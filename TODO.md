@@ -6,7 +6,7 @@ This document outlines the planned development phases for the Rental Management 
 
 Establish the persistence layer and schema definition for upcoming development.
 
-- [ ] Define initial SQL schema (DDL) for core tables (`item_types`, `assets`, `rent_actions`, `rent_action_items`).
+- [ ] Define initial SQL schema (DDL) for core tables (`item_types`, `assets`, `rent_actions`, `rent_action_items`) with Schema.org alignment.
 - [ ] Implement `SqlRepository` in `internal/db` satisfying the `Repository` interface.
 - [ ] Add unit tests for repository methods using a mock or local DB.
 - [ ] Setup database connection logic and configuration in `cmd/server`.

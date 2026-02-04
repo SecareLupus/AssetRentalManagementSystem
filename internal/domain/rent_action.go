@@ -23,10 +23,10 @@ type RentAction struct {
 	ApprovedByRef  *string          `json:"approved_by_ref,omitempty"`
 	Status         RentActionStatus `json:"status"`
 	Priority       string           `json:"priority"`
-	StartTime      time.Time        `json:"start_time"`
-	EndTime        time.Time        `json:"end_time"`
+	StartTime      time.Time        `json:"start_time"` // Maps to schema.org/startTime
+	EndTime        time.Time        `json:"end_time"`   // Maps to schema.org/endTime
 	IsASAP         bool             `json:"is_asap"`
-	Description    *string          `json:"description,omitempty"`
+	Description    *string          `json:"description,omitempty"` // Maps to schema.org/description
 	ExternalSource *string          `json:"external_source,omitempty"`
 	ExternalRef    *string          `json:"external_ref,omitempty"`
 	SchemaOrg      json.RawMessage  `json:"schema_org,omitempty"`
