@@ -31,4 +31,22 @@ type Repository interface {
 
 	// Inventory/Availability
 	GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error)
+
+	// Maintenance
+	AddMaintenanceLog(ctx context.Context, log *domain.MaintenanceLog) error
+	ListMaintenanceLogs(ctx context.Context, assetID int64) ([]domain.MaintenanceLog, error)
+
+	// Dynamic Inspections
+	CreateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error
+	GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error)
+	SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error
+
+	// Build Specs
+	CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error
+	GetBuildSpecByID(ctx context.Context, id int64) (*domain.BuildSpec, error)
+	ListBuildSpecs(ctx context.Context) ([]domain.BuildSpec, error)
+
+	// Provisioning
+	StartProvisioning(ctx context.Context, assetID int64, buildSpecID int64, performedBy string) (*domain.ProvisionAction, error)
+	CompleteProvisioning(ctx context.Context, actionID int64, notes string) error
 }

@@ -108,6 +108,62 @@ func (m *MockRepository) GetAvailableQuantity(ctx context.Context, itemTypeID in
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockRepository) AddMaintenanceLog(ctx context.Context, ml *domain.MaintenanceLog) error {
+	args := m.Called(ctx, ml)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListMaintenanceLogs(ctx context.Context, assetID int64) ([]domain.MaintenanceLog, error) {
+	args := m.Called(ctx, assetID)
+	return args.Get(0).([]domain.MaintenanceLog), args.Error(1)
+}
+
+func (m *MockRepository) CreateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error {
+	args := m.Called(ctx, it)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error) {
+	args := m.Called(ctx, itemTypeID)
+	return args.Get(0).([]domain.InspectionTemplate), args.Error(1)
+}
+
+func (m *MockRepository) SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error {
+	args := m.Called(ctx, is)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error {
+	args := m.Called(ctx, bs)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetBuildSpecByID(ctx context.Context, id int64) (*domain.BuildSpec, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.BuildSpec), args.Error(1)
+}
+
+func (m *MockRepository) ListBuildSpecs(ctx context.Context) ([]domain.BuildSpec, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]domain.BuildSpec), args.Error(1)
+}
+
+func (m *MockRepository) StartProvisioning(ctx context.Context, assetID int64, buildSpecID int64, performedBy string) (*domain.ProvisionAction, error) {
+	args := m.Called(ctx, assetID, buildSpecID, performedBy)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.ProvisionAction), args.Error(1)
+}
+
+func (m *MockRepository) CompleteProvisioning(ctx context.Context, actionID int64, notes string) error {
+	args := m.Called(ctx, actionID, notes)
+	return args.Error(0)
+}
+
 func TestHandler_CreateItemType(t *testing.T) {
 	repo := new(MockRepository)
 	h := NewHandler(repo)

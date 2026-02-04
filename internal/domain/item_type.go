@@ -13,16 +13,24 @@ const (
 	ItemKindKit        ItemKind = "kit"
 )
 
+type LifecycleFeatures struct {
+	RemoteManagement  bool `json:"remote_management"`
+	Provisioning      bool `json:"provisioning"`
+	Refurbishment     bool `json:"refurbishment"`
+	BuildSpecTracking bool `json:"build_spec_tracking"`
+}
+
 // ItemType represents a template for a piece of equipment.
 // It maps to https://schema.org/ProductModel
 type ItemType struct {
-	ID        int64           `json:"id"`
-	Code      string          `json:"code"` // Maps to schema.org/sku
-	Name      string          `json:"name"` // Maps to schema.org/name
-	Kind      ItemKind        `json:"kind"` // Maps to schema.org/category
-	IsActive  bool            `json:"is_active"`
-	SchemaOrg json.RawMessage `json:"schema_org,omitempty"`
-	Metadata  json.RawMessage `json:"metadata,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID                int64             `json:"id"`
+	Code              string            `json:"code"` // Maps to schema.org/sku
+	Name              string            `json:"name"` // Maps to schema.org/name
+	Kind              ItemKind          `json:"kind"` // Maps to schema.org/category
+	IsActive          bool              `json:"is_active"`
+	SupportedFeatures LifecycleFeatures `json:"supported_features"`
+	SchemaOrg         json.RawMessage   `json:"schema_org,omitempty"`
+	Metadata          json.RawMessage   `json:"metadata,omitempty"`
+	CreatedAt         time.Time         `json:"created_at"`
+	UpdatedAt         time.Time         `json:"updated_at"`
 }

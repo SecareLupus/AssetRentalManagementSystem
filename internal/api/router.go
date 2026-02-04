@@ -19,6 +19,23 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+	mux.HandleFunc("/v1/catalog/inspection-templates", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.CreateInspectionTemplate(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/fleet/build-specs", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateBuildSpec(w, r)
+		case http.MethodGet:
+			h.ListBuildSpecs(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -47,6 +64,38 @@ func NewRouter(h *Handler) http.Handler {
 		if strings.HasSuffix(r.URL.Path, "/status") {
 			if r.Method == http.MethodPatch {
 				h.UpdateAssetStatus(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/provision") {
+			if r.Method == http.MethodPost {
+				h.StartProvisioning(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/complete-provisioning") {
+			if r.Method == http.MethodPost {
+				h.CompleteProvisioning(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/required-inspections") {
+			if r.Method == http.MethodGet {
+				h.GetRequiredInspections(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/inspections") {
+			if r.Method == http.MethodPost {
+				h.SubmitInspection(w, r)
 				return
 			}
 			w.WriteHeader(http.StatusMethodNotAllowed)

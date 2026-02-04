@@ -20,8 +20,8 @@ func TestSqlRepository_GetItemTypeByID(t *testing.T) {
 	repo := NewSqlRepository(db)
 	ctx := context.Background()
 
-	rows := sqlmock.NewRows([]string{"id", "code", "name", "kind", "is_active", "schema_org", "metadata", "created_at", "updated_at"}).
-		AddRow(1, "SKU123", "Item A", "serialized", true, []byte("{}"), []byte("{}"), time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"id", "code", "name", "kind", "is_active", "supported_features", "schema_org", "metadata", "created_at", "updated_at"}).
+		AddRow(1, "SKU123", "Item A", "serialized", true, []byte("{}"), []byte("{}"), []byte("{}"), time.Now(), time.Now())
 
 	mock.ExpectQuery("SELECT (.+) FROM item_types WHERE id = \\$1").
 		WithArgs(1).

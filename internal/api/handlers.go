@@ -195,6 +195,22 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch ItemType to check features
+	it, err := h.repo.GetItemTypeByID(r.Context(), a.ItemTypeID)
+	if err == nil && it != nil {
+		if !it.SupportedFeatures.RemoteManagement {
+			a.RemoteManagementID = nil
+		}
+		if !it.SupportedFeatures.Provisioning {
+			a.ProvisioningStatus = ""
+			a.FirmwareVersion = nil
+			a.Hostname = nil
+		}
+		if !it.SupportedFeatures.BuildSpecTracking {
+			a.BuildSpecVersion = nil
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(a)
 }
@@ -217,6 +233,22 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 	if err := h.validateAsset(&a); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Fetch ItemType to check features before saving
+	it, err := h.repo.GetItemTypeByID(r.Context(), a.ItemTypeID)
+	if err == nil && it != nil {
+		if !it.SupportedFeatures.RemoteManagement {
+			a.RemoteManagementID = nil
+		}
+		if !it.SupportedFeatures.Provisioning {
+			a.ProvisioningStatus = ""
+			a.FirmwareVersion = nil
+			a.Hostname = nil
+		}
+		if !it.SupportedFeatures.BuildSpecTracking {
+			a.BuildSpecVersion = nil
+		}
 	}
 
 	if err := h.repo.UpdateAsset(r.Context(), &a); err != nil {
@@ -468,6 +500,164 @@ func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "cancelled_at", *ra.CancelledAt); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Inspection Handlers
+
+func (h *Handler) CreateInspectionTemplate(w http.ResponseWriter, r *http.Request) {
+	var it domain.InspectionTemplate
+	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.CreateInspectionTemplate(r.Context(), &it); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(it)
+}
+
+func (h *Handler) GetRequiredInspections(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/required-inspections")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	a, err := h.repo.GetAssetByID(r.Context(), id)
+	if err != nil || a == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	templates, err := h.repo.GetInspectionTemplatesForItemType(r.Context(), a.ItemTypeID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templates)
+}
+
+func (h *Handler) SubmitInspection(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/inspections")
+	assetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var is domain.InspectionSubmission
+	if err := json.NewDecoder(r.Body).Decode(&is); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	is.AssetID = assetID
+
+	if err := h.repo.SubmitInspection(r.Context(), &is); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(is)
+}
+
+// Build Spec Handlers
+
+func (h *Handler) CreateBuildSpec(w http.ResponseWriter, r *http.Request) {
+	var bs domain.BuildSpec
+	if err := json.NewDecoder(r.Body).Decode(&bs); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.CreateBuildSpec(r.Context(), &bs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(bs)
+}
+
+func (h *Handler) ListBuildSpecs(w http.ResponseWriter, r *http.Request) {
+	results, err := h.repo.ListBuildSpecs(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+// Provisioning Handlers
+
+func (h *Handler) StartProvisioning(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/provision")
+	assetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		BuildSpecID int64  `json:"build_spec_id"`
+		PerformedBy string `json:"performed_by"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	pa, err := h.repo.StartProvisioning(r.Context(), assetID, req.BuildSpecID, req.PerformedBy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(pa)
+}
+
+func (h *Handler) CompleteProvisioning(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/complete-provisioning")
+	assetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	_ = assetID
+
+	var req struct {
+		ActionID int64  `json:"action_id"`
+		Notes    string `json:"notes"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.CompleteProvisioning(r.Context(), req.ActionID, req.Notes); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

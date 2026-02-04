@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,11 +24,12 @@ func (r *SqlRepository) CreateItemType(ctx context.Context, it *domain.ItemType)
 	it.CreatedAt = now
 	it.UpdatedAt = now
 
-	query := `INSERT INTO item_types (code, name, kind, is_active, schema_org, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	query := `INSERT INTO item_types (code, name, kind, is_active, supported_features, schema_org, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
 
+	featuresJSON, _ := json.Marshal(it.SupportedFeatures)
 	err := r.db.QueryRowContext(ctx, query,
-		it.Code, it.Name, it.Kind, it.IsActive, it.SchemaOrg, it.Metadata, it.CreatedAt, it.UpdatedAt,
+		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.SchemaOrg, it.Metadata, it.CreatedAt, it.UpdatedAt,
 	).Scan(&it.ID)
 	if err != nil {
 		return fmt.Errorf("create item_type: %w", err)
@@ -37,13 +39,17 @@ func (r *SqlRepository) CreateItemType(ctx context.Context, it *domain.ItemType)
 
 // GetItemTypeByID retrieves an item type by its ID.
 func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.ItemType, error) {
-	query := `SELECT id, code, name, kind, is_active, schema_org, metadata, created_at, updated_at 
+	query := `SELECT id, code, name, kind, is_active, supported_features, schema_org, metadata, created_at, updated_at 
 	          FROM item_types WHERE id = $1`
 
 	var it domain.ItemType
+	var featuresJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt,
+		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt,
 	)
+	if err == nil {
+		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
+	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -67,9 +73,11 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 	var results []domain.ItemType
 	for rows.Next() {
 		var it domain.ItemType
-		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt); err != nil {
+		var featuresJSON []byte
+		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan item_type: %w", err)
 		}
+		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
 		results = append(results, it)
 	}
 	return results, nil
@@ -78,11 +86,12 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 // UpdateItemType updates an existing item type.
 func (r *SqlRepository) UpdateItemType(ctx context.Context, it *domain.ItemType) error {
 	it.UpdatedAt = time.Now()
-	query := `UPDATE item_types SET code = $1, name = $2, kind = $3, is_active = $4, schema_org = $5, metadata = $6, updated_at = $7
-	          WHERE id = $8`
+	query := `UPDATE item_types SET code = $1, name = $2, kind = $3, is_active = $4, supported_features = $5, schema_org = $6, metadata = $7, updated_at = $8
+	          WHERE id = $9`
 
+	featuresJSON, _ := json.Marshal(it.SupportedFeatures)
 	_, err := r.db.ExecContext(ctx, query,
-		it.Code, it.Name, it.Kind, it.IsActive, it.SchemaOrg, it.Metadata, it.UpdatedAt, it.ID,
+		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.SchemaOrg, it.Metadata, it.UpdatedAt, it.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update item_type: %w", err)
@@ -102,12 +111,16 @@ func (r *SqlRepository) DeleteItemType(ctx context.Context, id int64) error {
 
 // GetAssetByID retrieves a specific asset by its ID.
 func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, schema_org, metadata, created_at, updated_at 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
+	                 schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE id = $1`
 
 	var a domain.Asset
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+		&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
+		&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -124,11 +137,18 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 	a.CreatedAt = now
 	a.UpdatedAt = now
 
-	query := `INSERT INTO assets (item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, schema_org, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
+	query := `INSERT INTO assets (
+		item_type_id, asset_tag, serial_number, status, location, assigned_to, 
+		mesh_node_id, wireguard_hostname, build_spec_version, provisioning_status, 
+		firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
+		schema_org, metadata, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`
 
 	err := r.db.QueryRowContext(ctx, query,
-		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo, a.MeshNodeID, a.WireguardHostname, a.SchemaOrg, a.Metadata, a.CreatedAt, a.UpdatedAt,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
+		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
+		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
+		a.SchemaOrg, a.Metadata, a.CreatedAt, a.UpdatedAt,
 	).Scan(&a.ID)
 	if err != nil {
 		return fmt.Errorf("create asset: %w", err)
@@ -138,7 +158,9 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 
 // ListAssetsByItemType returns assets belonging to a specific item type.
 func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, schema_org, metadata, created_at, updated_at 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
+	                 schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE item_type_id = $1`
 
 	rows, err := r.db.QueryContext(ctx, query, itemTypeID)
@@ -150,7 +172,11 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 	var results []domain.Asset
 	for rows.Next() {
 		var a domain.Asset
-		if err := rows.Scan(&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
+			&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
 		results = append(results, a)
@@ -161,11 +187,19 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 // UpdateAsset updates an existing asset.
 func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error {
 	a.UpdatedAt = time.Now()
-	query := `UPDATE assets SET item_type_id = $1, asset_tag = $2, serial_number = $3, status = $4, location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8, schema_org = $9, metadata = $10, updated_at = $11
-	          WHERE id = $12`
+	query := `UPDATE assets SET 
+		item_type_id = $1, asset_tag = $2, serial_number = $3, status = $4, 
+		location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8,
+		build_spec_version = $9, provisioning_status = $10, firmware_version = $11,
+		hostname = $12, remote_management_id = $13, current_build_spec_id = $14, last_inspection_at = $15,
+		schema_org = $16, metadata = $17, updated_at = $18
+		WHERE id = $19`
 
 	_, err := r.db.ExecContext(ctx, query,
-		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo, a.MeshNodeID, a.WireguardHostname, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
+		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
+		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
+		a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update asset: %w", err)
@@ -347,4 +381,268 @@ func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int
 	}
 
 	return total - reserved, nil
+}
+
+// AddMaintenanceLog records a new maintenance activity.
+func (r *SqlRepository) AddMaintenanceLog(ctx context.Context, ml *domain.MaintenanceLog) error {
+	ml.CreatedAt = time.Now()
+	query := `INSERT INTO maintenance_logs (asset_id, action_type, notes, performed_by, test_bits, created_at)
+	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		ml.AssetID, ml.ActionType, ml.Notes, ml.PerformedBy, ml.TestBits, ml.CreatedAt,
+	).Scan(&ml.ID)
+	if err != nil {
+		return fmt.Errorf("add maintenance log: %w", err)
+	}
+	return nil
+}
+
+// ListMaintenanceLogs retrieves history for a specific asset.
+func (r *SqlRepository) ListMaintenanceLogs(ctx context.Context, assetID int64) ([]domain.MaintenanceLog, error) {
+	query := `SELECT id, asset_id, action_type, notes, performed_by, test_bits, created_at
+	          FROM maintenance_logs WHERE asset_id = $1 ORDER BY created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, assetID)
+	if err != nil {
+		return nil, fmt.Errorf("query maintenance_logs: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.MaintenanceLog
+	for rows.Next() {
+		var ml domain.MaintenanceLog
+		if err := rows.Scan(&ml.ID, &ml.AssetID, &ml.ActionType, &ml.Notes, &ml.PerformedBy, &ml.TestBits, &ml.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan maintenance log: %w", err)
+		}
+		results = append(results, ml)
+	}
+	return results, nil
+}
+
+// CreateInspectionTemplate creates a new inspection template with associated fields.
+func (r *SqlRepository) CreateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	it.CreatedAt = now
+	it.UpdatedAt = now
+
+	err = tx.QueryRowContext(ctx, "INSERT INTO inspection_templates (name, description, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id",
+		it.Name, it.Description, it.CreatedAt, it.UpdatedAt,
+	).Scan(&it.ID)
+	if err != nil {
+		return fmt.Errorf("insert template: %w", err)
+	}
+
+	for i := range it.Fields {
+		f := &it.Fields[i]
+		f.TemplateID = it.ID
+		err = tx.QueryRowContext(ctx, "INSERT INTO inspection_fields (template_id, label, field_type, required, display_order) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+			f.TemplateID, f.Label, f.Type, f.Required, f.DisplayOrder,
+		).Scan(&f.ID)
+		if err != nil {
+			return fmt.Errorf("insert field: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetInspectionTemplatesForItemType retrieves templates assigned to a specific category.
+func (r *SqlRepository) GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error) {
+	query := `
+		SELECT t.id, t.name, t.description, t.created_at, t.updated_at
+		FROM inspection_templates t
+		JOIN item_type_inspections iti ON t.id = iti.template_id
+		WHERE iti.item_type_id = $1
+	`
+	rows, err := r.db.QueryContext(ctx, query, itemTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("query templates: %w", err)
+	}
+	defer rows.Close()
+
+	var templates []domain.InspectionTemplate
+	for rows.Next() {
+		var t domain.InspectionTemplate
+		if err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			return nil, err
+		}
+
+		// Fetch fields for each template
+		fRows, err := r.db.QueryContext(ctx, "SELECT id, template_id, label, field_type, required, display_order FROM inspection_fields WHERE template_id = $1 ORDER BY display_order", t.ID)
+		if err != nil {
+			return nil, err
+		}
+		defer fRows.Close()
+
+		for fRows.Next() {
+			var f domain.InspectionField
+			if err := fRows.Scan(&f.ID, &f.TemplateID, &f.Label, &f.Type, &f.Required, &f.DisplayOrder); err != nil {
+				return nil, err
+			}
+			t.Fields = append(t.Fields, f)
+		}
+		templates = append(templates, t)
+	}
+	return templates, nil
+}
+
+// SubmitInspection records a completed inspection form.
+func (r *SqlRepository) SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	is.CreatedAt = time.Now()
+	err = tx.QueryRowContext(ctx, "INSERT INTO inspection_submissions (asset_id, template_id, performed_by, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+		is.AssetID, is.TemplateID, is.PerformedBy, is.CreatedAt,
+	).Scan(&is.ID)
+	if err != nil {
+		return fmt.Errorf("insert submission: %w", err)
+	}
+
+	for i := range is.Responses {
+		resp := &is.Responses[i]
+		resp.SubmissionID = is.ID
+		_, err = tx.ExecContext(ctx, "INSERT INTO inspection_responses (submission_id, field_id, response_value) VALUES ($1, $2, $3)",
+			resp.SubmissionID, resp.FieldID, resp.Value,
+		)
+		if err != nil {
+			return fmt.Errorf("insert response: %w", err)
+		}
+	}
+
+	// Update the asset's last inspection timestamp
+	_, err = tx.ExecContext(ctx, "UPDATE assets SET last_inspection_at = $1 WHERE id = $2", is.CreatedAt, is.AssetID)
+	if err != nil {
+		return fmt.Errorf("update asset last_inspection_at: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+// Build Spec Management
+
+func (r *SqlRepository) CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error {
+	now := time.Now()
+	bs.CreatedAt = now
+	bs.UpdatedAt = now
+
+	query := `INSERT INTO build_specs (version, hardware_config, software_config, firmware_url, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		bs.Version, bs.HardwareConfig, bs.SoftwareConfig, bs.FirmwareURL, bs.Metadata, bs.CreatedAt, bs.UpdatedAt,
+	).Scan(&bs.ID)
+	if err != nil {
+		return fmt.Errorf("create build_spec: %w", err)
+	}
+	return nil
+}
+
+func (r *SqlRepository) GetBuildSpecByID(ctx context.Context, id int64) (*domain.BuildSpec, error) {
+	query := `SELECT id, version, hardware_config, software_config, firmware_url, metadata, created_at, updated_at 
+	          FROM build_specs WHERE id = $1`
+
+	var bs domain.BuildSpec
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &bs.Metadata, &bs.CreatedAt, &bs.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get build_spec: %w", err)
+	}
+	return &bs, nil
+}
+
+func (r *SqlRepository) ListBuildSpecs(ctx context.Context) ([]domain.BuildSpec, error) {
+	query := `SELECT id, version, hardware_config, software_config, firmware_url, metadata, created_at, updated_at FROM build_specs`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.BuildSpec
+	for rows.Next() {
+		var bs domain.BuildSpec
+		if err := rows.Scan(&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &bs.Metadata, &bs.CreatedAt, &bs.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, bs)
+	}
+	return results, nil
+}
+
+// Provisioning Workflow
+
+func (r *SqlRepository) StartProvisioning(ctx context.Context, assetID int64, buildSpecID int64, performedBy string) (*domain.ProvisionAction, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Update Asset status
+	_, err = tx.ExecContext(ctx, "UPDATE assets SET status = 'maintenance', provisioning_status = 'flashing', current_build_spec_id = $1 WHERE id = $2", buildSpecID, assetID)
+	if err != nil {
+		return nil, fmt.Errorf("update asset for provisioning: %w", err)
+	}
+
+	// Create ProvisionAction log
+	pa := &domain.ProvisionAction{
+		AssetID:     assetID,
+		BuildSpecID: &buildSpecID,
+		Status:      domain.ProvisionStarted,
+		PerformedBy: performedBy,
+		CreatedAt:   time.Now(),
+	}
+
+	query := `INSERT INTO provision_actions (asset_id, build_spec_id, status, performed_by, created_at)
+	          VALUES ($1, $2, $3, $4, $5) RETURNING id`
+
+	err = tx.QueryRowContext(ctx, query, pa.AssetID, pa.BuildSpecID, pa.Status, pa.PerformedBy, pa.CreatedAt).Scan(&pa.ID)
+	if err != nil {
+		return nil, fmt.Errorf("create provision_action: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return pa, nil
+}
+
+func (r *SqlRepository) CompleteProvisioning(ctx context.Context, actionID int64, notes string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	var assetID int64
+	err = tx.QueryRowContext(ctx, "UPDATE provision_actions SET status = 'completed', notes = $1, completed_at = $2 WHERE id = $3 RETURNING asset_id",
+		notes, now, actionID,
+	).Scan(&assetID)
+	if err != nil {
+		return fmt.Errorf("complete provision_action: %w", err)
+	}
+
+	// Set asset to Ready
+	_, err = tx.ExecContext(ctx, "UPDATE assets SET status = 'available', provisioning_status = 'ready' WHERE id = $1", assetID)
+	if err != nil {
+		return fmt.Errorf("set asset to ready: %w", err)
+	}
+
+	return tx.Commit()
 }
