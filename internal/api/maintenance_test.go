@@ -14,7 +14,7 @@ import (
 
 func TestHandler_RecallItemTypeAssets(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	repo.On("RecallAssetsByItemType", mock.Anything, int64(1)).Return(nil)
 
@@ -29,7 +29,7 @@ func TestHandler_RecallItemTypeAssets(t *testing.T) {
 
 func TestHandler_RepairAsset(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	repo.On("UpdateAssetStatus", mock.Anything, int64(1), domain.AssetStatusMaintenance).Return(nil)
 
@@ -44,7 +44,7 @@ func TestHandler_RepairAsset(t *testing.T) {
 
 func TestHandler_RefurbishAsset(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	asset := &domain.Asset{ID: 1}
 	repo.On("GetAssetByID", mock.Anything, int64(1)).Return(asset, nil)

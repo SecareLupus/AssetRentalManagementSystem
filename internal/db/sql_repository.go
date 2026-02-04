@@ -657,3 +657,59 @@ func (r *SqlRepository) CompleteProvisioning(ctx context.Context, actionID int64
 
 	return tx.Commit()
 }
+
+// Outbox Implementation
+
+func (r *SqlRepository) AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error {
+	query := `INSERT INTO outbox_events (event_type, payload, status, created_at)
+	          VALUES ($1, $2, $3, $4) RETURNING id`
+
+	now := time.Now()
+	event.CreatedAt = now
+	event.Status = domain.OutboxPending
+
+	var err error
+	if tx != nil {
+		err = tx.QueryRowContext(ctx, query, event.Type, event.Payload, event.Status, event.CreatedAt).Scan(&event.ID)
+	} else {
+		err = r.db.QueryRowContext(ctx, query, event.Type, event.Payload, event.Status, event.CreatedAt).Scan(&event.ID)
+	}
+
+	if err != nil {
+		return fmt.Errorf("append outbox event: %w", err)
+	}
+	return nil
+}
+
+func (r *SqlRepository) GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error) {
+	query := `SELECT id, event_type, payload, status, error_message, retry_count, created_at, processed_at
+	          FROM outbox_events WHERE status = 'pending' ORDER BY created_at ASC LIMIT $1`
+
+	rows, err := r.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []domain.OutboxEvent
+	for rows.Next() {
+		var e domain.OutboxEvent
+		if err := rows.Scan(&e.ID, &e.Type, &e.Payload, &e.Status, &e.ErrorMessage, &e.RetryCount, &e.CreatedAt, &e.ProcessedAt); err != nil {
+			return nil, err
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
+func (r *SqlRepository) MarkEventProcessed(ctx context.Context, id int64) error {
+	query := `UPDATE outbox_events SET status = 'processed', processed_at = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
+	return err
+}
+
+func (r *SqlRepository) MarkEventFailed(ctx context.Context, id int64, errMessage string) error {
+	query := `UPDATE outbox_events SET status = 'failed', error_message = $1, retry_count = retry_count + 1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, errMessage, id)
+	return err
+}

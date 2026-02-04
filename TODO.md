@@ -50,10 +50,10 @@ Manage the return, repair, and upgrade circular workflow.
 
 ## Phase 6: Event System & External Integrations
 
-- [ ] Generic Remote Management integration (abstracted from specific providers like MeshCentral).
-- [ ] Outbox pattern for syncing with SnipeIT and InvenTree.
-- [ ] Webhook/Trigger system for automated lifecycle transitions.
-- [ ] TODO: Integrate RemoteManagementID into business logic (e.g. auto-recall on health failure).
+- [x] Reliable Event Outbox (database-backed staging for external sync).
+- [x] Generic Remote Management integration (abstracted from specific providers like MeshCentral).
+- [x] Webhook/Trigger system for automated lifecycle transitions.
+- [x] Integrated RemoteManagementID into health check and power control logic.
 
 ## Phase 7: Dynamic Inspection Forms
 

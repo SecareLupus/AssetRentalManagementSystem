@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/desmond/rental-management-system/internal/domain"
@@ -50,4 +51,10 @@ type Repository interface {
 	// Provisioning
 	StartProvisioning(ctx context.Context, assetID int64, buildSpecID int64, performedBy string) (*domain.ProvisionAction, error)
 	CompleteProvisioning(ctx context.Context, actionID int64, notes string) error
+
+	// Outbox
+	AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error
+	GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)
+	MarkEventProcessed(ctx context.Context, id int64) error
+	MarkEventFailed(ctx context.Context, id int64, errMessage string) error
 }

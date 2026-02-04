@@ -110,6 +110,24 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/v1/fleet/assets/") {
+			if strings.HasSuffix(r.URL.Path, "/remote-status") {
+				if r.Method == http.MethodGet {
+					h.GetAssetRemoteStatus(w, r)
+					return
+				}
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/remote-power") {
+				if r.Method == http.MethodPost {
+					h.ApplyAssetRemotePower(w, r)
+					return
+				}
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+		}
 		if strings.HasSuffix(r.URL.Path, "/required-inspections") {
 			if r.Method == http.MethodGet {
 				h.GetRequiredInspections(w, r)

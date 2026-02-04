@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -171,7 +172,7 @@ func (m *MockRepository) CompleteProvisioning(ctx context.Context, actionID int6
 
 func TestHandler_CreateItemType(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	it := domain.ItemType{Code: "TEST", Name: "Test Item", Kind: domain.ItemKindSerialized}
 	body, _ := json.Marshal(it)
@@ -189,7 +190,7 @@ func TestHandler_CreateItemType(t *testing.T) {
 
 func TestHandler_CreateItemType_Invalid(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	it := domain.ItemType{Code: "", Name: "Test Item", Kind: domain.ItemKindSerialized} // Empty Code
 	body, _ := json.Marshal(it)
@@ -204,7 +205,7 @@ func TestHandler_CreateItemType_Invalid(t *testing.T) {
 
 func TestHandler_GetCatalog(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	items := []domain.ItemType{{ID: 1, Name: "Item 1"}}
 	repo.On("ListItemTypes", mock.Anything).Return(items, nil)
@@ -223,7 +224,7 @@ func TestHandler_GetCatalog(t *testing.T) {
 
 func TestHandler_ApproveRentAction(t *testing.T) {
 	repo := new(MockRepository)
-	h := NewHandler(repo)
+	h := NewHandler(repo, nil)
 
 	ra := &domain.RentAction{
 		ID:        1,
@@ -246,4 +247,24 @@ func TestHandler_ApproveRentAction(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	repo.AssertExpectations(t)
+}
+
+func (m *MockRepository) AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error {
+	args := m.Called(ctx, tx, event)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error) {
+	args := m.Called(ctx, limit)
+	return args.Get(0).([]domain.OutboxEvent), args.Error(1)
+}
+
+func (m *MockRepository) MarkEventProcessed(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) MarkEventFailed(ctx context.Context, id int64, errMessage string) error {
+	args := m.Called(ctx, id, errMessage)
+	return args.Error(0)
 }

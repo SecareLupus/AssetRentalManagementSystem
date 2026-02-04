@@ -10,14 +10,19 @@ import (
 
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/domain"
+	"github.com/desmond/rental-management-system/internal/fleet"
 )
 
 type Handler struct {
-	repo db.Repository
+	repo           db.Repository
+	remoteRegistry *fleet.RemoteRegistry
 }
 
-func NewHandler(repo db.Repository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(repo db.Repository, remoteRegistry *fleet.RemoteRegistry) *Handler {
+	return &Handler{
+		repo:           repo,
+		remoteRegistry: remoteRegistry,
+	}
 }
 
 // ItemType Handlers
@@ -281,6 +286,13 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(map[string]interface{}{"asset_id": id, "new_status": req.Status})
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventAssetTransitioned,
+		Payload: payload,
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -736,7 +748,80 @@ func (h *Handler) CompleteProvisioning(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.CompleteProvisioning(r.Context(), req.ActionID, req.Notes); err != nil {
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetAssetRemoteStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/fleet/assets/")
+	idStr = strings.TrimSuffix(idStr, "/remote-status")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	asset, err := h.repo.GetAssetByID(r.Context(), id)
+	if err != nil || asset == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if asset.RemoteManagementID == nil {
+		http.Error(w, "asset does not have remote management enabled", http.StatusBadRequest)
+		return
+	}
+
+	mgr, err := h.remoteRegistry.Get("mock-provider")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	info, err := mgr.GetDeviceInfo(r.Context(), *asset.RemoteManagementID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(info)
+}
+
+func (h *Handler) ApplyAssetRemotePower(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/fleet/assets/")
+	idStr = strings.TrimSuffix(idStr, "/remote-power")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Action domain.RemotePowerAction `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	asset, err := h.repo.GetAssetByID(r.Context(), id)
+	if err != nil || asset == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if asset.RemoteManagementID == nil {
+		http.Error(w, "asset does not have remote management enabled", http.StatusBadRequest)
+		return
+	}
+
+	mgr, err := h.remoteRegistry.Get("mock-provider")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := mgr.ApplyPowerAction(r.Context(), *asset.RemoteManagementID, req.Action); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

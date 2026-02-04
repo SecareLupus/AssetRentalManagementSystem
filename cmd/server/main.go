@@ -8,6 +8,7 @@ import (
 
 	"github.com/desmond/rental-management-system/internal/api"
 	"github.com/desmond/rental-management-system/internal/db"
+	"github.com/desmond/rental-management-system/internal/fleet"
 	_ "github.com/lib/pq"
 )
 
@@ -28,7 +29,13 @@ func main() {
 	}
 
 	repo := db.NewSqlRepository(conn)
-	handler := api.NewHandler(repo)
+
+	// Remote Management Setup
+	registry := fleet.NewRemoteRegistry()
+	mockMgr := fleet.NewMockRemoteManager()
+	registry.Register("mock-provider", mockMgr)
+
+	handler := api.NewHandler(repo, registry)
 	router := api.NewRouter(handler)
 
 	log.Printf("Starting server on :8080 (DB: %s)", dbURL)
