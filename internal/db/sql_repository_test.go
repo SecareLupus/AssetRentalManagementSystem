@@ -70,3 +70,30 @@ func TestSqlRepository_CreateRentAction(t *testing.T) {
 	assert.Equal(t, int64(1), ra.ID)
 	assert.Equal(t, int64(100), ra.Items[0].ID)
 }
+
+func TestSqlRepository_GetAvailableQuantity(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	repo := NewSqlRepository(db)
+	ctx := context.Background()
+	startTime := time.Now()
+	endTime := startTime.Add(time.Hour)
+
+	// Mock total assets
+	mock.ExpectQuery("SELECT COUNT(.+) FROM assets WHERE item_type_id = \\$1 AND status != 'retired'").
+		WithArgs(int64(10)).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(10))
+
+	// Mock overlapping reserved quantity
+	mock.ExpectQuery("SELECT COALESCE(.+) FROM rent_action_items rai JOIN rent_actions ra").
+		WithArgs(int64(10), startTime, endTime).
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(3))
+
+	avail, err := repo.GetAvailableQuantity(ctx, 10, startTime, endTime)
+	assert.NoError(t, err)
+	assert.Equal(t, 7, avail)
+}

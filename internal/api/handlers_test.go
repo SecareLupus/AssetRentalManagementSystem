@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/desmond/rental-management-system/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -97,6 +98,16 @@ func (m *MockRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAc
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error {
+	args := m.Called(ctx, id, status, timestampField, timestampValue)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error) {
+	args := m.Called(ctx, itemTypeID, startTime, endTime)
+	return args.Int(0), args.Error(1)
+}
+
 func TestHandler_CreateItemType(t *testing.T) {
 	repo := new(MockRepository)
 	h := NewHandler(repo)
@@ -147,4 +158,31 @@ func TestHandler_GetCatalog(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&response)
 	assert.Len(t, response, 1)
 	assert.Equal(t, "Item 1", response[0].Name)
+}
+
+func TestHandler_ApproveRentAction(t *testing.T) {
+	repo := new(MockRepository)
+	h := NewHandler(repo)
+
+	ra := &domain.RentAction{
+		ID:        1,
+		Status:    domain.RentActionStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(time.Hour),
+		Items: []domain.RentActionItem{
+			{ItemKind: "item_type", ItemID: 10, RequestedQuantity: 1},
+		},
+	}
+
+	repo.On("GetRentActionByID", mock.Anything, int64(1)).Return(ra, nil)
+	repo.On("GetAvailableQuantity", mock.Anything, int64(10), mock.Anything, mock.Anything).Return(5, nil)
+	repo.On("UpdateRentActionStatus", mock.Anything, int64(1), domain.RentActionStatusApproved, "approved_at", mock.Anything).Return(nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/rent-actions/1/approve", nil)
+	w := httptest.NewRecorder()
+
+	h.ApproveRentAction(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	repo.AssertExpectations(t)
 }

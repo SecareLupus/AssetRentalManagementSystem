@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -49,4 +50,52 @@ type RentActionItem struct {
 	AllocatedQuantity int             `json:"allocated_quantity"`
 	Notes             *string         `json:"notes,omitempty"`
 	Metadata          json.RawMessage `json:"metadata,omitempty"`
+}
+
+func (ra *RentAction) Validate() error {
+	if ra.StartTime.After(ra.EndTime) || ra.StartTime.Equal(ra.EndTime) {
+		return fmt.Errorf("start time must be before end time")
+	}
+	if ra.RequesterRef == "" {
+		return fmt.Errorf("requester is required")
+	}
+	return nil
+}
+
+func (ra *RentAction) Submit() error {
+	if ra.Status != RentActionStatusDraft {
+		return fmt.Errorf("can only submit from draft status, current: %s", ra.Status)
+	}
+	ra.Status = RentActionStatusPending
+	return nil
+}
+
+func (ra *RentAction) Approve() error {
+	if ra.Status != RentActionStatusPending {
+		return fmt.Errorf("can only approve from pending status, current: %s", ra.Status)
+	}
+	now := time.Now()
+	ra.Status = RentActionStatusApproved
+	ra.ApprovedAt = &now
+	return nil
+}
+
+func (ra *RentAction) Reject() error {
+	if ra.Status != RentActionStatusPending {
+		return fmt.Errorf("can only reject from pending status, current: %s", ra.Status)
+	}
+	now := time.Now()
+	ra.Status = RentActionStatusRejected
+	ra.RejectedAt = &now
+	return nil
+}
+
+func (ra *RentAction) Cancel() error {
+	if ra.Status == RentActionStatusFulfilled || ra.Status == RentActionStatusCancelled {
+		return fmt.Errorf("cannot cancel reservation in status: %s", ra.Status)
+	}
+	now := time.Now()
+	ra.Status = RentActionStatusCancelled
+	ra.CancelledAt = &now
+	return nil
 }

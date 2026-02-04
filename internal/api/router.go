@@ -74,7 +74,31 @@ func NewRouter(h *Handler) http.Handler {
 			// List rent actions (internal handler needed)
 		}
 	})
-	mux.HandleFunc("/v1/rent-actions/", h.GetRentAction)
+	mux.HandleFunc("/v1/rent-actions/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/submit") {
+			h.SubmitRentAction(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/approve") {
+			h.ApproveRentAction(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/reject") {
+			h.RejectRentAction(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/cancel") {
+			h.CancelRentAction(w, r)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			h.GetRentAction(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 
 	return mux
 }

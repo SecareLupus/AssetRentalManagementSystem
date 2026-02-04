@@ -305,3 +305,46 @@ func (r *SqlRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAct
 	}
 	return nil
 }
+
+// UpdateRentActionStatus updates only the status and a specific timestamp field for a rent action.
+func (r *SqlRepository) UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error {
+	var query string
+	if timestampField != "" {
+		query = fmt.Sprintf("UPDATE rent_actions SET status = $1, %s = $2, updated_at = $2 WHERE id = $3", timestampField)
+		_, err := r.db.ExecContext(ctx, query, status, timestampValue, id)
+		return err
+	}
+	query = "UPDATE rent_actions SET status = $1, updated_at = $2 WHERE id = $3"
+	_, err := r.db.ExecContext(ctx, query, status, time.Now(), id)
+	return err
+}
+
+// GetAvailableQuantity calculates the available inventory for an item type in a given time window.
+func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error) {
+	// 1. Get total assets for this item type (excluding retired)
+	var total int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM assets WHERE item_type_id = $1 AND status != 'retired'", itemTypeID).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("count assets: %w", err)
+	}
+
+	// 2. Subtract quantities from overlapping APPROVED reservations
+	// Overlap rule: (startA < endB) AND (endA > startB)
+	query := `
+		SELECT COALESCE(SUM(rai.requested_quantity), 0)
+		FROM rent_action_items rai
+		JOIN rent_actions ra ON rai.rent_action_id = ra.id
+		WHERE rai.item_kind = 'item_type' 
+		  AND rai.item_id = $1
+		  AND ra.status = 'approved'
+		  AND ra.start_time < $3
+		  AND ra.end_time > $2
+	`
+	var reserved int
+	err = r.db.QueryRowContext(ctx, query, itemTypeID, startTime, endTime).Scan(&reserved)
+	if err != nil {
+		return 0, fmt.Errorf("sum reserved quantity: %w", err)
+	}
+
+	return total - reserved, nil
+}

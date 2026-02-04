@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/desmond/rental-management-system/internal/domain"
 )
@@ -26,4 +27,8 @@ type Repository interface {
 	CreateRentAction(ctx context.Context, ra *domain.RentAction) error
 	GetRentActionByID(ctx context.Context, id int64) (*domain.RentAction, error)
 	UpdateRentAction(ctx context.Context, ra *domain.RentAction) error
+	UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error
+
+	// Inventory/Availability
+	GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error)
 }

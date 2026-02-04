@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/domain"
@@ -329,4 +330,147 @@ func (h *Handler) GetRentAction(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ra)
+}
+
+func (h *Handler) SubmitRentAction(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+	idStr = strings.TrimSuffix(idStr, "/submit")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if ra == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := ra.Submit(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "", time.Time{}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+	idStr = strings.TrimSuffix(idStr, "/approve")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if ra == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Basic Availability Check
+	for _, item := range ra.Items {
+		if item.ItemKind == "item_type" {
+			avail, err := h.repo.GetAvailableQuantity(r.Context(), item.ItemID, ra.StartTime, ra.EndTime)
+			if err != nil {
+				http.Error(w, "availability check failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if avail < item.RequestedQuantity {
+				http.Error(w, fmt.Sprintf("insufficient inventory for item_type %d: requested %d, available %d", item.ItemID, item.RequestedQuantity, avail), http.StatusConflict)
+				return
+			}
+		}
+	}
+
+	if err := ra.Approve(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "approved_at", *ra.ApprovedAt); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+	idStr = strings.TrimSuffix(idStr, "/reject")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if ra == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := ra.Reject(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "rejected_at", *ra.RejectedAt); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+	idStr = strings.TrimSuffix(idStr, "/cancel")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if ra == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := ra.Cancel(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "cancelled_at", *ra.CancelledAt); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
