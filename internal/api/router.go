@@ -3,10 +3,28 @@ package api
 import (
 	"net/http"
 	"strings"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 func NewRouter(h *Handler) http.Handler {
 	mux := http.NewServeMux()
+
+	// Auth
+	mux.HandleFunc("/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.Login(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/auth/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.Register(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
 
 	// Catalog (ItemTypes)
 	mux.HandleFunc("/v1/catalog/item-types", func(w http.ResponseWriter, r *http.Request) {
@@ -191,6 +209,9 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Swagger UI
+	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
 	return mux
 }

@@ -52,6 +52,12 @@ type Repository interface {
 	StartProvisioning(ctx context.Context, assetID int64, buildSpecID int64, performedBy string) (*domain.ProvisionAction, error)
 	CompleteProvisioning(ctx context.Context, actionID int64, notes string) error
 
+	// Users
+	CreateUser(ctx context.Context, u *domain.User) error
+	GetUserByID(ctx context.Context, id int64) (*domain.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
+	UpdateUser(ctx context.Context, u *domain.User) error
+
 	// Outbox
 	AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)

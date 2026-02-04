@@ -1,63 +1,54 @@
-# Rental Management System - Development Roadmap
+# Rental Management System - Phase II Roadmap
 
-This document outlines the planned development phases for the Rental Management System, based on the specifications.
+Building upon the solid backend foundation, the next phases focus on security, user interaction, and operational intelligence.
 
-## Phase 1: Foundation & Persistence
+## Phase 1: Identity & Access Management (IAM)
 
-Establish the persistence layer and schema definition for upcoming development.
+Secure the API and define user roles to support the varied workflows (Management vs. Technical Operations).
 
-- [x] Define initial SQL schema (DDL) for core tables (`item_types`, `assets`, `rent_actions`, `rent_action_items`) with Schema.org alignment.
-- [x] Implement `SqlRepository` in `internal/db` satisfying the `Repository` interface.
-- [x] Add unit tests for repository methods using a mock or local DB.
-- [x] Setup database connection logic and configuration in `cmd/server`.
+- [x] Define `User` domain model with support for roles (Admin, FleetManager, Technician).
+- [x] Implement `UserRepository` and SQL migrations for user tables.
+- [x] Implement Authentication Service (JWT-based or OIDC integration).
+- [x] Create Authorization Middleware (RBAC) for API endpoints.
+- [ ] Add `CreatedBy` / `UpdatedBy` audit trails to existing core entities (`RentAction`, `Asset`, etc.).
 
-## Phase 2: Catalog & Inventory API
+## Phase 2: Reference UI & API Visualization
 
-Build out the management interfaces for equipment types and physical assets.
+Establish the frontend not just as a tool, but as a live reference implementation for the API.
 
-- [x] Implement CRUD handlers for `ItemTypes`.
-- [x] Implement Asset management API (CRUD, status updates).
-- [x] Add validation for `ItemType` schema requirements.
-- [x] Implement "Catalog" view (browsable list of active items).
+- [x] **OpenAPI Integration**: specific annotations to Go handlers and generate `swagger.json` (using swaggo/swag).
+- [ ] **Frontend Foundation**: Initialize React/Vite with a "Developer Mode" context.
+- [ ] **API Inspector Component**: A global UI overlay that listens to network requests and displays:
+    -   The exact HTTP method and URL used.
+    -   The Request Body / Headers sent.
+    -   The Response received.
+    -   Relevant documentation excerpt for that endpoint.
+- [ ] **Dashboard Implementation**: Build the "Commander's Dashboard" utilizing this new Inspector system.
 
-## Phase 3: Reservation & Deployment Lifecycle
+## Phase 3: Catalog & Reservation (Self-Documenting)
 
-Implement the core `RentAction` workflow, mapping it to the "Deploy" phase of the fleet lifecycle.
+Enable users to browse inventory and request equipment (The "Rent" core loop) with full transparency.
 
-- [x] Implement Submit, Approve, Reject, and Cancel logic in `RentAction` domain model.
-- [x] Add status transition handlers to the API.
-- [x] Implement basic availability checks during the approval process.
-- [x] Ensure appropriate timestamps (`ApprovedAt`, etc.) are captured.
-- [x] Verify state transitions with unit tests.
+- [ ] **Catalog View**: Grid/List view of `ItemTypes` with availability status.
+- [ ] **Asset Details**: Rich view of individual assets (specs, history, maintenance log).
+- [ ] **Reservation Wizard**: Multi-step form to create a `RentAction` (Select dates, items, logistics).
+- [ ] **Approval Workflow UI**: Interface for Managers to review, approve, or reject requests.
+- [ ] **Integration Points**: Ensure every button/action in these views triggers the API Inspector log.
 
-## Phase 4: Fleet Provisioning & Build Specs
+## Phase 4: Fleet Services & Maintenance Station
 
-Handle the "Provision" and "Inspect" steps of the lifecycle.
+Tools for the Technician persona to manage the physical lifecycle of devices.
 
-- [x] Add fleet-specific fields to `Asset` (BuildSpec, Firmware, ProvisioningStatus, Hostname).
-- [x] Implement `BuildSpec` management (defining hardware/software standards).
-- [x] Create `ProvisionAction` API for tracking device preparation.
-- [x] Implement Build Spec compliance tracking (Inspect -> Verify test bits).
+- [ ] **Tech Dashboard**: View of "To-Do" items (Inspections due, Provisioning tasks, Returns to process).
+- [ ] **Inspection Runner**: UI to render the Dynamic Inspection Forms (from Phase 7) and capture results/photos.
+- [ ] **Provisioning Interface**: Step-by-step wizard for `ProvisionAction` (setting Test Bits, verifying firmware).
+- [ ] **Check-in/Check-out Kiosk**: Simplified view for scanning assets in and out of the warehouse.
 
-## Phase 5: Refurbishment & Maintenance [REVISED]
+## Phase 5: Planning & Intelligence Engine
 
-Manage the return, repair, and upgrade circular workflow.
+Leverage the data to provide predictive insights and reporting.
 
-- [x] Implement "Recall" workflow (bulk transitions from `deployed` to `recalled`).
-- [x] Add `MaintenanceLog` and `RepairHistory` tracking for assets.
-- [x] Implement "Refurbish" workflow (Upgrading recalled devices to latest Build Spec).
-- [x] Track "Test Bits" and final QC approval before re-entering the pool.
-
-## Phase 6: Event System & External Integrations
-
-- [x] Reliable Event Outbox (database-backed staging for external sync).
-- [x] Generic Remote Management integration (abstracted from specific providers like MeshCentral).
-- [x] Webhook/Trigger system for automated lifecycle transitions.
-- [x] Integrated RemoteManagementID into health check and power control logic.
-
-## Phase 7: Dynamic Inspection Forms
-
-- [x] Define `InspectionTemplate` schema with support for Boolean, Text, and Image fields.
-- [x] Implement assignment of templates to `ItemTypes`.
-- [x] Create API for collating necessary inspections for a device based on its type.
-- [x] Implement submission and storage of inspection results.
+- [ ] **Availability Calendar**: Visual timeline of stock levels vs. reservations.
+- [ ] **Shortfall Prediction**: Automated alerts when future reservations exceed projected stock.
+- [ ] **Utilization Reports**: Analysis of most/least used assets and categories.
+- [ ] **Lifecycle Analytics**: Tracking average asset lifespan, repair costs, and depreciation.

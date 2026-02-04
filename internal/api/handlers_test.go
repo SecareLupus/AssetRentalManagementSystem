@@ -249,7 +249,34 @@ func TestHandler_ApproveRentAction(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func (m *MockRepository) CreateUser(ctx context.Context, u *domain.User) error {
+	args := m.Called(ctx, u)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetUserByID(ctx context.Context, id int64) (*domain.User, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.User), args.Error(1)
+}
+
+func (m *MockRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	args := m.Called(ctx, username)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.User), args.Error(1)
+}
+
+func (m *MockRepository) UpdateUser(ctx context.Context, u *domain.User) error {
+	args := m.Called(ctx, u)
+	return args.Error(0)
+}
+
 func (m *MockRepository) AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error {
+
 	args := m.Called(ctx, tx, event)
 	return args.Error(0)
 }

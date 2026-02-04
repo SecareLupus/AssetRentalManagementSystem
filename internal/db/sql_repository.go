@@ -658,6 +658,70 @@ func (r *SqlRepository) CompleteProvisioning(ctx context.Context, actionID int64
 	return tx.Commit()
 }
 
+// User Management
+
+func (r *SqlRepository) CreateUser(ctx context.Context, u *domain.User) error {
+	now := time.Now()
+	u.CreatedAt = now
+	u.UpdatedAt = now
+
+	query := `INSERT INTO users (username, email, password_hash, role, is_enabled, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		u.Username, u.Email, u.PasswordHash, u.Role, u.IsEnabled, u.CreatedAt, u.UpdatedAt,
+	).Scan(&u.ID)
+	if err != nil {
+		return fmt.Errorf("create user: %w", err)
+	}
+	return nil
+}
+
+func (r *SqlRepository) GetUserByID(ctx context.Context, id int64) (*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, role, is_enabled, last_login_at, created_at, updated_at 
+	          FROM users WHERE id = $1`
+
+	var u domain.User
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.IsEnabled, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+	return &u, nil
+}
+
+func (r *SqlRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, role, is_enabled, last_login_at, created_at, updated_at 
+	          FROM users WHERE username = $1`
+
+	var u domain.User
+	err := r.db.QueryRowContext(ctx, query, username).Scan(
+		&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.IsEnabled, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get user by username: %w", err)
+	}
+	return &u, nil
+}
+
+func (r *SqlRepository) UpdateUser(ctx context.Context, u *domain.User) error {
+	u.UpdatedAt = time.Now()
+	query := `UPDATE users SET email = $1, role = $2, is_enabled = $3, last_login_at = $4, updated_at = $5 WHERE id = $6`
+
+	_, err := r.db.ExecContext(ctx, query, u.Email, u.Role, u.IsEnabled, u.LastLoginAt, u.UpdatedAt, u.ID)
+	if err != nil {
+		return fmt.Errorf("update user: %w", err)
+	}
+	return nil
+}
+
 // Outbox Implementation
 
 func (r *SqlRepository) AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error {
