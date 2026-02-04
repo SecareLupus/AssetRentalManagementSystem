@@ -217,6 +217,17 @@ func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status 
 	return nil
 }
 
+// RecallAssetsByItemType moves all deployed/available assets of a type into 'recalled' status.
+func (r *SqlRepository) RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error {
+	query := `UPDATE assets SET status = 'recalled', updated_at = $1 
+	          WHERE item_type_id = $2 AND (status = 'available' OR status = 'deployed')`
+	_, err := r.db.ExecContext(ctx, query, time.Now(), itemTypeID)
+	if err != nil {
+		return fmt.Errorf("bulk recall assets: %w", err)
+	}
+	return nil
+}
+
 // DeleteAsset deletes an asset (permanent).
 func (r *SqlRepository) DeleteAsset(ctx context.Context, id int64) error {
 	query := `DELETE FROM assets WHERE id = $1`

@@ -75,6 +75,11 @@ func (m *MockRepository) UpdateAssetStatus(ctx context.Context, id int64, status
 	return args.Error(0)
 }
 
+func (m *MockRepository) RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error {
+	args := m.Called(ctx, itemTypeID)
+	return args.Error(0)
+}
+
 func (m *MockRepository) DeleteAsset(ctx context.Context, id int64) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)

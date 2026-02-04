@@ -36,7 +36,16 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/fleet/item-types/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/recall") {
+			if r.Method == http.MethodPost {
+				h.RecallItemTypeAssets(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			h.GetItemType(w, r)
@@ -80,6 +89,22 @@ func NewRouter(h *Handler) http.Handler {
 		if strings.HasSuffix(r.URL.Path, "/complete-provisioning") {
 			if r.Method == http.MethodPost {
 				h.CompleteProvisioning(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/repair") {
+			if r.Method == http.MethodPost {
+				h.RepairAsset(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/refurbish") {
+			if r.Method == http.MethodPost {
+				h.RefurbishAsset(w, r)
 				return
 			}
 			w.WriteHeader(http.StatusMethodNotAllowed)

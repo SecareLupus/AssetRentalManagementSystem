@@ -21,6 +21,7 @@ type Repository interface {
 	ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error)
 	UpdateAsset(ctx context.Context, a *domain.Asset) error
 	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error
+	RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error
 	DeleteAsset(ctx context.Context, id int64) error
 
 	// RentActions

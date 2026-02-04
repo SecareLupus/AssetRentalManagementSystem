@@ -572,9 +572,88 @@ func (h *Handler) SubmitInspection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Automatic QC Transition logic (Draft)
+	// If a response indicates "QC Passed", we could transition the asset to available.
+	// For now, this is a placeholder for future business logic refinement.
+	if len(is.Responses) > 0 {
+		// Example: if is.Responses[0].Value == "true" { ... }
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(is)
+}
+
+// Maintenance Workflow Handlers
+
+func (h *Handler) RecallItemTypeAssets(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/fleet/item-types/")
+	idStr = strings.TrimSuffix(idStr, "/recall")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.RecallAssetsByItemType(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) RepairAsset(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/repair")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.UpdateAssetStatus(r.Context(), id, domain.AssetStatusMaintenance); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) RefurbishAsset(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/refurbish")
+	assetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		BuildSpecID int64 `json:"build_spec_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Move to maintenance and assign latest build spec
+	a, err := h.repo.GetAssetByID(r.Context(), assetID)
+	if err != nil || a == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	a.Status = domain.AssetStatusMaintenance
+	a.CurrentBuildSpecID = &req.BuildSpecID
+	a.ProvisioningStatus = domain.ProvisioningFlashing // Transition back to flashing
+
+	if err := h.repo.UpdateAsset(r.Context(), a); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Build Spec Handlers

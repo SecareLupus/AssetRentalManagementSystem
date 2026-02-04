@@ -12,6 +12,8 @@ const (
 	AssetStatusReserved    AssetStatus = "reserved"
 	AssetStatusMaintenance AssetStatus = "maintenance"
 	AssetStatusRetired     AssetStatus = "retired"
+	AssetStatusDeployed    AssetStatus = "deployed"
+	AssetStatusRecalled    AssetStatus = "recalled"
 )
 
 type ProvisioningStatus string

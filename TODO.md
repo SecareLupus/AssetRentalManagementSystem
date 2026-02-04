@@ -43,10 +43,10 @@ Handle the "Provision" and "Inspect" steps of the lifecycle.
 
 Manage the return, repair, and upgrade circular workflow.
 
-- [ ] Implement "Recall" workflow (bulk transitions from `deployed` to `recalled`).
-- [ ] Add `MaintenanceLog` and `RepairHistory` tracking for assets.
-- [ ] Implement "Refurbish" workflow (Upgrading recalled devices to latest Build Spec).
-- [ ] Track "Test Bits" and final QC approval before re-entering the pool.
+- [x] Implement "Recall" workflow (bulk transitions from `deployed` to `recalled`).
+- [x] Add `MaintenanceLog` and `RepairHistory` tracking for assets.
+- [x] Implement "Refurbish" workflow (Upgrading recalled devices to latest Build Spec).
+- [x] Track "Test Bits" and final QC approval before re-entering the pool.
 
 ## Phase 6: Event System & External Integrations
 
