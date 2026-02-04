@@ -6,19 +6,19 @@ This document outlines the planned development phases for the Rental Management 
 
 Establish the persistence layer and schema definition for upcoming development.
 
-- [ ] Define initial SQL schema (DDL) for core tables (`item_types`, `assets`, `rent_actions`, `rent_action_items`) with Schema.org alignment.
-- [ ] Implement `SqlRepository` in `internal/db` satisfying the `Repository` interface.
-- [ ] Add unit tests for repository methods using a mock or local DB.
-- [ ] Setup database connection logic and configuration in `cmd/server`.
+- [x] Define initial SQL schema (DDL) for core tables (`item_types`, `assets`, `rent_actions`, `rent_action_items`) with Schema.org alignment.
+- [x] Implement `SqlRepository` in `internal/db` satisfying the `Repository` interface.
+- [x] Add unit tests for repository methods using a mock or local DB.
+- [x] Setup database connection logic and configuration in `cmd/server`.
 
 ## Phase 2: Catalog & Inventory API
 
 Build out the management interfaces for equipment types and physical assets.
 
-- [ ] Implement CRUD handlers for `ItemTypes`.
-- [ ] Implement Asset management API (CRUD, status updates).
-- [ ] Add validation for `ItemType` schema requirements.
-- [ ] Implement "Catalog" view (browsable list of active items).
+- [x] Implement CRUD handlers for `ItemTypes`.
+- [x] Implement Asset management API (CRUD, status updates).
+- [x] Add validation for `ItemType` schema requirements.
+- [x] Implement "Catalog" view (browsable list of active items).
 
 ## Phase 3: Reservation Lifecycle
 

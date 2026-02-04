@@ -17,6 +17,24 @@ func NewSqlRepository(db *sql.DB) *SqlRepository {
 	return &SqlRepository{db: db}
 }
 
+// CreateItemType creates a new item type.
+func (r *SqlRepository) CreateItemType(ctx context.Context, it *domain.ItemType) error {
+	now := time.Now()
+	it.CreatedAt = now
+	it.UpdatedAt = now
+
+	query := `INSERT INTO item_types (code, name, kind, is_active, schema_org, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		it.Code, it.Name, it.Kind, it.IsActive, it.SchemaOrg, it.Metadata, it.CreatedAt, it.UpdatedAt,
+	).Scan(&it.ID)
+	if err != nil {
+		return fmt.Errorf("create item_type: %w", err)
+	}
+	return nil
+}
+
 // GetItemTypeByID retrieves an item type by its ID.
 func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.ItemType, error) {
 	query := `SELECT id, code, name, kind, is_active, schema_org, metadata, created_at, updated_at 
@@ -57,6 +75,31 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 	return results, nil
 }
 
+// UpdateItemType updates an existing item type.
+func (r *SqlRepository) UpdateItemType(ctx context.Context, it *domain.ItemType) error {
+	it.UpdatedAt = time.Now()
+	query := `UPDATE item_types SET code = $1, name = $2, kind = $3, is_active = $4, schema_org = $5, metadata = $6, updated_at = $7
+	          WHERE id = $8`
+
+	_, err := r.db.ExecContext(ctx, query,
+		it.Code, it.Name, it.Kind, it.IsActive, it.SchemaOrg, it.Metadata, it.UpdatedAt, it.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update item_type: %w", err)
+	}
+	return nil
+}
+
+// DeleteItemType soft deletes an item type.
+func (r *SqlRepository) DeleteItemType(ctx context.Context, id int64) error {
+	query := `UPDATE item_types SET is_active = FALSE, updated_at = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("delete item_type: %w", err)
+	}
+	return nil
+}
+
 // GetAssetByID retrieves a specific asset by its ID.
 func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error) {
 	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, schema_org, metadata, created_at, updated_at 
@@ -73,6 +116,24 @@ func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Ass
 		return nil, fmt.Errorf("scan asset: %w", err)
 	}
 	return &a, nil
+}
+
+// CreateAsset creates a new asset.
+func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error {
+	now := time.Now()
+	a.CreatedAt = now
+	a.UpdatedAt = now
+
+	query := `INSERT INTO assets (item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, schema_org, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo, a.MeshNodeID, a.WireguardHostname, a.SchemaOrg, a.Metadata, a.CreatedAt, a.UpdatedAt,
+	).Scan(&a.ID)
+	if err != nil {
+		return fmt.Errorf("create asset: %w", err)
+	}
+	return nil
 }
 
 // ListAssetsByItemType returns assets belonging to a specific item type.
@@ -95,6 +156,41 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 		results = append(results, a)
 	}
 	return results, nil
+}
+
+// UpdateAsset updates an existing asset.
+func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error {
+	a.UpdatedAt = time.Now()
+	query := `UPDATE assets SET item_type_id = $1, asset_tag = $2, serial_number = $3, status = $4, location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8, schema_org = $9, metadata = $10, updated_at = $11
+	          WHERE id = $12`
+
+	_, err := r.db.ExecContext(ctx, query,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo, a.MeshNodeID, a.WireguardHostname, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update asset: %w", err)
+	}
+	return nil
+}
+
+// UpdateAssetStatus updates the status of an asset.
+func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error {
+	query := `UPDATE assets SET status = $1, updated_at = $2 WHERE id = $3`
+	_, err := r.db.ExecContext(ctx, query, status, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("update asset status: %w", err)
+	}
+	return nil
+}
+
+// DeleteAsset deletes an asset (permanent).
+func (r *SqlRepository) DeleteAsset(ctx context.Context, id int64) error {
+	query := `DELETE FROM assets WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete asset: %w", err)
+	}
+	return nil
 }
 
 // CreateRentAction creates a new rent action and its associated items.
