@@ -15,9 +15,9 @@ Address critical integration gaps identified during the Milestone II audit to en
 
 Introduce MQTT as a primary event conduit for edge clients and mobile observers.
 
-- [ ] **MQTT Infrastructure**: Add an MQTT Client to the backend (e.g., using `paho.mqtt.golang`).
-- [ ] **Outbox-to-MQTT Mirror**: Implement an MQTT adapter in `OutboxWorker` that echoes every processed event to a structured topic tree (e.g., `rms/events/{event_type}`).
-- [ ] **Health Status Mirroring**: Periodically publish asset health summaries obtained via `RemoteManager` to MQTT.
+- [x] **MQTT Infrastructure**: Add an MQTT Client to the backend (e.g., using `paho.mqtt.golang`).
+- [x] **Outbox-to-MQTT Mirror**: Implement an MQTT adapter in `OutboxWorker` that echoes every processed event to a structured topic tree (e.g., `rms/events/{event_type}`).
+- [x] **Health Status Mirroring**: Periodically publish asset health summaries obtained via `RemoteManager` to MQTT.
 
 ## Phase 14: Fleet Connectivity & Remote Ops
 

@@ -14,17 +14,20 @@ import (
 
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/domain"
+	"github.com/desmond/rental-management-system/internal/mqtt"
 )
 
 type OutboxWorker struct {
-	repo   db.Repository
-	client *http.Client
+	repo       db.Repository
+	httpClient *http.Client
+	mqttClient *mqtt.Client
 }
 
-func NewOutboxWorker(repo db.Repository) *OutboxWorker {
+func NewOutboxWorker(repo db.Repository, mqttClient *mqtt.Client) *OutboxWorker {
 	return &OutboxWorker{
-		repo: repo,
-		client: &http.Client{
+		repo:       repo,
+		mqttClient: mqttClient,
+		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
@@ -86,6 +89,15 @@ func (w *OutboxWorker) DeliverEvent(ctx context.Context, event domain.OutboxEven
 		}
 	}
 
+	// Mirror to MQTT
+	if w.mqttClient != nil {
+		topic := fmt.Sprintf("rms/events/%s", event.Type)
+		payload, _ := json.Marshal(event)
+		if err := w.mqttClient.Publish(topic, 1, false, payload); err != nil {
+			log.Printf("MQTT Publish failed: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -111,7 +123,7 @@ func (w *OutboxWorker) dispatchToWebhook(ctx context.Context, wh domain.WebhookC
 		req.Header.Set("X-RMS-Signature", signature)
 	}
 
-	resp, err := w.client.Do(req)
+	resp, err := w.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

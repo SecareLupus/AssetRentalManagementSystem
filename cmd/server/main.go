@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/desmond/rental-management-system/cmd/server/docs" // Setup for Swagger docs
 	"github.com/desmond/rental-management-system/internal/api"
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/fleet"
+	"github.com/desmond/rental-management-system/internal/mqtt"
+	"github.com/desmond/rental-management-system/internal/worker"
 	_ "github.com/lib/pq"
 )
 
@@ -48,10 +52,32 @@ func main() {
 
 	repo := db.NewSqlRepository(conn)
 
+	// MQTT Setup
+	mqttBroker := os.Getenv("MQTT_BROKER")
+	if mqttBroker == "" {
+		mqttBroker = "tcp://localhost:1883"
+	}
+	mqttClient := mqtt.NewClient(mqtt.Config{
+		BrokerURL: mqttBroker,
+		ClientID:  "rms-server",
+	})
+	if err := mqttClient.Connect(); err != nil {
+		log.Printf("Warning: Failed to connect to MQTT broker: %v", err)
+	} else {
+		defer mqttClient.Disconnect()
+	}
+
 	// Remote Management Setup
 	registry := fleet.NewRemoteRegistry()
 	mockMgr := fleet.NewMockRemoteManager()
 	registry.Register("mock-provider", mockMgr)
+
+	// Workers
+	outboxWorker := worker.NewOutboxWorker(repo, mqttClient)
+	go outboxWorker.Start(context.Background(), 5*time.Second)
+
+	healthWorker := worker.NewHealthWorker(repo, mqttClient, registry)
+	go healthWorker.Start(context.Background(), 1*time.Minute)
 
 	handler := api.NewHandler(repo, registry)
 	router := api.NewRouter(handler)
