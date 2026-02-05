@@ -1,54 +1,42 @@
-# Rental Management System - Milestone II Roadmap
+# Rental Management System - Milestone III Roadmap
 
-Building upon the solid backend foundation, the next phases focus on security, user interaction, and operational intelligence.
+Building on the foundation established in Milestone II, this phase focuses on hardening system integrity, expanding real-time connectivity, and enabling advanced operational flows.
 
-## Phase 7: Identity & Access Management (IAM)
+## Phase 12: M-II Hardening & Security
 
-Secure the API and define user roles to support the varied workflows (Management vs. Technical Operations).
+Address critical integration gaps identified during the Milestone II audit to ensure system production-readiness.
 
-- [x] Define `User` domain model with support for roles (Admin, FleetManager, Technician).
-- [x] Implement `UserRepository` and SQL migrations for user tables.
-- [x] Implement Authentication Service (JWT-based or OIDC integration).
-- [x] Create Authorization Middleware (RBAC) for API endpoints.
-- [x] Add `CreatedBy` / `UpdatedBy` audit trails to existing core entities (`RentAction`, `Asset`, etc.).
+- [ ] **API Security**: Apply `AuthMiddleware` to all `/v1` routes in `router.go`.
+- [ ] **Event Instrumentation**: Update core handlers (`CreateAsset`, `UpdateAsset`, `ApproveRentAction`, etc.) to call `AppendOutboxEvent`.
+- [ ] **Audit Trail Expansion**: Add `CreatedByUserID` and `UpdatedByUserID` to the `ItemType` model and ensure `UpdatedByUserID` is captured across all core entities.
+- [ ] **Webhook Dispatcher**: Implement a generic HTTP dispatcher within the `OutboxWorker` to deliver events to registered `WebhookConfigs`.
 
-## Phase 8: Reference UI & API Visualization
+## Phase 13: MQTT Integration & Real-time Mirroring
 
-Establish the frontend not just as a tool, but as a live reference implementation for the API.
+Introduce MQTT as a primary event conduit for edge clients and mobile observers.
 
-- [x] **OpenAPI Integration**: specific annotations to Go handlers and generate `swagger.json` (using swaggo/swag).
-- [x] **Frontend Foundation**: Initialize React/Vite with a "Developer Mode" context.
-- [x] **API Inspector Component**: A global UI overlay that listens to network requests and displays:
-  - The exact HTTP method and URL used.
-  - The Request Body / Headers sent.
-  - The Response received.
-  - Relevant documentation excerpt for that endpoint.
-- [x] **Dashboard Implementation**: Build the "Commander's Dashboard" utilizing this new Inspector system.
+- [ ] **MQTT Infrastructure**: Add an MQTT Client to the backend (e.g., using `paho.mqtt.golang`).
+- [ ] **Outbox-to-MQTT Mirror**: Implement an MQTT adapter in `OutboxWorker` that echoes every processed event to a structured topic tree (e.g., `rms/events/{event_type}`).
+- [ ] **Health Status Mirroring**: Periodically publish asset health summaries obtained via `RemoteManager` to MQTT.
 
-## Phase 9: Catalog & Reservation (Self-Documenting)
+## Phase 14: Fleet Connectivity & Remote Ops
 
-Enable users to browse inventory and request equipment (The "Rent" core loop) with full transparency.
+Extend the ability to interact with and verify remote hardware.
 
-- [x] **Catalog View**: Grid/List view of `ItemTypes` with availability status.
-- [x] **Asset Details**: Rich view of individual assets (specs, history, maintenance log).
-- [x] **Reservation Wizard**: Multi-step form to create a `RentAction` (Select dates, items, logistics).
-- [x] **Approval Workflow UI**: Interface for Managers to review, approve, or reject requests.
-- [x] **Integration Points**: Ensure every button/action in these views triggers the API Inspector log.
+- [ ] **RemoteManager Implementation**: Implement the first concrete provider (e.g., a MeshCentral or SSH-based agent).
+- [ ] **Real-time Dashboard Metrics**: Integrate MQTT or long-polling into the Dashboard to show live device health without page refreshes.
+- [ ] **Power Action Verification**: Ensure `ApplyPowerAction` results are captured as events and reflected in the asset history.
 
-## Phase 10: Fleet Services & Maintenance Station
+## Phase 15: Advanced Lifecycle & Logistics
 
-Tools for the Technician persona to manage the physical lifecycle of devices.
+Optimizing the flow of assets through the facility and field.
 
-- [x] **Tech Dashboard**: View of "To-Do" items (Inspections due, Provisioning tasks, Returns to process).
-- [x] **Inspection Runner**: UI to render the Dynamic Inspection Forms (from Phase 7) and capture results/photos.
-- [x] **Provisioning Interface**: Step-by-step wizard for `ProvisionAction` (setting Test Bits, verifying firmware).
-- [x] **Check-in/Check-out Kiosk**: Simplified view for scanning assets in and out of the warehouse.
+- [ ] **Asset Reclamation UI**: Dedicated interface for bulk-recalling assets (e.g., "End of Project" wizard).
+- [ ] **Inventory Reconciliation**: A "Scan & Compare" tool for the Warehouse Kiosk to verify database records against physical inventory.
+- [ ] **Maintenance Prediction refinement**: Tuning the Intelligence Engine with more granular usage metrics.
 
-## Phase 11: Planning & Intelligence Engine
+## Future Plans (Backlog)
 
-Leverage the data to provide predictive insights and reporting.
-
-- [x] **Availability Heatmap**: Visual calendar view showing projected equipment utilization and gaps.
-- [x] **Shortage Alerts**: Proactive notifications when overlapping reservations exceed physical inventory.
-- [x] **"What-If" Planning Mode**: Ability to draft a large `RentAction` and see its impact on future fleet health without committing.
-- [x] **Maintenance Forecasting**: Predicting when assets will need inspection based on usage cycles captured in `Metadata`.ion.
+- **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
+- **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
+- **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.
