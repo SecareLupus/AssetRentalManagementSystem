@@ -96,14 +96,35 @@ const AssetDetails = () => {
 
                 <aside>
                     <div className="glass" style={{ padding: '1.5rem', borderRadius: '1rem', marginBottom: '1.5rem' }}>
-                        <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Fleet Controls</h4>
+                        <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Asset Actions</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <button className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Wrench size={16} /> Manual Inspection
+                            <button onClick={() => alert("Inspection Templates not yet configured in backend.")} className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <ShieldCheck size={16} /> Manual Inspection
                             </button>
-                            <button className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Activity size={16} /> Run Diagnostics
-                            </button>
+                            
+                            {asset.status !== 'maintenance' ? (
+                                <button onClick={async () => {
+                                    if(!window.confirm("Mark this asset for repair? It will be unavailable.")) return;
+                                    try {
+                                        await axios.post(`/v1/inventory/assets/${id}/repair`);
+                                        setAsset({...asset, status: 'maintenance'});
+                                        alert("Asset marked for repair.");
+                                    } catch(e) { alert("Action failed: " + e.message); }
+                                }} className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--warning)' }}>
+                                    <Wrench size={16} /> Mark for Repair
+                                </button>
+                            ) : (
+                                <button onClick={async () => {
+                                    if(!window.confirm("Mark this asset as Available?")) return;
+                                    try {
+                                        await axios.patch(`/v1/inventory/assets/${id}/status`, { status: "available" });
+                                        setAsset({...asset, status: 'available'});
+                                        alert("Asset marked as Available.");
+                                    } catch(e) { alert("Action failed: " + e.message); }
+                                }} className="btn-primary" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                                    <Activity size={16} /> Return to Service
+                                </button>
+                            )}
                         </div>
                     </div>
                 </aside>

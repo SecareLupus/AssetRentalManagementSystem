@@ -10,7 +10,23 @@
   --success: #10b981;
   --error: #ef4444;
   --warning: #f59e0b;
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --font-family: "Inter", system-ui, -apple-system, sans-serif;
+
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 64px;
+  --header-height: 4rem;
 }
 
 * {
@@ -30,15 +46,57 @@ body {
 .app-container {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
 }
 
 /* Glassmorphism utility */
-.glass {
+.glass,
+.glass-card {
   background: rgba(30, 41, 59, 0.7);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+.page-header {
+  margin-bottom: var(--spacing-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.2;
+}
+
+.page-header p {
+  color: var(--text-muted);
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 50; /* Ensure above content when scrolling if needed */
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
 }
 
 button {
@@ -52,11 +110,29 @@ button {
   background: var(--primary);
   color: white;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
 }

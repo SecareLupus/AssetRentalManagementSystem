@@ -1,30 +1,74 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Box, ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info } from 'lucide-react';
+import { ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info, Plus } from 'lucide-react';
+import { GlassCard, PageHeader, StatusBadge } from '../components/Shared';
 
 const ItemTypeDetails = () => {
     const { id } = useParams();
     const [item, setItem] = useState(null);
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // Modals
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+
+    // Form States
+    const [editForm, setEditForm] = useState({});
+    const [assetForm, setAssetForm] = useState({
+        asset_tag: '',
+        serial_number: '',
+        location: '',
+        status: 'available'
+    });
+
+    const fetchData = async () => {
+        try {
+            const itemRes = await axios.get(`/v1/catalog/item-types/${id}`);
+            setItem(itemRes.data);
+            setEditForm(itemRes.data); // Initialize edit form
+
+            const assetsRes = await axios.get(`/v1/inventory/assets?item_type_id=${id}`);
+            setAssets(assetsRes.data || []);
+        } catch (error) {
+            console.error("Error fetching item details", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const itemRes = await axios.get(`/v1/fleet/item-types/${id}`);
-                setItem(itemRes.data);
-
-                const assetsRes = await axios.get(`/v1/inventory/assets?item_type_id=${id}`);
-                setAssets(assetsRes.data || []);
-            } catch (error) {
-                console.error("Error fetching item details", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
     }, [id]);
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.put(`/v1/catalog/item-types/${id}`, editForm);
+            alert("Item Type updated!");
+            setShowEditModal(false);
+            fetchData();
+        } catch (error) {
+            alert("Update failed: " + (error.response?.data || error.message));
+        }
+    };
+
+    const handleAddAsset = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post('/v1/inventory/assets', {
+                ...assetForm,
+                item_type_id: parseInt(id)
+            });
+            alert("Asset created!");
+            setShowAddAssetModal(false);
+            setAssetForm({ asset_tag: '', serial_number: '', location: '', status: 'available' });
+            fetchData();
+        } catch (error) {
+            alert("Asset creation failed: " + (error.response?.data || error.message));
+        }
+    };
 
     if (loading) return <div style={{ padding: '4rem', textAlign: 'center' }}>Loading details...</div>;
     if (!item) return <div style={{ padding: '4rem', textAlign: 'center' }}>Item not found.</div>;
@@ -38,17 +82,22 @@ const ItemTypeDetails = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
                 {/* Main Content */}
                 <div>
-                    <header style={{ marginBottom: '2rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                            <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>{item.name}</h1>
-                            <span style={{ background: 'var(--primary)20', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '2rem', fontSize: '0.875rem', fontWeight: 600 }}>
-                                {item.kind}
-                            </span>
-                        </div>
-                        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}>Code: <code>{item.code}</code></p>
-                    </header>
+                    <PageHeader 
+                        title={item.name} 
+                        subtitle={<span>Code: <code>{item.code}</code></span>}
+                        actions={
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <span style={{ background: 'var(--primary)20', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '2rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                                    {item.kind}
+                                </span>
+                                <button onClick={() => setShowEditModal(true)} className="glass" style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem' }}>
+                                    Edit
+                                </button>
+                            </div>
+                        }
+                    />
 
-                    <section className="glass" style={{ padding: '2rem', borderRadius: '1rem', marginBottom: '2rem' }}>
+                    <GlassCard style={{ marginBottom: '2rem' }}>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Shield size={20} color="var(--primary)" /> Supported Features
                         </h2>
@@ -58,10 +107,16 @@ const ItemTypeDetails = () => {
                             <FeatureItem icon={History} label="Build Spec Tracking" active={item.supported_features?.build_spec_tracking} />
                             <FeatureItem icon={Wifi} label="Telemetry" active={item.supported_features?.telemetry} />
                         </div>
-                    </section>
+                    </GlassCard>
 
-                    <section className="glass" style={{ padding: '2rem', borderRadius: '1rem' }}>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem' }}>Specific Assets ({assets.length})</h2>
+                    <GlassCard>
+                        <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Specific Assets ({assets.length})</h2>
+                            <button onClick={() => setShowAddAssetModal(true)} className="btn-primary" style={{ fontSize: '0.875rem', padding: '0.4rem 0.75rem' }}>
+                                <Plus size={16} /> Add Asset
+                            </button>
+                        </div>
+                        
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {assets.map(asset => (
                                 <div key={asset.id} style={{
@@ -87,18 +142,18 @@ const ItemTypeDetails = () => {
                             ))}
                             {assets.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>No individual assets found for this type.</p>}
                         </div>
-                    </section>
+                    </GlassCard>
                 </div>
 
                 {/* Sidebar / Quick Actions */}
                 <aside>
-                    <div className="glass" style={{ padding: '1.5rem', borderRadius: '1rem', position: 'sticky', top: '2rem' }}>
+                    <GlassCard style={{ position: 'sticky', top: '2rem' }}>
                         <h3 style={{ fontWeight: 700, marginBottom: '1.5rem' }}>Quick Reserve</h3>
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Quantity</label>
                             <input type="number" defaultValue="1" style={{ width: '100%', padding: '0.75rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', color: 'var(--text)' }} />
                         </div>
-                        <button className="btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>Request Reservation</button>
+                        <button className="btn-primary" style={{ width: '100%', marginBottom: '1rem', justifyContent: 'center' }}>Request Reservation</button>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                             Expected availability: <span style={{ color: 'var(--success)' }}>Immediate</span>
                         </p>
@@ -111,9 +166,55 @@ const ItemTypeDetails = () => {
                                 This item requires a technician inspection before it can be deployed to a client site.
                             </p>
                         </div>
-                    </div>
+                    </GlassCard>
                 </aside>
             </div>
+
+            {/* Edit Modal */}
+            {showEditModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                    <GlassCard style={{ width: '500px', padding: '2rem' }}>
+                        <h2 style={{ marginBottom: '1.5rem' }}>Edit Item Type</h2>
+                        <form onSubmit={handleEditSubmit}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name</label>
+                                <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <button type="button" onClick={() => setShowEditModal(false)} className="glass" style={{ padding: '0.5rem 1rem' }}>Cancel</button>
+                                <button type="submit" className="btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </GlassCard>
+                </div>
+            )}
+
+            {/* Add Asset Modal */}
+            {showAddAssetModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                    <GlassCard style={{ width: '500px', padding: '2rem' }}>
+                        <h2 style={{ marginBottom: '1.5rem' }}>Add New Asset</h2>
+                        <form onSubmit={handleAddAsset}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Asset Tag</label>
+                                <input value={assetForm.asset_tag} onChange={e => setAssetForm({...assetForm, asset_tag: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Serial Number</label>
+                                <input value={assetForm.serial_number} onChange={e => setAssetForm({...assetForm, serial_number: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Location</label>
+                                <input value={assetForm.location} onChange={e => setAssetForm({...assetForm, location: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                            </div>
+                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <button type="button" onClick={() => setShowAddAssetModal(false)} className="glass" style={{ padding: '0.5rem 1rem' }}>Cancel</button>
+                                <button type="submit" className="btn-primary">Create Asset</button>
+                            </div>
+                        </form>
+                    </GlassCard>
+                </div>
+            )}
         </div>
     );
 };
@@ -126,22 +227,5 @@ const FeatureItem = ({ icon: Icon, label, active }) => (
         <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{label}</span>
     </div>
 );
-
-const StatusBadge = ({ status }) => {
-    const colors = {
-        available: 'var(--success)',
-        reserved: 'var(--warning)',
-        maintenance: 'var(--error)',
-        deployed: 'var(--primary)'
-    };
-    const color = colors[status] || 'var(--text-muted)';
-
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color }} />
-            <span style={{ fontSize: '0.75rem', textTransform: 'capitalize', fontWeight: 600, color }}>{status}</span>
-        </div>
-    );
-};
 
 export default ItemTypeDetails;

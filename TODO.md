@@ -1,42 +1,30 @@
-# Rental Management System - Milestone III Roadmap
+# Rental Management System - Milestone IV Roadmap
 
-Building on the foundation established in Milestone II, this phase focuses on hardening system integrity, expanding real-time connectivity, and enabling advanced operational flows.
+This milestone focuses on refining the user experience and preparing the system for advanced operational flows.
 
-## Phase 12: M-II Hardening & Security
+## Phase 16: UX Refinements & Foundations
 
-Address critical integration gaps identified during the Milestone II audit to ensure system production-readiness.
+Addressing immediate usability issues and establishing a better foundation for the UI.
 
-- [x] **API Security**: Apply `AuthMiddleware` to all `/v1` routes in `router.go`.
-- [x] **Event Instrumentation**: Update core handlers (`CreateAsset`, `UpdateAsset`, `ApproveRentAction`, etc.) to call `AppendOutboxEvent`.
-- [x] **Audit Trail Expansion**: Add `CreatedByUserID` and `UpdatedByUserID` to the `ItemType` model and ensure `UpdatedByUserID` is captured across all core entities.
-- [x] **Webhook Dispatcher**: Implement a generic HTTP dispatcher within the `OutboxWorker` to deliver events to registered `WebhookConfigs`.
+- [x] **Content Pane Z-Layering**: Fix issues where content elements overlap incorrectly.
+- [x] **Menu Pane Interaction**: Fix menu overlapping content and add collapsibility.
+- [x] **Item Creation**: Add functionality to create new items (UI Placeholder).
+- [x] **Reservation UX**: Move "Create Reservation" to the reservations page.
+- [x] **General Polish**: Refactored styles, centralized CSS variables, and created shared components.
 
-## Phase 13: MQTT Integration & Real-time Mirroring
+## Phase 17: Frontend API Full Integration
 
-Introduce MQTT as a primary event conduit for edge clients and mobile observers.
+Goal: Achieve 100% API coverage in the frontend by hooking up all backend calls to their respective UI components.
 
-- [x] **MQTT Infrastructure**: Add an MQTT Client to the backend (e.g., using `paho.mqtt.golang`).
-- [x] **Outbox-to-MQTT Mirror**: Implement an MQTT adapter in `OutboxWorker` that echoes every processed event to a structured topic tree (e.g., `rms/events/{event_type}`).
-- [x] **Health Status Mirroring**: Periodically publish asset health summaries obtained via `RemoteManager` to MQTT.
+- [x] **API Audit**: Map all backend endpoints to frontend usage; identify gaps.
+- [x] **Catalog Integration**: Implement real `POST` / `PUT` / `DELETE` for Item Types.
+- [x] **Inventory Integration**: Implement specific Asset creation, editing, and status management.
+- [x] **Reservation Lifecycle**: Implement full flow (Submit -> Approve/Reject -> Provision -> Return).
+- [x] **Error Handling**: Standardize API error handling and loading states across the app.
 
-## Phase 14: Fleet Connectivity & Remote Ops
+## Future Plans (Carried over from Milestone III)
 
-Extend the ability to interact with and verify remote hardware.
-
-- [x] **RemoteManager Implementation**: Implement the first concrete provider (e.g., a MeshCentral or SSH-based agent). -> _Refined to direct management linkage and auditing._
-- [x] **Real-time Dashboard Metrics**: Integrate MQTT or long-polling into the Dashboard to show live device health without page refreshes.
-- [x] **Power Action Verification**: Ensure `ApplyPowerAction` results are captured as events and reflected in the asset history.
-
-## Phase 15: Advanced Lifecycle & Logistics
-
-Optimizing the flow of assets through the facility and field.
-
-- [x] **Asset Reclamation API**: Backend support for bulk-recalling assets.
-- [x] **Inventory Reconciliation**: A "Scan & Compare" endpoint for the Warehouse Kiosk to verify database records against physical inventory.
-- [x] **Maintenance Prediction refinement**: Tuning the Intelligence Engine with granular usage metrics and weighted forecasting.
-
-## Future Plans (Backlog)
-
-- **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
-- **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
-- **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.
+- [ ] **Remote Management Interface**: Implement a pluggable interface for generic service integration. Connect frontend to Real-time Device controls.
+- [ ] **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
+- [ ] **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
+- [ ] **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.
