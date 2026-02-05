@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Cpu, Wifi, Activity, History, Tool, ShieldCheck, MapPin, Gauge } from 'lucide-react';
+import { ArrowLeft, Cpu, Wifi, Activity, History, Wrench, ShieldCheck, MapPin, Gauge } from 'lucide-react';
 
 const AssetDetails = () => {
     const { id } = useParams();
@@ -99,7 +99,7 @@ const AssetDetails = () => {
                         <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Fleet Controls</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <button className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Tool size={16} /> Manual Inspection
+                                <Wrench size={16} /> Manual Inspection
                             </button>
                             <button className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <Activity size={16} /> Run Diagnostics

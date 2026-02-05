@@ -1,14 +1,71 @@
 package api
 
 import (
+	"embed"
+	"io/fs"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
+//go:embed web/dist/*
+var uiFS embed.FS
+
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.ResponseWriter.WriteHeader(status)
+}
+
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{w, http.StatusOK}
+		next.ServeHTTP(rw, r)
+		log.Printf("[%s] %s -> %d (%s)", r.Method, r.URL.Path, rw.status, time.Since(start))
+	})
+}
+
 func NewRouter(h *Handler) http.Handler {
 	mux := http.NewServeMux()
+
+	// UI (Embedded)
+	// We handle the root and static files here.
+	distFS, err := fs.Sub(uiFS, "web/dist")
+	if err != nil {
+		log.Printf("Warning: failed to sub uiFS: %v. UI will be unavailable.", err)
+	}
+	uiServer := http.FileServer(http.FS(distFS))
+
+	// System & UI
+	mux.HandleFunc("/v1/health", h.Health)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// Let API and Swagger through
+		if strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/swagger/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Serve static files if they exist in the embedded FS
+		_, err := distFS.Open(strings.TrimPrefix(path, "/"))
+		if err == nil || path == "/" {
+			uiServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Fallback to index.html for SPA routing
+		r.URL.Path = "/"
+		uiServer.ServeHTTP(w, r)
+	})
 
 	// Auth (Public)
 	mux.HandleFunc("/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
@@ -154,24 +211,6 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/v1/fleet/assets/") {
-			if strings.HasSuffix(r.URL.Path, "/remote-status") {
-				if r.Method == http.MethodGet {
-					h.GetAssetRemoteStatus(w, r)
-					return
-				}
-				w.WriteHeader(http.StatusMethodNotAllowed)
-				return
-			}
-			if strings.HasSuffix(r.URL.Path, "/remote-power") {
-				if r.Method == http.MethodPost {
-					h.ApplyAssetRemotePower(w, r)
-					return
-				}
-				w.WriteHeader(http.StatusMethodNotAllowed)
-				return
-			}
-		}
 		if strings.HasSuffix(r.URL.Path, "/required-inspections") {
 			if r.Method == http.MethodGet {
 				h.GetRequiredInspections(w, r)
@@ -203,10 +242,30 @@ func NewRouter(h *Handler) http.Handler {
 		case http.MethodPut:
 			h.UpdateAsset(w, r)
 		case http.MethodDelete:
-			h.DeleteItemType(w, r)
+			h.DeleteAsset(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
+	})
+
+	mux.HandleFunc("/v1/fleet/assets/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/remote-status") {
+			if r.Method == http.MethodGet {
+				h.GetAssetRemoteStatus(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/remote-power") {
+			if r.Method == http.MethodPost {
+				h.ApplyAssetRemotePower(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 	})
 
 	// Rent Actions
@@ -272,22 +331,25 @@ func NewRouter(h *Handler) http.Handler {
 	// Swagger UI (Public)
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
+	// Wrap entire mux in LoggingMiddleware
+	handler := LoggingMiddleware(mux)
+
 	// Apply AuthMiddleware to all /v1 routes EXCEPT public ones
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		// Skip auth for login, register, and swagger
-		if strings.HasPrefix(path, "/v1/auth/") || strings.HasPrefix(path, "/swagger/") {
-			mux.ServeHTTP(w, r)
+		// Skip auth for health, login, register, and swagger
+		if path == "/v1/health" || strings.HasPrefix(path, "/v1/auth/") || strings.HasPrefix(path, "/swagger/") || path == "/" {
+			handler.ServeHTTP(w, r)
 			return
 		}
 
 		// Require auth for all other /v1 routes
 		if strings.HasPrefix(path, "/v1/") {
-			h.AuthMiddleware(mux).ServeHTTP(w, r)
+			h.AuthMiddleware(handler).ServeHTTP(w, r)
 			return
 		}
 
 		// Fallback for any other routes
-		mux.ServeHTTP(w, r)
+		handler.ServeHTTP(w, r)
 	})
 }

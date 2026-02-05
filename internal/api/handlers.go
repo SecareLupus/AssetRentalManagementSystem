@@ -25,6 +25,19 @@ func NewHandler(repo db.Repository, remoteRegistry *fleet.RemoteRegistry) *Handl
 	}
 }
 
+// Health returns a simple 200 OK status.
+// @Summary Health Check
+// @Description Returns the health status of the service.
+// @Tags System
+// @Produce json
+// @Success 200 {string} string "ok"
+// @Router /health [get]
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
 func (h *Handler) getUserIDFromContext(r *http.Request) *int64 {
 	claims, ok := r.Context().Value(UserContextKey).(map[string]interface{}) // JWT usually unmarshals to map[string]interface{} or jwt.MapClaims
 	if !ok {

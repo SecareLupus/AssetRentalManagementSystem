@@ -14,7 +14,7 @@ import WarehouseKiosk from './pages/WarehouseKiosk';
 import IntelligenceOverview from './pages/IntelligenceOverview';
 import AvailabilityHeatmap from './pages/AvailabilityHeatmap';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Tool, Scan, Brain } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain } from 'lucide-react';
 import './App.css';
 
 const DevToggle = () => {
@@ -110,7 +110,7 @@ function AppContent() {
 
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
-          <NavLink to="/tech" icon={Tool} label="Maintenance" />
+          <NavLink to="/tech" icon={Wrench} label="Maintenance" />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" />
           <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" />
 

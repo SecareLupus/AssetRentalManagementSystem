@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Tool, Activity, Zap, ClipboardCheck, ArrowLeftRight, Clock, ChevronRight, AlertCircle, Box } from 'lucide-react';
+import { Wrench, Activity, Zap, ClipboardCheck, ArrowLeftRight, Clock, ChevronRight, AlertCircle, Box } from 'lucide-react';
 
 const TechDashboard = () => {
     const [tasks, setTasks] = useState({
