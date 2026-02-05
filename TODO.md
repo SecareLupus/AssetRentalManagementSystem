@@ -6,10 +6,10 @@ Building on the foundation established in Milestone II, this phase focuses on ha
 
 Address critical integration gaps identified during the Milestone II audit to ensure system production-readiness.
 
-- [ ] **API Security**: Apply `AuthMiddleware` to all `/v1` routes in `router.go`.
-- [ ] **Event Instrumentation**: Update core handlers (`CreateAsset`, `UpdateAsset`, `ApproveRentAction`, etc.) to call `AppendOutboxEvent`.
-- [ ] **Audit Trail Expansion**: Add `CreatedByUserID` and `UpdatedByUserID` to the `ItemType` model and ensure `UpdatedByUserID` is captured across all core entities.
-- [ ] **Webhook Dispatcher**: Implement a generic HTTP dispatcher within the `OutboxWorker` to deliver events to registered `WebhookConfigs`.
+- [x] **API Security**: Apply `AuthMiddleware` to all `/v1` routes in `router.go`.
+- [x] **Event Instrumentation**: Update core handlers (`CreateAsset`, `UpdateAsset`, `ApproveRentAction`, etc.) to call `AppendOutboxEvent`.
+- [x] **Audit Trail Expansion**: Add `CreatedByUserID` and `UpdatedByUserID` to the `ItemType` model and ensure `UpdatedByUserID` is captured across all core entities.
+- [x] **Webhook Dispatcher**: Implement a generic HTTP dispatcher within the `OutboxWorker` to deliver events to registered `WebhookConfigs`.
 
 ## Phase 13: MQTT Integration & Real-time Mirroring
 

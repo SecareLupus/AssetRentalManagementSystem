@@ -92,10 +92,20 @@ func (h *Handler) CreateItemType(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	it.CreatedByUserID = h.getUserIDFromContext(r)
+	it.UpdatedByUserID = it.CreatedByUserID
+
 	if err := h.repo.CreateItemType(r.Context(), &it); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(it)
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventItemTypeCreated,
+		Payload: payload,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -143,6 +153,8 @@ func (h *Handler) UpdateItemType(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	it.UpdatedByUserID = h.getUserIDFromContext(r)
 
 	if err := h.repo.UpdateItemType(r.Context(), &it); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -223,6 +235,13 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(a)
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventAssetCreated,
+		Payload: payload,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -310,6 +329,8 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.UpdatedByUserID = h.getUserIDFromContext(r)
+
 	// Fetch ItemType to check features before saving
 	it, err := h.repo.GetItemTypeByID(r.Context(), a.ItemTypeID)
 	if err == nil && it != nil {
@@ -330,6 +351,13 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(a)
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventAssetTransitioned,
+		Payload: payload,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(a)
@@ -364,13 +392,18 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID := h.getUserIDFromContext(r)
 	if err := h.repo.UpdateAssetStatus(r.Context(), id, req.Status); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Append Outbox Event
-	payload, _ := json.Marshal(map[string]interface{}{"asset_id": id, "new_status": req.Status})
+	payload, _ := json.Marshal(map[string]interface{}{
+		"asset_id":    id,
+		"new_status":  req.Status,
+		"modified_by": userID,
+	})
 	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
 		Type:    domain.EventAssetTransitioned,
 		Payload: payload,
@@ -484,6 +517,13 @@ func (h *Handler) CreateRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Append Outbox Event
+	payload, _ := json.Marshal(ra)
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventRentalSubmitted,
+		Payload: payload,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(ra)
@@ -560,6 +600,13 @@ func (h *Handler) SubmitRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Append Outbox Event
+	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status})
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventRentalSubmitted,
+		Payload: payload,
+	})
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -613,10 +660,19 @@ func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ra.UpdatedByUserID = h.getUserIDFromContext(r)
+
 	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "approved_at", *ra.ApprovedAt); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status, "approved_at": ra.ApprovedAt})
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventRentalApproved,
+		Payload: payload,
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -702,6 +758,13 @@ func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Append Outbox Event
+	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status, "cancelled_at": ra.CancelledAt})
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventAssetTransitioned, // We could define a more specific event if needed
+		Payload: payload,
+	})
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -769,6 +832,13 @@ func (h *Handler) SubmitInspection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Append Outbox Event
+	payload, _ := json.Marshal(is)
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventInspectionSubmitted,
+		Payload: payload,
+	})
 
 	// Automatic QC Transition logic (Draft)
 	// If a response indicates "QC Passed", we could transition the asset to available.

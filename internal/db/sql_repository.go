@@ -24,12 +24,12 @@ func (r *SqlRepository) CreateItemType(ctx context.Context, it *domain.ItemType)
 	it.CreatedAt = now
 	it.UpdatedAt = now
 
-	query := `INSERT INTO item_types (code, name, kind, is_active, supported_features, schema_org, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	query := `INSERT INTO item_types (code, name, kind, is_active, supported_features, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 
 	featuresJSON, _ := json.Marshal(it.SupportedFeatures)
 	err := r.db.QueryRowContext(ctx, query,
-		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.SchemaOrg, it.Metadata, it.CreatedAt, it.UpdatedAt,
+		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.CreatedByUserID, it.UpdatedByUserID, it.SchemaOrg, it.Metadata, it.CreatedAt, it.UpdatedAt,
 	).Scan(&it.ID)
 	if err != nil {
 		return fmt.Errorf("create item_type: %w", err)
@@ -39,13 +39,13 @@ func (r *SqlRepository) CreateItemType(ctx context.Context, it *domain.ItemType)
 
 // GetItemTypeByID retrieves an item type by its ID.
 func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.ItemType, error) {
-	query := `SELECT id, code, name, kind, is_active, supported_features, schema_org, metadata, created_at, updated_at 
+	query := `SELECT id, code, name, kind, is_active, supported_features, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM item_types WHERE id = $1`
 
 	var it domain.ItemType
 	var featuresJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt,
+		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt,
 	)
 	if err == nil {
 		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
@@ -61,7 +61,7 @@ func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.
 
 // ListItemTypes returns all active item types.
 func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, error) {
-	query := `SELECT id, code, name, kind, is_active, schema_org, metadata, created_at, updated_at 
+	query := `SELECT id, code, name, kind, is_active, supported_features, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM item_types WHERE is_active = TRUE`
 
 	rows, err := r.db.QueryContext(ctx, query)
@@ -74,7 +74,7 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 	for rows.Next() {
 		var it domain.ItemType
 		var featuresJSON []byte
-		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan item_type: %w", err)
 		}
 		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
@@ -86,12 +86,12 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 // UpdateItemType updates an existing item type.
 func (r *SqlRepository) UpdateItemType(ctx context.Context, it *domain.ItemType) error {
 	it.UpdatedAt = time.Now()
-	query := `UPDATE item_types SET code = $1, name = $2, kind = $3, is_active = $4, supported_features = $5, schema_org = $6, metadata = $7, updated_at = $8
-	          WHERE id = $9`
+	query := `UPDATE item_types SET code = $1, name = $2, kind = $3, is_active = $4, supported_features = $5, updated_by_user_id = $6, schema_org = $7, metadata = $8, updated_at = $9
+	          WHERE id = $10`
 
 	featuresJSON, _ := json.Marshal(it.SupportedFeatures)
 	_, err := r.db.ExecContext(ctx, query,
-		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.SchemaOrg, it.Metadata, it.UpdatedAt, it.ID,
+		it.Code, it.Name, it.Kind, it.IsActive, featuresJSON, it.UpdatedByUserID, it.SchemaOrg, it.Metadata, it.UpdatedAt, it.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update item_type: %w", err)
@@ -113,14 +113,14 @@ func (r *SqlRepository) DeleteItemType(ctx context.Context, id int64) error {
 func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error) {
 	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 schema_org, metadata, created_at, updated_at 
+	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE id = $1`
 
 	var a domain.Asset
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
 		&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-		&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -160,7 +160,7 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) {
 	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 schema_org, metadata, created_at, updated_at 
+	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets`
 
 	rows, err := r.db.QueryContext(ctx, query)
@@ -175,7 +175,7 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 		if err := rows.Scan(
 			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
@@ -188,7 +188,7 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
 	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 schema_org, metadata, created_at, updated_at 
+	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE item_type_id = $1`
 
 	rows, err := r.db.QueryContext(ctx, query, itemTypeID)
@@ -203,7 +203,7 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 		if err := rows.Scan(
 			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
@@ -220,14 +220,14 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 		location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8,
 		build_spec_version = $9, provisioning_status = $10, firmware_version = $11,
 		hostname = $12, remote_management_id = $13, current_build_spec_id = $14, last_inspection_at = $15,
-		schema_org = $16, metadata = $17, updated_at = $18
-		WHERE id = $19`
+		updated_by_user_id = $16, schema_org = $17, metadata = $18, updated_at = $19
+		WHERE id = $20`
 
 	_, err := r.db.ExecContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
 		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
-		a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
+		a.UpdatedByUserID, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update asset: %w", err)
@@ -281,14 +281,14 @@ func (r *SqlRepository) CreateRentAction(ctx context.Context, ra *domain.RentAct
 	query := `INSERT INTO rent_actions (
 		requester_ref, created_by_ref, approved_by_ref, status, priority, 
 		start_time, end_time, is_asap, description, external_source, 
-		external_ref, schema_org, metadata, created_by_user_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		external_ref, schema_org, metadata, created_by_user_id, updated_by_user_id, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	RETURNING id`
 
 	err = tx.QueryRowContext(ctx, query,
 		ra.RequesterRef, ra.CreatedByRef, ra.ApprovedByRef, ra.Status, ra.Priority,
 		ra.StartTime, ra.EndTime, ra.IsASAP, ra.Description, ra.ExternalSource,
-		ra.ExternalRef, ra.SchemaOrg, ra.Metadata, ra.CreatedByUserID, ra.CreatedAt, ra.UpdatedAt,
+		ra.ExternalRef, ra.SchemaOrg, ra.Metadata, ra.CreatedByUserID, ra.UpdatedByUserID, ra.CreatedAt, ra.UpdatedAt,
 	).Scan(&ra.ID)
 	if err != nil {
 		return fmt.Errorf("insert rent_action: %w", err)
@@ -835,6 +835,27 @@ func (r *SqlRepository) MarkEventFailed(ctx context.Context, id int64, errMessag
 	query := `UPDATE outbox_events SET status = 'failed', error_message = $1, retry_count = retry_count + 1 WHERE id = $2`
 	_, err := r.db.ExecContext(ctx, query, errMessage, id)
 	return err
+}
+
+func (r *SqlRepository) ListWebhooks(ctx context.Context) ([]domain.WebhookConfig, error) {
+	query := `SELECT id, url, secret, enabled_events, is_active, created_at, updated_at FROM webhooks WHERE is_active = TRUE`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.WebhookConfig
+	for rows.Next() {
+		var w domain.WebhookConfig
+		var eventsJSON []byte
+		if err := rows.Scan(&w.ID, &w.URL, &w.Secret, &eventsJSON, &w.IsActive, &w.CreatedAt, &w.UpdatedAt); err != nil {
+			return nil, err
+		}
+		json.Unmarshal(eventsJSON, &w.Events)
+		results = append(results, w)
+	}
+	return results, nil
 }
 
 // GetAvailabilityTimeline returns availability data points over a range of dates.

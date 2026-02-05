@@ -22,6 +22,7 @@ type RentAction struct {
 	RequesterRef    string           `json:"requester_ref"`
 	CreatedByRef    string           `json:"created_by_ref"`               // Legacy ref or username
 	CreatedByUserID *int64           `json:"created_by_user_id,omitempty"` // Audit trail
+	UpdatedByUserID *int64           `json:"updated_by_user_id,omitempty"`
 	ApprovedByRef   *string          `json:"approved_by_ref,omitempty"`
 	Status          RentActionStatus `json:"status"`
 	Priority        string           `json:"priority"`

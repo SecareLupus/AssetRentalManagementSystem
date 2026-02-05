@@ -29,6 +29,8 @@ type ItemType struct {
 	Kind              ItemKind          `json:"kind"` // Maps to schema.org/category
 	IsActive          bool              `json:"is_active"`
 	SupportedFeatures LifecycleFeatures `json:"supported_features"`
+	CreatedByUserID   *int64            `json:"created_by_user_id,omitempty"`
+	UpdatedByUserID   *int64            `json:"updated_by_user_id,omitempty"`
 	SchemaOrg         json.RawMessage   `json:"schema_org,omitempty" swaggertype:"string" example:"{}"`
 	Metadata          json.RawMessage   `json:"metadata,omitempty" swaggertype:"string" example:"{}"`
 	CreatedAt         time.Time         `json:"created_at"`

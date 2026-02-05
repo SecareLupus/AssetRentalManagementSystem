@@ -188,6 +188,7 @@ func TestHandler_CreateItemType(t *testing.T) {
 	body, _ := json.Marshal(it)
 
 	repo.On("CreateItemType", mock.Anything, mock.AnythingOfType("*domain.ItemType")).Return(nil)
+	repo.On("AppendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil) // Added
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/catalog/item-types", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
@@ -249,6 +250,7 @@ func TestHandler_ApproveRentAction(t *testing.T) {
 	repo.On("GetRentActionByID", mock.Anything, int64(1)).Return(ra, nil)
 	repo.On("GetAvailableQuantity", mock.Anything, int64(10), mock.Anything, mock.Anything).Return(5, nil)
 	repo.On("UpdateRentActionStatus", mock.Anything, int64(1), domain.RentActionStatusApproved, "approved_at", mock.Anything).Return(nil)
+	repo.On("AppendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil) // Added
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/rent-actions/1/approve", nil)
 	w := httptest.NewRecorder()
@@ -319,4 +321,12 @@ func (m *MockRepository) GetShortageAlerts(ctx context.Context) ([]domain.Shorta
 func (m *MockRepository) GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error) {
 	args := m.Called(ctx)
 	return args.Get(0).([]domain.MaintenanceForecast), args.Error(1)
+}
+
+func (m *MockRepository) ListWebhooks(ctx context.Context) ([]domain.WebhookConfig, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.WebhookConfig), args.Error(1)
 }

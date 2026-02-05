@@ -1,8 +1,15 @@
 package worker
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/desmond/rental-management-system/internal/db"
@@ -10,11 +17,17 @@ import (
 )
 
 type OutboxWorker struct {
-	repo db.Repository
+	repo   db.Repository
+	client *http.Client
 }
 
 func NewOutboxWorker(repo db.Repository) *OutboxWorker {
-	return &OutboxWorker{repo: repo}
+	return &OutboxWorker{
+		repo: repo,
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
 }
 
 func (w *OutboxWorker) Start(ctx context.Context, interval time.Duration) {
@@ -49,12 +62,64 @@ func (w *OutboxWorker) ProcessEvents(ctx context.Context) {
 }
 
 func (w *OutboxWorker) DeliverEvent(ctx context.Context, event domain.OutboxEvent) error {
-	// For now, we simulate delivery by logging
-	// In a real system, this would iterate through configured webhooks or external sync adapters
-	log.Printf("Delivering event: %s (ID: %d), Payload: %s", event.Type, event.ID, string(event.Payload))
+	webhooks, err := w.repo.ListWebhooks(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list webhooks: %w", err)
+	}
 
-	// Real implementation example:
-	// return w.webhookSvc.Dispatch(ctx, event)
+	for _, wh := range webhooks {
+		// Check if webhook is interested in this event type
+		interested := false
+		for _, et := range wh.Events {
+			if et == string(event.Type) || et == "*" {
+				interested = true
+				break
+			}
+		}
+
+		if interested {
+			if err := w.dispatchToWebhook(ctx, wh, event); err != nil {
+				log.Printf("Webhook dispatch failed for URL %s: %v", wh.URL, err)
+				// We log and continue to other webhooks.
+				// In a more robust system, we might track delivery status per webhook.
+			}
+		}
+	}
+
+	return nil
+}
+
+func (w *OutboxWorker) dispatchToWebhook(ctx context.Context, wh domain.WebhookConfig, event domain.OutboxEvent) error {
+	body, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", wh.URL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-RMS-Event", string(event.Type))
+	req.Header.Set("X-RMS-Delivery-ID", fmt.Sprintf("%d", event.ID))
+
+	if wh.Secret != nil && *wh.Secret != "" {
+		h := hmac.New(sha256.New, []byte(*wh.Secret))
+		h.Write(body)
+		signature := hex.EncodeToString(h.Sum(nil))
+		req.Header.Set("X-RMS-Signature", signature)
+	}
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
 
 	return nil
 }

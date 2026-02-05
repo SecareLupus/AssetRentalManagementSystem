@@ -65,9 +65,10 @@ type Repository interface {
 	GetShortageAlerts(ctx context.Context) ([]domain.ShortageAlert, error)
 	GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error)
 
-	// Outbox
+	// Outbox / Webhooks
 	AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)
 	MarkEventProcessed(ctx context.Context, id int64) error
 	MarkEventFailed(ctx context.Context, id int64, errMessage string) error
+	ListWebhooks(ctx context.Context) ([]domain.WebhookConfig, error)
 }

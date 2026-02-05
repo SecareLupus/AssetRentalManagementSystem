@@ -8,12 +8,14 @@ import (
 type EventType string
 
 const (
-	EventAssetCreated      EventType = "asset.created"
-	EventAssetUpdated      EventType = "asset.updated"
-	EventAssetTransitioned EventType = "asset.status_changed"
-	EventRentalSubmitted   EventType = "rental.submitted"
-	EventRentalApproved    EventType = "rental.approved"
-	EventInspectionSummary EventType = "inspection.completed"
+	EventAssetCreated        EventType = "asset.created"
+	EventAssetUpdated        EventType = "asset.updated"
+	EventAssetTransitioned   EventType = "asset.status_changed"
+	EventRentalSubmitted     EventType = "rental.submitted"
+	EventRentalApproved      EventType = "rental.approved"
+	EventItemTypeCreated     EventType = "item_type.created"
+	EventInspectionSubmitted EventType = "inspection.submitted"
+	EventInspectionSummary   EventType = "inspection.completed"
 )
 
 type OutboxStatus string

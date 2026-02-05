@@ -47,6 +47,7 @@ type Asset struct {
 	CurrentBuildSpecID *int64             `json:"current_build_spec_id,omitempty"`
 	LastInspectionAt   *time.Time         `json:"last_inspection_at,omitempty"`
 	CreatedByUserID    *int64             `json:"created_by_user_id,omitempty"` // Audit trail
+	UpdatedByUserID    *int64             `json:"updated_by_user_id,omitempty"` // Audit trail
 
 	SchemaOrg json.RawMessage `json:"schema_org,omitempty" swaggertype:"string" example:"{}"`
 	Metadata  json.RawMessage `json:"metadata,omitempty" swaggertype:"string" example:"{}"`

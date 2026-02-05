@@ -10,7 +10,7 @@ import (
 func NewRouter(h *Handler) http.Handler {
 	mux := http.NewServeMux()
 
-	// Auth
+	// Auth (Public)
 	mux.HandleFunc("/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			h.Login(w, r)
@@ -180,7 +180,7 @@ func NewRouter(h *Handler) http.Handler {
 		case http.MethodPut:
 			h.UpdateAsset(w, r)
 		case http.MethodDelete:
-			h.DeleteAsset(w, r)
+			h.DeleteItemType(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -246,8 +246,25 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 
-	// Swagger UI
+	// Swagger UI (Public)
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
-	return mux
+	// Apply AuthMiddleware to all /v1 routes EXCEPT public ones
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		// Skip auth for login, register, and swagger
+		if strings.HasPrefix(path, "/v1/auth/") || strings.HasPrefix(path, "/swagger/") {
+			mux.ServeHTTP(w, r)
+			return
+		}
+
+		// Require auth for all other /v1 routes
+		if strings.HasPrefix(path, "/v1/") {
+			h.AuthMiddleware(mux).ServeHTTP(w, r)
+			return
+		}
+
+		// Fallback for any other routes
+		mux.ServeHTTP(w, r)
+	})
 }
