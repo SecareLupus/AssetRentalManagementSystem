@@ -16,6 +16,8 @@ const (
 	EventItemTypeCreated     EventType = "item_type.created"
 	EventInspectionSubmitted EventType = "inspection.submitted"
 	EventInspectionSummary   EventType = "inspection.completed"
+	EventAssetPowerAction    EventType = "asset.power_action"
+	EventAssetRecalled       EventType = "asset.recalled"
 )
 
 type OutboxStatus string

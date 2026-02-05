@@ -330,3 +330,14 @@ func (m *MockRepository) ListWebhooks(ctx context.Context) ([]domain.WebhookConf
 	}
 	return args.Get(0).([]domain.WebhookConfig), args.Error(1)
 }
+func (m *MockRepository) GetDashboardStats(ctx context.Context) (*domain.DashboardStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.DashboardStats), args.Error(1)
+}
+func (m *MockRepository) BulkRecallAssets(ctx context.Context, ids []int64) error {
+	args := m.Called(ctx, ids)
+	return args.Error(0)
+}

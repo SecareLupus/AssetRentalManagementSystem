@@ -1101,6 +1101,19 @@ func (h *Handler) ApplyAssetRemotePower(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Append Outbox Event for Audit
+	payload, _ := json.Marshal(map[string]interface{}{
+		"asset_id":  id,
+		"asset_tag": asset.AssetTag,
+		"action":    req.Action,
+		"user_id":   h.getUserIDFromContext(r),
+		"timestamp": time.Now(),
+	})
+	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+		Type:    domain.EventAssetPowerAction,
+		Payload: payload,
+	})
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1170,4 +1183,105 @@ func (h *Handler) GetMaintenanceForecast(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+// GetDashboardStats handles requests for dashboard summaries.
+func (h *Handler) GetDashboardStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.repo.GetDashboardStats(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
+// BulkRecallAssets transitions multiple assets to recalled status.
+func (h *Handler) BulkRecallAssets(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AssetIDs []int64 `json:"asset_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.BulkRecallAssets(r.Context(), req.AssetIDs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Emit audit events for each
+	for _, id := range req.AssetIDs {
+		payload, _ := json.Marshal(map[string]interface{}{"asset_id": id})
+		h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
+			Type:    domain.EventAssetRecalled,
+			Payload: payload,
+		})
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type ReconciliationRequest struct {
+	Location    string   `json:"location"`
+	ScannedTags []string `json:"scanned_tags"`
+}
+
+type ReconciliationReport struct {
+	Verified   []string `json:"verified_tags"`
+	Missing    []string `json:"missing_tags"`    // In DB as available/maintenance at location, but not scanned
+	Unexpected []string `json:"unexpected_tags"` // Scanned but not found in DB at location with expected status
+}
+
+// VerifyInventory performs a reconciliation check for a specific location.
+func (h *Handler) VerifyInventory(w http.ResponseWriter, r *http.Request) {
+	var req ReconciliationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// 1. Get all assets at this location that *should* be there (Available or Maintenance)
+	assets, err := h.repo.ListAssets(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	dbTags := make(map[string]bool)
+	for _, a := range assets {
+		if a.Location != nil && *a.Location == req.Location && (a.Status == domain.AssetStatusAvailable || a.Status == domain.AssetStatusMaintenance) {
+			if a.AssetTag != nil {
+				dbTags[*a.AssetTag] = true
+			}
+		}
+	}
+
+	scannedTags := make(map[string]bool)
+	for _, tag := range req.ScannedTags {
+		scannedTags[tag] = true
+	}
+
+	report := ReconciliationReport{}
+
+	// Verified & Missing
+	for tag := range dbTags {
+		if scannedTags[tag] {
+			report.Verified = append(report.Verified, tag)
+		} else {
+			report.Missing = append(report.Missing, tag)
+		}
+	}
+
+	// Unexpected
+	for tag := range scannedTags {
+		if !dbTags[tag] {
+			report.Unexpected = append(report.Unexpected, tag)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
 }

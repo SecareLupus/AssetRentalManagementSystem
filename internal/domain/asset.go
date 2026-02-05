@@ -37,6 +37,7 @@ type Asset struct {
 	AssignedTo        *string     `json:"assigned_to,omitempty"`
 	MeshNodeID        *string     `json:"mesh_node_id,omitempty"`
 	WireguardHostname *string     `json:"wireguard_hostname,omitempty"`
+	ManagementURL     *string     `json:"management_url,omitempty"` // Link to external management tool
 
 	// Fleet Management Fields
 	BuildSpecVersion   *string            `json:"build_spec_version,omitempty"`
@@ -46,6 +47,8 @@ type Asset struct {
 	RemoteManagementID *string            `json:"remote_management_id,omitempty"`
 	CurrentBuildSpecID *int64             `json:"current_build_spec_id,omitempty"`
 	LastInspectionAt   *time.Time         `json:"last_inspection_at,omitempty"`
+	UsageHours         float64            `json:"usage_hours"`
+	NextServiceHours   float64            `json:"next_service_hours"`
 	CreatedByUserID    *int64             `json:"created_by_user_id,omitempty"` // Audit trail
 	UpdatedByUserID    *int64             `json:"updated_by_user_id,omitempty"` // Audit trail
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/desmond/rental-management-system/internal/domain"
+	"github.com/lib/pq"
 )
 
 type SqlRepository struct {
@@ -111,16 +112,16 @@ func (r *SqlRepository) DeleteItemType(ctx context.Context, id int64) error {
 
 // GetAssetByID retrieves a specific asset by its ID.
 func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url,
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
+	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE id = $1`
 
 	var a domain.Asset
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 		&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-		&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -139,16 +140,16 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 
 	query := `INSERT INTO assets (
 		item_type_id, asset_tag, serial_number, status, location, assigned_to, 
-		mesh_node_id, wireguard_hostname, build_spec_version, provisioning_status, 
+		mesh_node_id, wireguard_hostname, management_url, build_spec_version, provisioning_status, 
 		firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-		schema_org, metadata, created_by_user_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`
+		usage_hours, next_service_hours, schema_org, metadata, created_by_user_id, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`
 
 	err := r.db.QueryRowContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
-		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
+		a.MeshNodeID, a.WireguardHostname, a.ManagementURL, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
-		a.SchemaOrg, a.Metadata, a.CreatedByUserID, a.CreatedAt, a.UpdatedAt,
+		a.UsageHours, a.NextServiceHours, a.SchemaOrg, a.Metadata, a.CreatedByUserID, a.CreatedAt, a.UpdatedAt,
 	).Scan(&a.ID)
 	if err != nil {
 		return fmt.Errorf("create asset: %w", err)
@@ -158,9 +159,9 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 
 // ListAssets returns all assets.
 func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
+	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets`
 
 	rows, err := r.db.QueryContext(ctx, query)
@@ -173,9 +174,9 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 	for rows.Next() {
 		var a domain.Asset
 		if err := rows.Scan(
-			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
@@ -186,9 +187,9 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 
 // ListAssetsByItemType returns assets belonging to a specific item type.
 func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-	                 created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
+	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE item_type_id = $1`
 
 	rows, err := r.db.QueryContext(ctx, query, itemTypeID)
@@ -201,9 +202,9 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 	for rows.Next() {
 		var a domain.Asset
 		if err := rows.Scan(
-			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
@@ -218,16 +219,17 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 	query := `UPDATE assets SET 
 		item_type_id = $1, asset_tag = $2, serial_number = $3, status = $4, 
 		location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8,
-		build_spec_version = $9, provisioning_status = $10, firmware_version = $11,
-		hostname = $12, remote_management_id = $13, current_build_spec_id = $14, last_inspection_at = $15,
-		updated_by_user_id = $16, schema_org = $17, metadata = $18, updated_at = $19
-		WHERE id = $20`
+		management_url = $9, build_spec_version = $10, provisioning_status = $11, firmware_version = $12,
+		hostname = $13, remote_management_id = $14, current_build_spec_id = $15, last_inspection_at = $16,
+		usage_hours = $17, next_service_hours = $18, updated_by_user_id = $19, schema_org = $20, 
+		metadata = $21, updated_at = $22
+		WHERE id = $23`
 
 	_, err := r.db.ExecContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
-		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
+		a.MeshNodeID, a.WireguardHostname, a.ManagementURL, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
-		a.UpdatedByUserID, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
+		a.UsageHours, a.NextServiceHours, a.UpdatedByUserID, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update asset: %w", err)
@@ -926,15 +928,13 @@ func (r *SqlRepository) GetShortageAlerts(ctx context.Context) ([]domain.Shortag
 	return alerts, nil
 }
 
-// GetMaintenanceForecast predicts inspection needs based on calendar cycles.
+// GetMaintenanceForecast predicts inspection needs based on calendar cycles and usage.
 func (r *SqlRepository) GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error) {
-	// Assets not inspected in > 90 days are "due"
-	query := `SELECT id, asset_tag, last_inspection_at FROM assets 
-	          WHERE status != 'retired' 
-	          AND (last_inspection_at IS NULL OR last_inspection_at < $1)`
+	// Assets not inspected in > 90 days OR nearing usage limit
+	query := `SELECT id, asset_tag, last_inspection_at, usage_hours, next_service_hours FROM assets 
+	          WHERE status != 'retired'`
 
-	threshold := time.Now().AddDate(0, 0, -90)
-	rows, err := r.db.QueryContext(ctx, query, threshold)
+	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -944,20 +944,95 @@ func (r *SqlRepository) GetMaintenanceForecast(ctx context.Context) ([]domain.Ma
 	for rows.Next() {
 		var f domain.MaintenanceForecast
 		var lastIns *time.Time
-		if err := rows.Scan(&f.AssetID, &f.AssetTag, &lastIns); err != nil {
+		var usage, nextService float64
+		if err := rows.Scan(&f.AssetID, &f.AssetTag, &lastIns, &usage, &nextService); err != nil {
 			continue
 		}
 
+		// Calculate urgency by calendar
+		urgencyCalendar := 0.0
 		if lastIns == nil {
-			f.Reason = "Initial inspection required"
-			f.UrgencyScore = 1.0
-			f.NextService = time.Now()
+			urgencyCalendar = 1.0
 		} else {
-			f.Reason = "Quarterly cycle exceeded"
-			f.UrgencyScore = 0.8
-			f.NextService = lastIns.AddDate(0, 0, 90)
+			daysSince := time.Since(*lastIns).Hours() / 24
+			urgencyCalendar = daysSince / 90.0
 		}
-		forecasts = append(forecasts, f)
+
+		// Calculate urgency by usage
+		urgencyUsage := 0.0
+		if nextService > 0 {
+			urgencyUsage = usage / nextService
+		}
+
+		// Combined urgency (weighted)
+		f.UrgencyScore = urgencyCalendar
+		if urgencyUsage > f.UrgencyScore {
+			f.UrgencyScore = urgencyUsage
+		}
+
+		if f.UrgencyScore >= 0.8 {
+			if urgencyUsage > urgencyCalendar {
+				f.Reason = "Usage limit approached"
+			} else {
+				f.Reason = "Quarterly cycle exceeded"
+			}
+			f.NextService = time.Now() // Simplified
+			forecasts = append(forecasts, f)
+		}
 	}
 	return forecasts, nil
+}
+
+// GetDashboardStats returns a summary of the system state.
+func (r *SqlRepository) GetDashboardStats(ctx context.Context) (*domain.DashboardStats, error) {
+	stats := &domain.DashboardStats{
+		AssetsByStatus: make(map[string]int),
+	}
+
+	// Total Assets and Group by Status
+	queryAssets := "SELECT status, COUNT(*) FROM assets GROUP BY status"
+	rows, err := r.db.QueryContext(ctx, queryAssets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, err
+		}
+		stats.AssetsByStatus[status] = count
+		stats.TotalAssets += count
+	}
+
+	// Active Rentals
+	queryRentals := "SELECT COUNT(*) FROM rent_actions WHERE status = 'approved' OR status = 'ongoing'"
+	err = r.db.QueryRowContext(ctx, queryRentals).Scan(&stats.ActiveRentals)
+	if err != nil {
+		return nil, err
+	}
+
+	// Pending Outbox
+	queryOutbox := "SELECT COUNT(*) FROM outbox_events WHERE status = 'pending'"
+	err = r.db.QueryRowContext(ctx, queryOutbox).Scan(&stats.PendingOutbox)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
+// BulkRecallAssets transitions multiple assets to 'recalled' status.
+func (r *SqlRepository) BulkRecallAssets(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	query := "UPDATE assets SET status = 'recalled', updated_at = $1 WHERE id = ANY($2)"
+	_, err := r.db.ExecContext(ctx, query, time.Now(), pq.Array(ids))
+	if err != nil {
+		return fmt.Errorf("bulk recall assets: %w", err)
+	}
+	return nil
 }

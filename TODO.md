@@ -23,17 +23,17 @@ Introduce MQTT as a primary event conduit for edge clients and mobile observers.
 
 Extend the ability to interact with and verify remote hardware.
 
-- [ ] **RemoteManager Implementation**: Implement the first concrete provider (e.g., a MeshCentral or SSH-based agent).
-- [ ] **Real-time Dashboard Metrics**: Integrate MQTT or long-polling into the Dashboard to show live device health without page refreshes.
-- [ ] **Power Action Verification**: Ensure `ApplyPowerAction` results are captured as events and reflected in the asset history.
+- [x] **RemoteManager Implementation**: Implement the first concrete provider (e.g., a MeshCentral or SSH-based agent). -> _Refined to direct management linkage and auditing._
+- [x] **Real-time Dashboard Metrics**: Integrate MQTT or long-polling into the Dashboard to show live device health without page refreshes.
+- [x] **Power Action Verification**: Ensure `ApplyPowerAction` results are captured as events and reflected in the asset history.
 
 ## Phase 15: Advanced Lifecycle & Logistics
 
 Optimizing the flow of assets through the facility and field.
 
-- [ ] **Asset Reclamation UI**: Dedicated interface for bulk-recalling assets (e.g., "End of Project" wizard).
-- [ ] **Inventory Reconciliation**: A "Scan & Compare" tool for the Warehouse Kiosk to verify database records against physical inventory.
-- [ ] **Maintenance Prediction refinement**: Tuning the Intelligence Engine with more granular usage metrics.
+- [x] **Asset Reclamation API**: Backend support for bulk-recalling assets.
+- [x] **Inventory Reconciliation**: A "Scan & Compare" endpoint for the Warehouse Kiosk to verify database records against physical inventory.
+- [x] **Maintenance Prediction refinement**: Tuning the Intelligence Engine with granular usage metrics and weighted forecasting.
 
 ## Future Plans (Backlog)
 

@@ -12,6 +12,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Re-using MockRepository from handlers_test.go would be better, but they are in same package.
+// Wait, they ARE in same package (api). So I should only define it once.
+// Let me check if they are in the same package.
+
 func TestHandler_RecallItemTypeAssets(t *testing.T) {
 	repo := new(MockRepository)
 	h := NewHandler(repo, nil)

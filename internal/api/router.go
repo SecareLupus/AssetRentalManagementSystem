@@ -54,6 +54,16 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Dashboard
+	mux.HandleFunc("/v1/dashboard/stats", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.GetDashboardStats(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -79,7 +89,6 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	// Inventory (Assets)
 	mux.HandleFunc("/v1/inventory/assets", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -89,6 +98,20 @@ func NewRouter(h *Handler) http.Handler {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
+	})
+	mux.HandleFunc("/v1/inventory/assets/bulk-recall", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.BulkRecallAssets(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/inventory/reconcile", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.VerifyInventory(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 	mux.HandleFunc("/v1/inventory/assets/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/status") {

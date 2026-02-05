@@ -1,0 +1,3 @@
+-- 000010_asset_usage_metrics.sql
+ALTER TABLE assets ADD COLUMN usage_hours DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE assets ADD COLUMN next_service_hours DOUBLE PRECISION DEFAULT 500;

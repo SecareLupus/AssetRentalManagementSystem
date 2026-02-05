@@ -24,7 +24,10 @@ type Repository interface {
 	UpdateAsset(ctx context.Context, a *domain.Asset) error
 	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error
 	RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error
+	BulkRecallAssets(ctx context.Context, ids []int64) error
 	DeleteAsset(ctx context.Context, id int64) error
+
+	GetDashboardStats(ctx context.Context) (*domain.DashboardStats, error)
 
 	// RentActions
 	CreateRentAction(ctx context.Context, ra *domain.RentAction) error
