@@ -17,13 +17,13 @@ Secure the API and define user roles to support the varied workflows (Management
 Establish the frontend not just as a tool, but as a live reference implementation for the API.
 
 - [x] **OpenAPI Integration**: specific annotations to Go handlers and generate `swagger.json` (using swaggo/swag).
-- [ ] **Frontend Foundation**: Initialize React/Vite with a "Developer Mode" context.
-- [ ] **API Inspector Component**: A global UI overlay that listens to network requests and displays:
+- [x] **Frontend Foundation**: Initialize React/Vite with a "Developer Mode" context.
+- [x] **API Inspector Component**: A global UI overlay that listens to network requests and displays:
     -   The exact HTTP method and URL used.
     -   The Request Body / Headers sent.
     -   The Response received.
     -   Relevant documentation excerpt for that endpoint.
-- [ ] **Dashboard Implementation**: Build the "Commander's Dashboard" utilizing this new Inspector system.
+- [x] **Dashboard Implementation**: Build the "Commander's Dashboard" utilizing this new Inspector system.
 
 ## Phase 3: Catalog & Reservation (Self-Documenting)
 
