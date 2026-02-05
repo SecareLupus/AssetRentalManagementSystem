@@ -18,19 +18,49 @@ This service is API-first, providing robust management for rental reservations (
 ### Prerequisites
 
 - Go 1.21+
-- SQL Database (PostgreSQL recommended)
+- Docker & Docker Compose (for Postgres/MQTT)
 
-### Installation
+### Setup Test Environment
+
+The fastest way to spin up the required database and MQTT broker is via Docker Compose:
 
 ```bash
-go mod download
+docker-compose up -d
+```
+
+### Configuration
+
+The following environment variables can be used to configure the service:
+
+| Variable       | Description                  | Default                                                                 |
+| -------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/rental_db?sslmode=disable` |
+| `MQTT_BROKER`  | MQTT broker URL              | `tcp://localhost:1883`                                                  |
+
+### Database Migrations
+
+Apply the SQL migrations located in `./migrations/` to your database. You can do this manually using `psql`:
+
+```bash
+for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 ```
 
 ### Running the Service
 
-```bash
-go run ./cmd/server
-```
+1. Install dependencies:
+
+   ```bash
+   go mod download
+   ```
+
+2. Run the server:
+
+   ```bash
+   go run ./cmd/server
+   ```
+
+3. Explore the API via Swagger UI:
+   Navigate to [http://localhost:8080/swagger/](http://localhost:8080/swagger/)
 
 ## Project Structure
 
