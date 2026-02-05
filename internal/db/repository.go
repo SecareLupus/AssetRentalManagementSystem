@@ -12,7 +12,7 @@ type Repository interface {
 	// ItemTypes
 	CreateItemType(ctx context.Context, it *domain.ItemType) error
 	GetItemTypeByID(ctx context.Context, id int64) (*domain.ItemType, error)
-	ListItemTypes(ctx context.Context) ([]domain.ItemType, error)
+	ListItemTypes(ctx context.Context, includeInactive bool) ([]domain.ItemType, error)
 	UpdateItemType(ctx context.Context, it *domain.ItemType) error
 	DeleteItemType(ctx context.Context, id int64) error
 

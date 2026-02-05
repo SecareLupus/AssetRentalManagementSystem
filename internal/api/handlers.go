@@ -201,9 +201,11 @@ func (h *Handler) DeleteItemType(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {array} domain.ItemType
 // @Failure 500 {string} string "Internal Server Error"
+// @Param include_inactive query bool false "Include inactive items"
 // @Router /catalog/item-types [get]
 func (h *Handler) GetCatalog(w http.ResponseWriter, r *http.Request) {
-	results, err := h.repo.ListItemTypes(r.Context())
+	includeInactive := r.URL.Query().Get("include_inactive") == "true"
+	results, err := h.repo.ListItemTypes(r.Context(), includeInactive)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

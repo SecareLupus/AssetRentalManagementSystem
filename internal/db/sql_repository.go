@@ -44,12 +44,14 @@ func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.
 	          FROM item_types WHERE id = $1`
 
 	var it domain.ItemType
-	var featuresJSON []byte
+	var featuresJSON, schemaOrgJSON, metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt,
+		&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &it.CreatedAt, &it.UpdatedAt,
 	)
 	if err == nil {
 		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
+		it.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		it.Metadata = json.RawMessage(metadataJSON)
 	}
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -60,10 +62,13 @@ func (r *SqlRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain.
 	return &it, nil
 }
 
-// ListItemTypes returns all active item types.
-func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, error) {
+// ListItemTypes returns item types, optionally including inactive ones.
+func (r *SqlRepository) ListItemTypes(ctx context.Context, includeInactive bool) ([]domain.ItemType, error) {
 	query := `SELECT id, code, name, kind, is_active, supported_features, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
-	          FROM item_types WHERE is_active = TRUE`
+	          FROM item_types`
+	if !includeInactive {
+		query += ` WHERE is_active = TRUE`
+	}
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -74,11 +79,13 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, e
 	var results []domain.ItemType
 	for rows.Next() {
 		var it domain.ItemType
-		var featuresJSON []byte
-		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &it.SchemaOrg, &it.Metadata, &it.CreatedAt, &it.UpdatedAt); err != nil {
+		var featuresJSON, schemaOrgJSON, metadataJSON []byte
+		if err := rows.Scan(&it.ID, &it.Code, &it.Name, &it.Kind, &it.IsActive, &featuresJSON, &it.CreatedByUserID, &it.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan item_type: %w", err)
 		}
 		json.Unmarshal(featuresJSON, &it.SupportedFeatures)
+		it.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		it.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, it)
 	}
 	return results, nil
@@ -118,11 +125,16 @@ func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Ass
 	          FROM assets WHERE id = $1`
 
 	var a domain.Asset
+	var schemaOrgJSON, metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 		&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-		&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 	)
+	if err == nil {
+		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		a.Metadata = json.RawMessage(metadataJSON)
+	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -173,13 +185,16 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 	var results []domain.Asset
 	for rows.Next() {
 		var a domain.Asset
+		var schemaOrgJSON, metadataJSON []byte
 		if err := rows.Scan(
 			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
+		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		a.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, a)
 	}
 	return results, nil
@@ -201,13 +216,16 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 	var results []domain.Asset
 	for rows.Next() {
 		var a domain.Asset
+		var schemaOrgJSON, metadataJSON []byte
 		if err := rows.Scan(
 			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
-			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan asset: %w", err)
 		}
+		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		a.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, a)
 	}
 	return results, nil
@@ -324,12 +342,17 @@ func (r *SqlRepository) GetRentActionByID(ctx context.Context, id int64) (*domai
 	          FROM rent_actions WHERE id = $1`
 
 	var ra domain.RentAction
+	var schemaOrgJSON, metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&ra.ID, &ra.RequesterRef, &ra.CreatedByRef, &ra.ApprovedByRef, &ra.Status, &ra.Priority,
 		&ra.StartTime, &ra.EndTime, &ra.IsASAP, &ra.Description, &ra.ExternalSource,
-		&ra.ExternalRef, &ra.SchemaOrg, &ra.Metadata, &ra.ApprovedAt, &ra.RejectedAt,
+		&ra.ExternalRef, &schemaOrgJSON, &metadataJSON, &ra.ApprovedAt, &ra.RejectedAt,
 		&ra.CancelledAt, &ra.CreatedAt, &ra.UpdatedAt,
 	)
+	if err == nil {
+		ra.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		ra.Metadata = json.RawMessage(metadataJSON)
+	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -348,9 +371,11 @@ func (r *SqlRepository) GetRentActionByID(ctx context.Context, id int64) (*domai
 
 	for rows.Next() {
 		var item domain.RentActionItem
-		if err := rows.Scan(&item.ID, &item.RentActionID, &item.ItemKind, &item.ItemID, &item.RequestedQuantity, &item.AllocatedQuantity, &item.Notes, &item.Metadata); err != nil {
+		var metadataJSON []byte
+		if err := rows.Scan(&item.ID, &item.RentActionID, &item.ItemKind, &item.ItemID, &item.RequestedQuantity, &item.AllocatedQuantity, &item.Notes, &metadataJSON); err != nil {
 			return nil, fmt.Errorf("scan rent_action_item: %w", err)
 		}
+		item.Metadata = json.RawMessage(metadataJSON)
 		ra.Items = append(ra.Items, item)
 	}
 
@@ -374,15 +399,18 @@ func (r *SqlRepository) ListRentActions(ctx context.Context) ([]domain.RentActio
 	var results []domain.RentAction
 	for rows.Next() {
 		var ra domain.RentAction
+		var schemaOrgJSON, metadataJSON []byte
 		err := rows.Scan(
 			&ra.ID, &ra.RequesterRef, &ra.CreatedByRef, &ra.CreatedByUserID, &ra.ApprovedByRef, &ra.Status, &ra.Priority,
 			&ra.StartTime, &ra.EndTime, &ra.IsASAP, &ra.Description, &ra.ExternalSource,
-			&ra.ExternalRef, &ra.SchemaOrg, &ra.Metadata, &ra.ApprovedAt, &ra.RejectedAt,
+			&ra.ExternalRef, &schemaOrgJSON, &metadataJSON, &ra.ApprovedAt, &ra.RejectedAt,
 			&ra.CancelledAt, &ra.CreatedAt, &ra.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan rent_action: %w", err)
 		}
+		ra.SchemaOrg = json.RawMessage(schemaOrgJSON)
+		ra.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, ra)
 	}
 	return results, nil
@@ -625,9 +653,13 @@ func (r *SqlRepository) GetBuildSpecByID(ctx context.Context, id int64) (*domain
 	          FROM build_specs WHERE id = $1`
 
 	var bs domain.BuildSpec
+	var metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &bs.Metadata, &bs.CreatedAt, &bs.UpdatedAt,
+		&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &metadataJSON, &bs.CreatedAt, &bs.UpdatedAt,
 	)
+	if err == nil {
+		bs.Metadata = json.RawMessage(metadataJSON)
+	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -648,9 +680,11 @@ func (r *SqlRepository) ListBuildSpecs(ctx context.Context) ([]domain.BuildSpec,
 	var results []domain.BuildSpec
 	for rows.Next() {
 		var bs domain.BuildSpec
-		if err := rows.Scan(&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &bs.Metadata, &bs.CreatedAt, &bs.UpdatedAt); err != nil {
+		var metadataJSON []byte
+		if err := rows.Scan(&bs.ID, &bs.Version, &bs.HardwareConfig, &bs.SoftwareConfig, &bs.FirmwareURL, &metadataJSON, &bs.CreatedAt, &bs.UpdatedAt); err != nil {
 			return nil, err
 		}
+		bs.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, bs)
 	}
 	return results, nil

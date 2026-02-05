@@ -33,8 +33,8 @@ func (m *MockRepository) GetItemTypeByID(ctx context.Context, id int64) (*domain
 	return args.Get(0).(*domain.ItemType), args.Error(1)
 }
 
-func (m *MockRepository) ListItemTypes(ctx context.Context) ([]domain.ItemType, error) {
-	args := m.Called(ctx)
+func (m *MockRepository) ListItemTypes(ctx context.Context, includeInactive bool) ([]domain.ItemType, error) {
+	args := m.Called(ctx, includeInactive)
 	return args.Get(0).([]domain.ItemType), args.Error(1)
 }
 
@@ -219,7 +219,7 @@ func TestHandler_GetCatalog(t *testing.T) {
 	h := NewHandler(repo, nil)
 
 	items := []domain.ItemType{{ID: 1, Name: "Item 1"}}
-	repo.On("ListItemTypes", mock.Anything).Return(items, nil)
+	repo.On("ListItemTypes", mock.Anything, false).Return(items, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/catalog/item-types", nil)
 	w := httptest.NewRecorder()

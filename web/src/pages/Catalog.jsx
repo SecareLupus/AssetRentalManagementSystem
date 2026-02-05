@@ -9,12 +9,14 @@ const Catalog = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [includeInactive, setIncludeInactive] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
         name: '',
         code: '',
         kind: 'serialized',
+        is_active: true,
         supported_features: {
             remote_management: false,
             provisioning: false,
@@ -26,7 +28,7 @@ const Catalog = () => {
     const fetchCatalog = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/v1/catalog/item-types');
+            const response = await axios.get(`/v1/catalog/item-types${includeInactive ? '?include_inactive=true' : ''}`);
             setItemTypes(response.data || []);
         } catch (error) {
             console.error("Failed to fetch catalog", error);
@@ -37,7 +39,7 @@ const Catalog = () => {
 
     useEffect(() => {
         fetchCatalog();
-    }, []);
+    }, [includeInactive]);
 
     const filteredItems = itemTypes.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,6 +57,7 @@ const Catalog = () => {
                 name: '',
                 code: '',
                 kind: 'serialized',
+                is_active: true,
                 supported_features: {
                     remote_management: false,
                     provisioning: false,
@@ -110,9 +113,20 @@ const Catalog = () => {
                         }}
                     />
                 </div>
-                <button className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}>
-                    <Filter size={18} /> Filters
-                </button>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={includeInactive} 
+                            onChange={(e) => setIncludeInactive(e.target.checked)} 
+                        />
+                        Show Archived
+                    </label>
+                    <button className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}>
+                        <Filter size={18} /> Filters
+                    </button>
+                </div>
             </GlassCard>
 
             {loading ? (
