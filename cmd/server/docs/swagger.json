@@ -17,7 +17,1036 @@
     },
     "host": "localhost:8080",
     "basePath": "/v1",
-    "paths": {},
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user and returns a JWT token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "Login Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.AuthResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Creates a new user account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register",
+                "parameters": [
+                    {
+                        "description": "Registration Info",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog/item-types": {
+            "get": {
+                "description": "Returns the full catalog of Item Types.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "List Item Types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ItemType"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new Item Type definition.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Create Item Type",
+                "parameters": [
+                    {
+                        "description": "Item Type Definition",
+                        "name": "item_type",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ItemType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ItemType"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/assets": {
+            "get": {
+                "description": "Returns a list of assets, optionally filtered by item_type_id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "List Assets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Item Type ID",
+                        "name": "item_type_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Asset"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/assets/{id}": {
+            "get": {
+                "description": "Retrieves an asset by its ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "Get Asset",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Asset"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Updates an existing asset's details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "Update Asset",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Asset Data",
+                        "name": "asset",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Asset"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Asset"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Permanently removes an asset.",
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "Delete Asset",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/assets/{id}/status": {
+            "patch": {
+                "description": "Updates the status of an asset (e.g., available, maintenance).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "Update Asset Status",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New Status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "status": {
+                                    "$ref": "#/definitions/domain.AssetStatus"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions": {
+            "post": {
+                "description": "Creates a new rent action (reservation).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Create Rent Action",
+                "parameters": [
+                    {
+                        "description": "Rent Action Data",
+                        "name": "rent_action",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.RentAction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RentAction"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions/{id}": {
+            "get": {
+                "description": "Retrieves a rent action by its ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Get Rent Action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Rent Action ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RentAction"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions/{id}/approve": {
+            "post": {
+                "description": "Transitions a rent action from Pending to Approved. Checks availability.",
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Approve Rent Action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Rent Action ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid State Transition",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Insufficient Inventory",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions/{id}/cancel": {
+            "post": {
+                "description": "Cancels a rent action.",
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Cancel Rent Action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Rent Action ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid State Transition",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions/{id}/reject": {
+            "post": {
+                "description": "Transitions a rent action from Pending to Rejected.",
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Reject Rent Action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Rent Action ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid State Transition",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rent-actions/{id}/submit": {
+            "post": {
+                "description": "Transitions a rent action from Draft to Pending.",
+                "tags": [
+                    "RentActions"
+                ],
+                "summary": "Submit Rent Action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Rent Action ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid State Transition",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "api.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/domain.User"
+                }
+            }
+        },
+        "api.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Asset": {
+            "type": "object",
+            "properties": {
+                "asset_tag": {
+                    "description": "Maps to schema.org/identifier",
+                    "type": "string"
+                },
+                "assigned_to": {
+                    "type": "string"
+                },
+                "build_spec_version": {
+                    "description": "Fleet Management Fields",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_build_spec_id": {
+                    "type": "integer"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "item_type_id": {
+                    "description": "Links to the ProductModel (ItemType)",
+                    "type": "integer"
+                },
+                "last_inspection_at": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "mesh_node_id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "provisioning_status": {
+                    "$ref": "#/definitions/domain.ProvisioningStatus"
+                },
+                "remote_management_id": {
+                    "type": "string"
+                },
+                "schema_org": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "serial_number": {
+                    "description": "Maps to schema.org/serialNumber",
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.AssetStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "wireguard_hostname": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AssetStatus": {
+            "type": "string",
+            "enum": [
+                "available",
+                "reserved",
+                "maintenance",
+                "retired",
+                "deployed",
+                "recalled"
+            ],
+            "x-enum-varnames": [
+                "AssetStatusAvailable",
+                "AssetStatusReserved",
+                "AssetStatusMaintenance",
+                "AssetStatusRetired",
+                "AssetStatusDeployed",
+                "AssetStatusRecalled"
+            ]
+        },
+        "domain.ItemKind": {
+            "type": "string",
+            "enum": [
+                "serialized",
+                "fungible",
+                "kit"
+            ],
+            "x-enum-varnames": [
+                "ItemKindSerialized",
+                "ItemKindFungible",
+                "ItemKindKit"
+            ]
+        },
+        "domain.ItemType": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Maps to schema.org/sku",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "kind": {
+                    "description": "Maps to schema.org/category",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ItemKind"
+                        }
+                    ]
+                },
+                "metadata": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "name": {
+                    "description": "Maps to schema.org/name",
+                    "type": "string"
+                },
+                "schema_org": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "supported_features": {
+                    "$ref": "#/definitions/domain.LifecycleFeatures"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.LifecycleFeatures": {
+            "type": "object",
+            "properties": {
+                "build_spec_tracking": {
+                    "type": "boolean"
+                },
+                "provisioning": {
+                    "type": "boolean"
+                },
+                "refurbishment": {
+                    "type": "boolean"
+                },
+                "remote_management": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "domain.ProvisioningStatus": {
+            "type": "string",
+            "enum": [
+                "unprovisioned",
+                "flashing",
+                "configured",
+                "ready"
+            ],
+            "x-enum-varnames": [
+                "ProvisioningUnprovisioned",
+                "ProvisioningFlashing",
+                "ProvisioningConfigured",
+                "ProvisioningReady"
+            ]
+        },
+        "domain.RentAction": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by_ref": {
+                    "type": "string"
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_ref": {
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Maps to schema.org/description",
+                    "type": "string"
+                },
+                "end_time": {
+                    "description": "Maps to schema.org/endTime",
+                    "type": "string"
+                },
+                "external_ref": {
+                    "type": "string"
+                },
+                "external_source": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_asap": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RentActionItem"
+                    }
+                },
+                "metadata": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "rejected_at": {
+                    "type": "string"
+                },
+                "requester_ref": {
+                    "type": "string"
+                },
+                "schema_org": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "start_time": {
+                    "description": "Maps to schema.org/startTime",
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.RentActionStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RentActionItem": {
+            "type": "object",
+            "properties": {
+                "allocated_quantity": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "item_id": {
+                    "type": "integer"
+                },
+                "item_kind": {
+                    "description": "'item_type','kit_template'",
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "string",
+                    "example": "{}"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "rent_action_id": {
+                    "type": "integer"
+                },
+                "requested_quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.RentActionStatus": {
+            "type": "string",
+            "enum": [
+                "draft",
+                "pending",
+                "approved",
+                "rejected",
+                "cancelled",
+                "fulfilled"
+            ],
+            "x-enum-varnames": [
+                "RentActionStatusDraft",
+                "RentActionStatusPending",
+                "RentActionStatusApproved",
+                "RentActionStatusRejected",
+                "RentActionStatusCancelled",
+                "RentActionStatusFulfilled"
+            ]
+        },
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/domain.UserRole"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "fleet_manager",
+                "technician",
+                "viewer"
+            ],
+            "x-enum-varnames": [
+                "UserRoleAdmin",
+                "UserRoleFleetManager",
+                "UserRoleTechnician",
+                "UserRoleViewer"
+            ]
+        }
+    },
     "securityDefinitions": {
         "BearerAuth": {
             "type": "apiKey",

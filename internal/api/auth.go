@@ -25,6 +25,17 @@ type AuthResponse struct {
 	User  domain.User `json:"user"`
 }
 
+// Login authenticates a user and returns a JWT token.
+// @Summary Login
+// @Description Authenticates a user and returns a JWT token.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login Credentials"
+// @Success 200 {object} AuthResponse
+// @Failure 401 {string} string "Invalid credentials"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -77,6 +88,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Register creates a new user account.
+// @Summary Register
+// @Description Creates a new user account.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Registration Info"
+// @Success 201 {string} string "User created"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var user domain.User
 	var req struct {

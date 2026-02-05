@@ -141,14 +141,14 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 		item_type_id, asset_tag, serial_number, status, location, assigned_to, 
 		mesh_node_id, wireguard_hostname, build_spec_version, provisioning_status, 
 		firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
-		schema_org, metadata, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`
+		schema_org, metadata, created_by_user_id, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`
 
 	err := r.db.QueryRowContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
 		a.MeshNodeID, a.WireguardHostname, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
-		a.SchemaOrg, a.Metadata, a.CreatedAt, a.UpdatedAt,
+		a.SchemaOrg, a.Metadata, a.CreatedByUserID, a.CreatedAt, a.UpdatedAt,
 	).Scan(&a.ID)
 	if err != nil {
 		return fmt.Errorf("create asset: %w", err)
@@ -253,14 +253,14 @@ func (r *SqlRepository) CreateRentAction(ctx context.Context, ra *domain.RentAct
 	query := `INSERT INTO rent_actions (
 		requester_ref, created_by_ref, approved_by_ref, status, priority, 
 		start_time, end_time, is_asap, description, external_source, 
-		external_ref, schema_org, metadata, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		external_ref, schema_org, metadata, created_by_user_id, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	RETURNING id`
 
 	err = tx.QueryRowContext(ctx, query,
 		ra.RequesterRef, ra.CreatedByRef, ra.ApprovedByRef, ra.Status, ra.Priority,
 		ra.StartTime, ra.EndTime, ra.IsASAP, ra.Description, ra.ExternalSource,
-		ra.ExternalRef, ra.SchemaOrg, ra.Metadata, ra.CreatedAt, ra.UpdatedAt,
+		ra.ExternalRef, ra.SchemaOrg, ra.Metadata, ra.CreatedByUserID, ra.CreatedAt, ra.UpdatedAt,
 	).Scan(&ra.ID)
 	if err != nil {
 		return fmt.Errorf("insert rent_action: %w", err)

@@ -1,4 +1,264 @@
 basePath: /v1
+definitions:
+  api.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  api.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  domain.Asset:
+    properties:
+      asset_tag:
+        description: Maps to schema.org/identifier
+        type: string
+      assigned_to:
+        type: string
+      build_spec_version:
+        description: Fleet Management Fields
+        type: string
+      created_at:
+        type: string
+      current_build_spec_id:
+        type: integer
+      firmware_version:
+        type: string
+      hostname:
+        type: string
+      id:
+        type: integer
+      item_type_id:
+        description: Links to the ProductModel (ItemType)
+        type: integer
+      last_inspection_at:
+        type: string
+      location:
+        type: string
+      mesh_node_id:
+        type: string
+      metadata:
+        example: '{}'
+        type: string
+      provisioning_status:
+        $ref: '#/definitions/domain.ProvisioningStatus'
+      remote_management_id:
+        type: string
+      schema_org:
+        example: '{}'
+        type: string
+      serial_number:
+        description: Maps to schema.org/serialNumber
+        type: string
+      status:
+        $ref: '#/definitions/domain.AssetStatus'
+      updated_at:
+        type: string
+      wireguard_hostname:
+        type: string
+    type: object
+  domain.AssetStatus:
+    enum:
+    - available
+    - reserved
+    - maintenance
+    - retired
+    - deployed
+    - recalled
+    type: string
+    x-enum-varnames:
+    - AssetStatusAvailable
+    - AssetStatusReserved
+    - AssetStatusMaintenance
+    - AssetStatusRetired
+    - AssetStatusDeployed
+    - AssetStatusRecalled
+  domain.ItemKind:
+    enum:
+    - serialized
+    - fungible
+    - kit
+    type: string
+    x-enum-varnames:
+    - ItemKindSerialized
+    - ItemKindFungible
+    - ItemKindKit
+  domain.ItemType:
+    properties:
+      code:
+        description: Maps to schema.org/sku
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/domain.ItemKind'
+        description: Maps to schema.org/category
+      metadata:
+        example: '{}'
+        type: string
+      name:
+        description: Maps to schema.org/name
+        type: string
+      schema_org:
+        example: '{}'
+        type: string
+      supported_features:
+        $ref: '#/definitions/domain.LifecycleFeatures'
+      updated_at:
+        type: string
+    type: object
+  domain.LifecycleFeatures:
+    properties:
+      build_spec_tracking:
+        type: boolean
+      provisioning:
+        type: boolean
+      refurbishment:
+        type: boolean
+      remote_management:
+        type: boolean
+    type: object
+  domain.ProvisioningStatus:
+    enum:
+    - unprovisioned
+    - flashing
+    - configured
+    - ready
+    type: string
+    x-enum-varnames:
+    - ProvisioningUnprovisioned
+    - ProvisioningFlashing
+    - ProvisioningConfigured
+    - ProvisioningReady
+  domain.RentAction:
+    properties:
+      approved_at:
+        type: string
+      approved_by_ref:
+        type: string
+      cancelled_at:
+        type: string
+      created_at:
+        type: string
+      created_by_ref:
+        type: string
+      description:
+        description: Maps to schema.org/description
+        type: string
+      end_time:
+        description: Maps to schema.org/endTime
+        type: string
+      external_ref:
+        type: string
+      external_source:
+        type: string
+      id:
+        type: integer
+      is_asap:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/domain.RentActionItem'
+        type: array
+      metadata:
+        example: '{}'
+        type: string
+      priority:
+        type: string
+      rejected_at:
+        type: string
+      requester_ref:
+        type: string
+      schema_org:
+        example: '{}'
+        type: string
+      start_time:
+        description: Maps to schema.org/startTime
+        type: string
+      status:
+        $ref: '#/definitions/domain.RentActionStatus'
+      updated_at:
+        type: string
+    type: object
+  domain.RentActionItem:
+    properties:
+      allocated_quantity:
+        type: integer
+      id:
+        type: integer
+      item_id:
+        type: integer
+      item_kind:
+        description: '''item_type'',''kit_template'''
+        type: string
+      metadata:
+        example: '{}'
+        type: string
+      notes:
+        type: string
+      rent_action_id:
+        type: integer
+      requested_quantity:
+        type: integer
+    type: object
+  domain.RentActionStatus:
+    enum:
+    - draft
+    - pending
+    - approved
+    - rejected
+    - cancelled
+    - fulfilled
+    type: string
+    x-enum-varnames:
+    - RentActionStatusDraft
+    - RentActionStatusPending
+    - RentActionStatusApproved
+    - RentActionStatusRejected
+    - RentActionStatusCancelled
+    - RentActionStatusFulfilled
+  domain.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_enabled:
+        type: boolean
+      last_login_at:
+        type: string
+      role:
+        $ref: '#/definitions/domain.UserRole'
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  domain.UserRole:
+    enum:
+    - admin
+    - fleet_manager
+    - technician
+    - viewer
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleFleetManager
+    - UserRoleTechnician
+    - UserRoleViewer
 host: localhost:8080
 info:
   contact:
@@ -12,7 +272,440 @@ info:
   termsOfService: http://swagger.io/terms/
   title: Rental Management System API
   version: "1.0"
-paths: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token.
+      parameters:
+      - description: Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.AuthResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Login
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account.
+      parameters:
+      - description: Registration Info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Register
+      tags:
+      - Auth
+  /catalog/item-types:
+    get:
+      description: Returns the full catalog of Item Types.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.ItemType'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Item Types
+      tags:
+      - Catalog
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Item Type definition.
+      parameters:
+      - description: Item Type Definition
+        in: body
+        name: item_type
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ItemType'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ItemType'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Item Type
+      tags:
+      - Catalog
+  /inventory/assets:
+    get:
+      description: Returns a list of assets, optionally filtered by item_type_id.
+      parameters:
+      - description: Item Type ID
+        in: query
+        name: item_type_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Asset'
+            type: array
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Assets
+      tags:
+      - Assets
+  /inventory/assets/{id}:
+    delete:
+      description: Permanently removes an asset.
+      parameters:
+      - description: Asset ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Delete Asset
+      tags:
+      - Assets
+    get:
+      description: Retrieves an asset by its ID.
+      parameters:
+      - description: Asset ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Asset'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Asset
+      tags:
+      - Assets
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing asset's details.
+      parameters:
+      - description: Asset ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Asset Data
+        in: body
+        name: asset
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Asset'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Asset'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Asset
+      tags:
+      - Assets
+  /inventory/assets/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the status of an asset (e.g., available, maintenance).
+      parameters:
+      - description: Asset ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New Status
+        in: body
+        name: status
+        required: true
+        schema:
+          properties:
+            status:
+              $ref: '#/definitions/domain.AssetStatus'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Asset Status
+      tags:
+      - Assets
+  /rent-actions:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new rent action (reservation).
+      parameters:
+      - description: Rent Action Data
+        in: body
+        name: rent_action
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RentAction'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.RentAction'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Rent Action
+      tags:
+      - RentActions
+  /rent-actions/{id}:
+    get:
+      description: Retrieves a rent action by its ID.
+      parameters:
+      - description: Rent Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.RentAction'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Rent Action
+      tags:
+      - RentActions
+  /rent-actions/{id}/approve:
+    post:
+      description: Transitions a rent action from Pending to Approved. Checks availability.
+      parameters:
+      - description: Rent Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid State Transition
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "409":
+          description: Insufficient Inventory
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Approve Rent Action
+      tags:
+      - RentActions
+  /rent-actions/{id}/cancel:
+    post:
+      description: Cancels a rent action.
+      parameters:
+      - description: Rent Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid State Transition
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Cancel Rent Action
+      tags:
+      - RentActions
+  /rent-actions/{id}/reject:
+    post:
+      description: Transitions a rent action from Pending to Rejected.
+      parameters:
+      - description: Rent Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid State Transition
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Reject Rent Action
+      tags:
+      - RentActions
+  /rent-actions/{id}/submit:
+    post:
+      description: Transitions a rent action from Draft to Pending.
+      parameters:
+      - description: Rent Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid State Transition
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Submit Rent Action
+      tags:
+      - RentActions
 securityDefinitions:
   BearerAuth:
     in: header

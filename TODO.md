@@ -10,7 +10,7 @@ Secure the API and define user roles to support the varied workflows (Management
 - [x] Implement `UserRepository` and SQL migrations for user tables.
 - [x] Implement Authentication Service (JWT-based or OIDC integration).
 - [x] Create Authorization Middleware (RBAC) for API endpoints.
-- [ ] Add `CreatedBy` / `UpdatedBy` audit trails to existing core entities (`RentAction`, `Asset`, etc.).
+- [x] Add `CreatedBy` / `UpdatedBy` audit trails to existing core entities (`RentAction`, `Asset`, etc.).
 
 ## Phase 2: Reference UI & API Visualization
 

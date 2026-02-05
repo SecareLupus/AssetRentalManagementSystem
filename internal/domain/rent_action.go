@@ -18,25 +18,26 @@ const (
 )
 
 type RentAction struct {
-	ID             int64            `json:"id"`
-	RequesterRef   string           `json:"requester_ref"`
-	CreatedByRef   string           `json:"created_by_ref"`
-	ApprovedByRef  *string          `json:"approved_by_ref,omitempty"`
-	Status         RentActionStatus `json:"status"`
-	Priority       string           `json:"priority"`
-	StartTime      time.Time        `json:"start_time"` // Maps to schema.org/startTime
-	EndTime        time.Time        `json:"end_time"`   // Maps to schema.org/endTime
-	IsASAP         bool             `json:"is_asap"`
-	Description    *string          `json:"description,omitempty"` // Maps to schema.org/description
-	ExternalSource *string          `json:"external_source,omitempty"`
-	ExternalRef    *string          `json:"external_ref,omitempty"`
-	SchemaOrg      json.RawMessage  `json:"schema_org,omitempty"`
-	Metadata       json.RawMessage  `json:"metadata,omitempty"`
-	ApprovedAt     *time.Time       `json:"approved_at,omitempty"`
-	RejectedAt     *time.Time       `json:"rejected_at,omitempty"`
-	CancelledAt    *time.Time       `json:"cancelled_at,omitempty"`
-	CreatedAt      time.Time        `json:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at"`
+	ID              int64            `json:"id"`
+	RequesterRef    string           `json:"requester_ref"`
+	CreatedByRef    string           `json:"created_by_ref"`               // Legacy ref or username
+	CreatedByUserID *int64           `json:"created_by_user_id,omitempty"` // Audit trail
+	ApprovedByRef   *string          `json:"approved_by_ref,omitempty"`
+	Status          RentActionStatus `json:"status"`
+	Priority        string           `json:"priority"`
+	StartTime       time.Time        `json:"start_time"` // Maps to schema.org/startTime
+	EndTime         time.Time        `json:"end_time"`   // Maps to schema.org/endTime
+	IsASAP          bool             `json:"is_asap"`
+	Description     *string          `json:"description,omitempty"` // Maps to schema.org/description
+	ExternalSource  *string          `json:"external_source,omitempty"`
+	ExternalRef     *string          `json:"external_ref,omitempty"`
+	SchemaOrg       json.RawMessage  `json:"schema_org,omitempty" swaggertype:"string" example:"{}"`
+	Metadata        json.RawMessage  `json:"metadata,omitempty" swaggertype:"string" example:"{}"`
+	ApprovedAt      *time.Time       `json:"approved_at,omitempty"`
+	RejectedAt      *time.Time       `json:"rejected_at,omitempty"`
+	CancelledAt     *time.Time       `json:"cancelled_at,omitempty"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
 
 	Items []RentActionItem `json:"items,omitempty"`
 }
@@ -49,7 +50,7 @@ type RentActionItem struct {
 	RequestedQuantity int             `json:"requested_quantity"`
 	AllocatedQuantity int             `json:"allocated_quantity"`
 	Notes             *string         `json:"notes,omitempty"`
-	Metadata          json.RawMessage `json:"metadata,omitempty"`
+	Metadata          json.RawMessage `json:"metadata,omitempty" swaggertype:"string" example:"{}"`
 }
 
 func (ra *RentAction) Validate() error {

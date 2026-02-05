@@ -46,9 +46,10 @@ type Asset struct {
 	RemoteManagementID *string            `json:"remote_management_id,omitempty"`
 	CurrentBuildSpecID *int64             `json:"current_build_spec_id,omitempty"`
 	LastInspectionAt   *time.Time         `json:"last_inspection_at,omitempty"`
+	CreatedByUserID    *int64             `json:"created_by_user_id,omitempty"` // Audit trail
 
-	SchemaOrg json.RawMessage `json:"schema_org,omitempty"`
-	Metadata  json.RawMessage `json:"metadata,omitempty"`
+	SchemaOrg json.RawMessage `json:"schema_org,omitempty" swaggertype:"string" example:"{}"`
+	Metadata  json.RawMessage `json:"metadata,omitempty" swaggertype:"string" example:"{}"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 }

@@ -25,6 +25,32 @@ func NewHandler(repo db.Repository, remoteRegistry *fleet.RemoteRegistry) *Handl
 	}
 }
 
+func (h *Handler) getUserIDFromContext(r *http.Request) *int64 {
+	claims, ok := r.Context().Value(UserContextKey).(map[string]interface{}) // JWT usually unmarshals to map[string]interface{} or jwt.MapClaims
+	if !ok {
+		// Try jwt.MapClaims
+		if c, ok := r.Context().Value(UserContextKey).(map[string]interface{}); ok {
+			claims = c
+		} else {
+			// Depending on how jwt runs, it might be distinct type.
+			// In auth.go: ctx := context.WithValue(r.Context(), UserContextKey, claims) where claims is jwt.MapClaims
+			// claims is map[string]interface{}
+			return nil
+		}
+	}
+	// jwt.MapClaims is map[string]interface{}
+	claims, ok = r.Context().Value(UserContextKey).(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	if idFloat, ok := claims["user_id"].(float64); ok {
+		id := int64(idFloat)
+		return &id
+	}
+	return nil
+}
+
 // ItemType Handlers
 
 func (h *Handler) validateItemType(it *domain.ItemType) error {
@@ -43,6 +69,17 @@ func (h *Handler) validateItemType(it *domain.ItemType) error {
 	return nil
 }
 
+// CreateItemType creates a new item type in the catalog.
+// @Summary Create Item Type
+// @Description Creates a new Item Type definition.
+// @Tags Catalog
+// @Accept json
+// @Produce json
+// @Param item_type body domain.ItemType true "Item Type Definition"
+// @Success 201 {object} domain.ItemType
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /catalog/item-types [post]
 func (h *Handler) CreateItemType(w http.ResponseWriter, r *http.Request) {
 	var it domain.ItemType
 	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
@@ -132,6 +169,14 @@ func (h *Handler) DeleteItemType(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetCatalog returns all item types.
+// @Summary List Item Types
+// @Description Returns the full catalog of Item Types.
+// @Tags Catalog
+// @Produce json
+// @Success 200 {array} domain.ItemType
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /catalog/item-types [get]
 func (h *Handler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	results, err := h.repo.ListItemTypes(r.Context())
 	if err != nil {
@@ -172,6 +217,8 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.CreatedByUserID = h.getUserIDFromContext(r)
+
 	if err := h.repo.CreateAsset(r.Context(), &a); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -182,6 +229,16 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a)
 }
 
+// GetAsset retrieves a specific asset.
+// @Summary Get Asset
+// @Description Retrieves an asset by its ID.
+// @Tags Assets
+// @Produce json
+// @Param id path int true "Asset ID"
+// @Success 200 {object} domain.Asset
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /inventory/assets/{id} [get]
 func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -220,6 +277,19 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a)
 }
 
+// UpdateAsset updates an existing asset.
+// @Summary Update Asset
+// @Description Updates an existing asset's details.
+// @Tags Assets
+// @Accept json
+// @Produce json
+// @Param id path int true "Asset ID"
+// @Param asset body domain.Asset true "Asset Data"
+// @Success 200 {object} domain.Asset
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /inventory/assets/{id} [put]
 func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -265,6 +335,18 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a)
 }
 
+// UpdateAssetStatus updates the status of an asset.
+// @Summary Update Asset Status
+// @Description Updates the status of an asset (e.g., available, maintenance).
+// @Tags Assets
+// @Accept json
+// @Produce json
+// @Param id path int true "Asset ID"
+// @Param status body object{status=domain.AssetStatus} true "New Status"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /inventory/assets/{id}/status [patch]
 func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	idStr = strings.TrimSuffix(idStr, "/status")
@@ -297,6 +379,14 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteAsset deletes an asset.
+// @Summary Delete Asset
+// @Description Permanently removes an asset.
+// @Tags Assets
+// @Param id path int true "Asset ID"
+// @Success 204 {string} string "No Content"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /inventory/assets/{id} [delete]
 func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -313,6 +403,16 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListAssets lists assets filtered by item type.
+// @Summary List Assets
+// @Description Returns a list of assets, optionally filtered by item_type_id.
+// @Tags Assets
+// @Produce json
+// @Param item_type_id query int true "Item Type ID"
+// @Success 200 {array} domain.Asset
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /inventory/assets [get]
 func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) {
 	itemTypeIDStr := r.URL.Query().Get("item_type_id")
 	if itemTypeIDStr == "" {
@@ -337,12 +437,25 @@ func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) {
 
 // RentAction Handlers
 
+// CreateRentAction creates a new reservation request.
+// @Summary Create Rent Action
+// @Description Creates a new rent action (reservation).
+// @Tags RentActions
+// @Accept json
+// @Produce json
+// @Param rent_action body domain.RentAction true "Rent Action Data"
+// @Success 201 {object} domain.RentAction
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions [post]
 func (h *Handler) CreateRentAction(w http.ResponseWriter, r *http.Request) {
 	var ra domain.RentAction
 	if err := json.NewDecoder(r.Body).Decode(&ra); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	ra.CreatedByUserID = h.getUserIDFromContext(r)
 
 	if err := h.repo.CreateRentAction(r.Context(), &ra); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -354,6 +467,16 @@ func (h *Handler) CreateRentAction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ra)
 }
 
+// GetRentAction retrieves a rent action by ID.
+// @Summary Get Rent Action
+// @Description Retrieves a rent action by its ID.
+// @Tags RentActions
+// @Produce json
+// @Param id path int true "Rent Action ID"
+// @Success 200 {object} domain.RentAction
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions/{id} [get]
 func (h *Handler) GetRentAction(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -376,6 +499,16 @@ func (h *Handler) GetRentAction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ra)
 }
 
+// SubmitRentAction submits a draft rent action for approval.
+// @Summary Submit Rent Action
+// @Description Transitions a rent action from Draft to Pending.
+// @Tags RentActions
+// @Param id path int true "Rent Action ID"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {string} string "Invalid State Transition"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions/{id}/submit [post]
 func (h *Handler) SubmitRentAction(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
 	idStr = strings.TrimSuffix(idStr, "/submit")
@@ -408,6 +541,17 @@ func (h *Handler) SubmitRentAction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ApproveRentAction approves a pending rent action.
+// @Summary Approve Rent Action
+// @Description Transitions a rent action from Pending to Approved. Checks availability.
+// @Tags RentActions
+// @Param id path int true "Rent Action ID"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {string} string "Invalid State Transition"
+// @Failure 409 {string} string "Insufficient Inventory"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions/{id}/approve [post]
 func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
 	idStr = strings.TrimSuffix(idStr, "/approve")
@@ -455,6 +599,16 @@ func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// RejectRentAction rejects a pending rent action.
+// @Summary Reject Rent Action
+// @Description Transitions a rent action from Pending to Rejected.
+// @Tags RentActions
+// @Param id path int true "Rent Action ID"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {string} string "Invalid State Transition"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions/{id}/reject [post]
 func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
 	idStr = strings.TrimSuffix(idStr, "/reject")
@@ -487,6 +641,16 @@ func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// CancelRentAction cancels a rent action.
+// @Summary Cancel Rent Action
+// @Description Cancels a rent action.
+// @Tags RentActions
+// @Param id path int true "Rent Action ID"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {string} string "Invalid State Transition"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions/{id}/cancel [post]
 func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
 	idStr = strings.TrimSuffix(idStr, "/cancel")
