@@ -60,6 +60,11 @@ type Repository interface {
 	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
 	UpdateUser(ctx context.Context, u *domain.User) error
 
+	// Intelligence
+	GetAvailabilityTimeline(ctx context.Context, itemTypeID int64, start, end time.Time) ([]domain.AvailabilityPoint, error)
+	GetShortageAlerts(ctx context.Context) ([]domain.ShortageAlert, error)
+	GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error)
+
 	// Outbox
 	AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)

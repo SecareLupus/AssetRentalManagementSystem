@@ -836,3 +836,107 @@ func (r *SqlRepository) MarkEventFailed(ctx context.Context, id int64, errMessag
 	_, err := r.db.ExecContext(ctx, query, errMessage, id)
 	return err
 }
+
+// GetAvailabilityTimeline returns availability data points over a range of dates.
+func (r *SqlRepository) GetAvailabilityTimeline(ctx context.Context, itemTypeID int64, start, end time.Time) ([]domain.AvailabilityPoint, error) {
+	var points []domain.AvailabilityPoint
+	// Iterate day by day
+	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+		dayEnd := d.AddDate(0, 0, 1)
+		avail, err := r.GetAvailableQuantity(ctx, itemTypeID, d, dayEnd)
+		if err != nil {
+			return nil, err
+		}
+
+		var total int
+		err = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM assets WHERE item_type_id = $1 AND status != 'retired'", itemTypeID).Scan(&total)
+		if err != nil {
+			return nil, err
+		}
+
+		points = append(points, domain.AvailabilityPoint{
+			Date:      d,
+			Available: avail,
+			Total:     total,
+		})
+	}
+	return points, nil
+}
+
+// GetShortageAlerts identifies future bottlenecks in inventory.
+func (r *SqlRepository) GetShortageAlerts(ctx context.Context) ([]domain.ShortageAlert, error) {
+	// Simplified: Check next 14 days for all item types
+	var alerts []domain.ShortageAlert
+	start := time.Now()
+	end := start.AddDate(0, 0, 14)
+
+	rows, err := r.db.QueryContext(ctx, "SELECT id, name FROM item_types WHERE is_active = true")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var itID int64
+		var itName string
+		if err := rows.Scan(&itID, &itName); err != nil {
+			continue
+		}
+
+		timeline, err := r.GetAvailabilityTimeline(ctx, itID, start, end)
+		if err != nil {
+			continue
+		}
+
+		for _, p := range timeline {
+			if p.Available < 0 {
+				alerts = append(alerts, domain.ShortageAlert{
+					ItemTypeID:    itID,
+					ItemTypeName:  itName,
+					Date:          p.Date,
+					ShortageCount: -p.Available,
+					TotalNeeded:   p.Total - p.Available,
+					TotalOwned:    p.Total,
+				})
+			}
+		}
+	}
+
+	return alerts, nil
+}
+
+// GetMaintenanceForecast predicts inspection needs based on calendar cycles.
+func (r *SqlRepository) GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error) {
+	// Assets not inspected in > 90 days are "due"
+	query := `SELECT id, asset_tag, last_inspection_at FROM assets 
+	          WHERE status != 'retired' 
+	          AND (last_inspection_at IS NULL OR last_inspection_at < $1)`
+
+	threshold := time.Now().AddDate(0, 0, -90)
+	rows, err := r.db.QueryContext(ctx, query, threshold)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var forecasts []domain.MaintenanceForecast
+	for rows.Next() {
+		var f domain.MaintenanceForecast
+		var lastIns *time.Time
+		if err := rows.Scan(&f.AssetID, &f.AssetTag, &lastIns); err != nil {
+			continue
+		}
+
+		if lastIns == nil {
+			f.Reason = "Initial inspection required"
+			f.UrgencyScore = 1.0
+			f.NextService = time.Now()
+		} else {
+			f.Reason = "Quarterly cycle exceeded"
+			f.UrgencyScore = 0.8
+			f.NextService = lastIns.AddDate(0, 0, 90)
+		}
+		forecasts = append(forecasts, f)
+	}
+	return forecasts, nil
+}

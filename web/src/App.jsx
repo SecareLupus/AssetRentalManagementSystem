@@ -11,8 +11,10 @@ import TechDashboard from './pages/TechDashboard';
 import InspectionRunner from './pages/InspectionRunner';
 import ProvisioningInterface from './pages/ProvisioningInterface';
 import WarehouseKiosk from './pages/WarehouseKiosk';
+import IntelligenceOverview from './pages/IntelligenceOverview';
+import AvailabilityHeatmap from './pages/AvailabilityHeatmap';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Tool, Scan } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Tool, Scan, Brain } from 'lucide-react';
 import './App.css';
 
 const DevToggle = () => {
@@ -110,6 +112,7 @@ function AppContent() {
 
           <NavLink to="/tech" icon={Tool} label="Maintenance" />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" />
+          <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" />
 
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
@@ -134,6 +137,8 @@ function AppContent() {
           <Route path="/tech/inspect/:id" element={<InspectionRunner />} />
           <Route path="/tech/provision/:id" element={<ProvisioningInterface />} />
           <Route path="/kiosk" element={<WarehouseKiosk />} />
+          <Route path="/intelligence" element={<IntelligenceOverview />} />
+          <Route path="/analytics/heatmap" element={<AvailabilityHeatmap />} />
         </Routes>
       </main>
 

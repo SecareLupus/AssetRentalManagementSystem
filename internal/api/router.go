@@ -223,6 +223,29 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 
+	// Intelligence
+	mux.HandleFunc("/v1/intelligence/availability", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.GetAvailabilityTimeline(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/intelligence/shortage-alerts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.GetShortageAlerts(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/intelligence/maintenance-forecast", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.GetMaintenanceForecast(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+
 	// Swagger UI
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 

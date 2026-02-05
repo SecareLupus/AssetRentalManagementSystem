@@ -48,7 +48,7 @@ Tools for the Technician persona to manage the physical lifecycle of devices.
 
 Leverage the data to provide predictive insights and reporting.
 
-- [ ] **Availability Calendar**: Visual timeline of stock levels vs. reservations.
-- [ ] **Shortfall Prediction**: Automated alerts when future reservations exceed projected stock.
-- [ ] **Utilization Reports**: Analysis of most/least used assets and categories.
-- [ ] **Lifecycle Analytics**: Tracking average asset lifespan, repair costs, and depreciation.
+- [x] **Availability Heatmap**: Visual calendar view showing projected equipment utilization and gaps.
+- [x] **Shortage Alerts**: Proactive notifications when overlapping reservations exceed physical inventory.
+- [x] **"What-If" Planning Mode**: Ability to draft a large `RentAction` and see its impact on future fleet health without committing.
+- [x] **Maintenance Forecasting**: Predicting when assets will need inspection based on usage cycles captured in `Metadata`.ion.

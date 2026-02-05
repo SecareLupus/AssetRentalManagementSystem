@@ -1033,3 +1033,71 @@ func (h *Handler) ApplyAssetRemotePower(w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// Intelligence Handlers
+
+func (h *Handler) GetAvailabilityTimeline(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("item_type_id")
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+
+	if idStr == "" || startStr == "" || endStr == "" {
+		http.Error(w, "missing required parameters (item_type_id, start, end)", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	start, err := time.Parse(time.RFC3339, startStr)
+	if err != nil {
+		start, err = time.Parse("2006-01-02", startStr)
+		if err != nil {
+			http.Error(w, "invalid start date", http.StatusBadRequest)
+			return
+		}
+	}
+
+	end, err := time.Parse(time.RFC3339, endStr)
+	if err != nil {
+		end, err = time.Parse("2006-01-02", endStr)
+		if err != nil {
+			http.Error(w, "invalid end date", http.StatusBadRequest)
+			return
+		}
+	}
+
+	results, err := h.repo.GetAvailabilityTimeline(r.Context(), id, start, end)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+func (h *Handler) GetShortageAlerts(w http.ResponseWriter, r *http.Request) {
+	results, err := h.repo.GetShortageAlerts(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+func (h *Handler) GetMaintenanceForecast(w http.ResponseWriter, r *http.Request) {
+	results, err := h.repo.GetMaintenanceForecast(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}

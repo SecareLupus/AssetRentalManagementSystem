@@ -305,3 +305,18 @@ func (m *MockRepository) MarkEventFailed(ctx context.Context, id int64, errMessa
 	args := m.Called(ctx, id, errMessage)
 	return args.Error(0)
 }
+
+func (m *MockRepository) GetAvailabilityTimeline(ctx context.Context, itemTypeID int64, start, end time.Time) ([]domain.AvailabilityPoint, error) {
+	args := m.Called(ctx, itemTypeID, start, end)
+	return args.Get(0).([]domain.AvailabilityPoint), args.Error(1)
+}
+
+func (m *MockRepository) GetShortageAlerts(ctx context.Context) ([]domain.ShortageAlert, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]domain.ShortageAlert), args.Error(1)
+}
+
+func (m *MockRepository) GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]domain.MaintenanceForecast), args.Error(1)
+}
