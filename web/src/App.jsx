@@ -1,12 +1,16 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { DeveloperProvider, useDeveloper } from './context/DeveloperContext';
 import Dashboard from './pages/Dashboard';
+import Catalog from './pages/Catalog';
+import ItemTypeDetails from './pages/ItemTypeDetails';
+import AssetDetails from './pages/AssetDetails';
+import ReservationWizard from './pages/ReservationWizard';
+import ReservationsList from './pages/ReservationsList';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Settings, User, Terminal } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, ShoppingCart, ShieldAlert } from 'lucide-react';
 import './App.css';
 
-// A small sub-component to handle the Dev Mode toggle in the sidebar
 const DevToggle = () => {
   const { isDevMode, setIsDevMode } = useDeveloper();
   return (
@@ -49,6 +53,28 @@ const DevToggle = () => {
   );
 };
 
+const NavLink = ({ to, icon: Icon, label }) => {
+  const location = useLocation();
+  const active = location.pathname === to;
+
+  return (
+    <Link to={to} style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      padding: '0.75rem 1rem',
+      borderRadius: '0.5rem',
+      background: active ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+      color: active ? 'var(--primary)' : 'var(--text-muted)',
+      textDecoration: 'none',
+      fontWeight: active ? 600 : 500,
+      transition: 'all 0.2s'
+    }}>
+      <Icon size={20} /> {label}
+    </Link>
+  );
+};
+
 function AppContent() {
   return (
     <div className="app-container" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)', color: 'var(--text)' }}>
@@ -59,7 +85,10 @@ function AppContent() {
         display: 'flex',
         flexDirection: 'column',
         background: 'rgba(15, 23, 42, 0.5)',
-        backdropFilter: 'blur(10px)'
+        backdropFilter: 'blur(10px)',
+        position: 'sticky',
+        top: 0,
+        height: '100vh'
       }}>
         <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ background: 'var(--primary)', padding: '0.5rem', borderRadius: '0.75rem' }}>
@@ -69,50 +98,16 @@ function AppContent() {
         </div>
 
         <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <Link to="/" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            background: 'rgba(99, 102, 241, 0.1)',
-            color: 'var(--primary)',
-            textDecoration: 'none',
-            fontWeight: 600
-          }}>
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            color: 'var(--text-muted)',
-            cursor: 'not-allowed'
-          }}>
-            <Box size={20} /> Inventory
+          <NavLink to="/" icon={LayoutDashboard} label="Dashboard" />
+          <NavLink to="/catalog" icon={Box} label="Equipment Catalog" />
+          <NavLink to="/reservations" icon={Calendar} label="Reservations" />
+
+          <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
+            <ShieldAlert size={20} /> Fleet Status
           </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            color: 'var(--text-muted)',
-            cursor: 'not-allowed'
-          }}>
-            <User size={20} /> Customers
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            color: 'var(--text-muted)',
-            cursor: 'not-allowed'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
             <Settings size={20} /> Settings
           </div>
         </div>
@@ -121,9 +116,14 @@ function AppContent() {
       </nav>
 
       {/* Main Content */}
-      <main style={{ flex: 1, height: '100vh', overflowY: 'auto' }}>
+      <main style={{ flex: 1, minHeight: '100vh', overflowY: 'auto' }}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/catalog" element={<Catalog />} />
+          <Route path="/catalog/:id" element={<ItemTypeDetails />} />
+          <Route path="/assets/:id" element={<AssetDetails />} />
+          <Route path="/reserve" element={<ReservationWizard />} />
+          <Route path="/reservations" element={<ReservationsList />} />
         </Routes>
       </main>
 

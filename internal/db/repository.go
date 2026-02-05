@@ -28,6 +28,7 @@ type Repository interface {
 	// RentActions
 	CreateRentAction(ctx context.Context, ra *domain.RentAction) error
 	GetRentActionByID(ctx context.Context, id int64) (*domain.RentAction, error)
+	ListRentActions(ctx context.Context) ([]domain.RentAction, error)
 	UpdateRentAction(ctx context.Context, ra *domain.RentAction) error
 	UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error
 

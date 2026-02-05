@@ -99,6 +99,11 @@ func (m *MockRepository) GetRentActionByID(ctx context.Context, id int64) (*doma
 	return args.Get(0).(*domain.RentAction), args.Error(1)
 }
 
+func (m *MockRepository) ListRentActions(ctx context.Context) ([]domain.RentAction, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]domain.RentAction), args.Error(1)
+}
+
 func (m *MockRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAction) error {
 	args := m.Called(ctx, ra)
 	return args.Error(0)

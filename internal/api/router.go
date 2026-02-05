@@ -54,16 +54,7 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/fleet/item-types/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/recall") {
-			if r.Method == http.MethodPost {
-				h.RecallItemTypeAssets(w, r)
-				return
-			}
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
+	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			h.GetItemType(w, r)
@@ -74,6 +65,18 @@ func NewRouter(h *Handler) http.Handler {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
+	})
+
+	mux.HandleFunc("/v1/fleet/item-types/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/recall") {
+			if r.Method == http.MethodPost {
+				h.RecallItemTypeAssets(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 	})
 
 	// Inventory (Assets)
@@ -181,7 +184,9 @@ func NewRouter(h *Handler) http.Handler {
 		case http.MethodPost:
 			h.CreateRentAction(w, r)
 		case http.MethodGet:
-			// List rent actions (internal handler needed)
+			h.ListRentActions(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 	mux.HandleFunc("/v1/rent-actions/", func(w http.ResponseWriter, r *http.Request) {

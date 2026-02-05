@@ -29,11 +29,11 @@ Establish the frontend not just as a tool, but as a live reference implementatio
 
 Enable users to browse inventory and request equipment (The "Rent" core loop) with full transparency.
 
-- [ ] **Catalog View**: Grid/List view of `ItemTypes` with availability status.
-- [ ] **Asset Details**: Rich view of individual assets (specs, history, maintenance log).
-- [ ] **Reservation Wizard**: Multi-step form to create a `RentAction` (Select dates, items, logistics).
-- [ ] **Approval Workflow UI**: Interface for Managers to review, approve, or reject requests.
-- [ ] **Integration Points**: Ensure every button/action in these views triggers the API Inspector log.
+- [x] **Catalog View**: Grid/List view of `ItemTypes` with availability status.
+- [x] **Asset Details**: Rich view of individual assets (specs, history, maintenance log).
+- [x] **Reservation Wizard**: Multi-step form to create a `RentAction` (Select dates, items, logistics).
+- [x] **Approval Workflow UI**: Interface for Managers to review, approve, or reject requests.
+- [x] **Integration Points**: Ensure every button/action in these views triggers the API Inspector log.
 
 ## Phase 4: Fleet Services & Maintenance Station
 

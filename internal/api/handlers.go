@@ -435,6 +435,25 @@ func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+// ListRentActions returns all rent actions.
+// @Summary List Rent Actions
+// @Description Returns all rent actions (reservations).
+// @Tags RentActions
+// @Produce json
+// @Success 200 {array} domain.RentAction
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /rent-actions [get]
+func (h *Handler) ListRentActions(w http.ResponseWriter, r *http.Request) {
+	results, err := h.repo.ListRentActions(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
 // RentAction Handlers
 
 // CreateRentAction creates a new reservation request.

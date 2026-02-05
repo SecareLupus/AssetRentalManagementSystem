@@ -327,6 +327,37 @@ func (r *SqlRepository) GetRentActionByID(ctx context.Context, id int64) (*domai
 	return &ra, nil
 }
 
+// ListRentActions returns all rent actions.
+func (r *SqlRepository) ListRentActions(ctx context.Context) ([]domain.RentAction, error) {
+	query := `SELECT id, requester_ref, created_by_ref, created_by_user_id, approved_by_ref, status, priority, 
+	                 start_time, end_time, is_asap, description, external_source, 
+	                 external_ref, schema_org, metadata, approved_at, rejected_at, 
+	                 cancelled_at, created_at, updated_at 
+	          FROM rent_actions ORDER BY created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query rent_actions: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.RentAction
+	for rows.Next() {
+		var ra domain.RentAction
+		err := rows.Scan(
+			&ra.ID, &ra.RequesterRef, &ra.CreatedByRef, &ra.CreatedByUserID, &ra.ApprovedByRef, &ra.Status, &ra.Priority,
+			&ra.StartTime, &ra.EndTime, &ra.IsASAP, &ra.Description, &ra.ExternalSource,
+			&ra.ExternalRef, &ra.SchemaOrg, &ra.Metadata, &ra.ApprovedAt, &ra.RejectedAt,
+			&ra.CancelledAt, &ra.CreatedAt, &ra.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan rent_action: %w", err)
+		}
+		results = append(results, ra)
+	}
+	return results, nil
+}
+
 // UpdateRentAction updates an existing rent action.
 func (r *SqlRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAction) error {
 	ra.UpdatedAt = time.Now()
