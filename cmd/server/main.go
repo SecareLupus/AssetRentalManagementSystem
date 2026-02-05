@@ -50,6 +50,13 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
+	// Automated Migrations
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := db.RunMigrations(ctx, conn); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+
 	repo := db.NewSqlRepository(conn)
 
 	// MQTT Setup

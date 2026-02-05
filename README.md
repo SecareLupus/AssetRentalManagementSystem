@@ -53,11 +53,7 @@ cp .env.example .env
 
 ### Database Migrations
 
-Apply the SQL migrations located in `./migrations/` to your database. You can do this manually using `psql`:
-
-```bash
-for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
-```
+Migrations are automatically applied on application startup. If you need to apply them manually (e.g., in a custom environment), the SQL files are located in `internal/db/migrations/`.
 
 ### Running the Service
 

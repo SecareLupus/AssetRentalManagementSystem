@@ -27,8 +27,8 @@ RUN apk add --no-cache ca-certificates curl
 # Copy the binary from the builder stage
 COPY --from=builder /rms-server .
 
-# Copy migrations (if the app runs them or for manual application)
-COPY migrations ./migrations
+# Copy migrations (embedded in binary, but keeping for reference if needed)
+# COPY internal/db/migrations ./migrations
 
 # Expose API port
 EXPOSE 8080
