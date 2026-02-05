@@ -39,10 +39,10 @@ Enable users to browse inventory and request equipment (The "Rent" core loop) wi
 
 Tools for the Technician persona to manage the physical lifecycle of devices.
 
-- [ ] **Tech Dashboard**: View of "To-Do" items (Inspections due, Provisioning tasks, Returns to process).
-- [ ] **Inspection Runner**: UI to render the Dynamic Inspection Forms (from Phase 7) and capture results/photos.
-- [ ] **Provisioning Interface**: Step-by-step wizard for `ProvisionAction` (setting Test Bits, verifying firmware).
-- [ ] **Check-in/Check-out Kiosk**: Simplified view for scanning assets in and out of the warehouse.
+- [x] **Tech Dashboard**: View of "To-Do" items (Inspections due, Provisioning tasks, Returns to process).
+- [x] **Inspection Runner**: UI to render the Dynamic Inspection Forms (from Phase 7) and capture results/photos.
+- [x] **Provisioning Interface**: Step-by-step wizard for `ProvisionAction` (setting Test Bits, verifying firmware).
+- [x] **Check-in/Check-out Kiosk**: Simplified view for scanning assets in and out of the warehouse.
 
 ## Phase 5: Planning & Intelligence Engine
 

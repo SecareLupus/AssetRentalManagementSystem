@@ -7,8 +7,12 @@ import ItemTypeDetails from './pages/ItemTypeDetails';
 import AssetDetails from './pages/AssetDetails';
 import ReservationWizard from './pages/ReservationWizard';
 import ReservationsList from './pages/ReservationsList';
+import TechDashboard from './pages/TechDashboard';
+import InspectionRunner from './pages/InspectionRunner';
+import ProvisioningInterface from './pages/ProvisioningInterface';
+import WarehouseKiosk from './pages/WarehouseKiosk';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, ShoppingCart, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Tool, Scan } from 'lucide-react';
 import './App.css';
 
 const DevToggle = () => {
@@ -104,9 +108,11 @@ function AppContent() {
 
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
-            <ShieldAlert size={20} /> Fleet Status
-          </div>
+          <NavLink to="/tech" icon={Tool} label="Maintenance" />
+          <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" />
+
+          <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
             <Settings size={20} /> Settings
           </div>
@@ -124,6 +130,10 @@ function AppContent() {
           <Route path="/assets/:id" element={<AssetDetails />} />
           <Route path="/reserve" element={<ReservationWizard />} />
           <Route path="/reservations" element={<ReservationsList />} />
+          <Route path="/tech" element={<TechDashboard />} />
+          <Route path="/tech/inspect/:id" element={<InspectionRunner />} />
+          <Route path="/tech/provision/:id" element={<ProvisioningInterface />} />
+          <Route path="/kiosk" element={<WarehouseKiosk />} />
         </Routes>
       </main>
 

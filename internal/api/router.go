@@ -157,6 +157,14 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+		if strings.HasSuffix(r.URL.Path, "/maintenance-logs") {
+			if r.Method == http.MethodGet {
+				h.ListMaintenanceLogs(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		if strings.HasSuffix(r.URL.Path, "/inspections") {
 			if r.Method == http.MethodPost {
 				h.SubmitInspection(w, r)

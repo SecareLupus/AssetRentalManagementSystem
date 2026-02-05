@@ -156,6 +156,34 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 	return nil
 }
 
+// ListAssets returns all assets.
+func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) {
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 
+	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
+	                 schema_org, metadata, created_at, updated_at 
+	          FROM assets`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query assets: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.Asset
+	for rows.Next() {
+		var a domain.Asset
+		if err := rows.Scan(
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname,
+			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
+			&a.SchemaOrg, &a.Metadata, &a.CreatedAt, &a.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan asset: %w", err)
+		}
+		results = append(results, a)
+	}
+	return results, nil
+}
+
 // ListAssetsByItemType returns assets belonging to a specific item type.
 func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
 	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, 

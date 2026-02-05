@@ -61,6 +61,11 @@ func (m *MockRepository) GetAssetByID(ctx context.Context, id int64) (*domain.As
 	return args.Get(0).(*domain.Asset), args.Error(1)
 }
 
+func (m *MockRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]domain.Asset), args.Error(1)
+}
+
 func (m *MockRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
 	args := m.Called(ctx, itemTypeID)
 	return args.Get(0).([]domain.Asset), args.Error(1)

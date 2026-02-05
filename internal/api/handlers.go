@@ -415,17 +415,20 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 // @Router /inventory/assets [get]
 func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) {
 	itemTypeIDStr := r.URL.Query().Get("item_type_id")
-	if itemTypeIDStr == "" {
-		http.Error(w, "item_type_id required", http.StatusBadRequest)
-		return
-	}
-	itemTypeID, err := strconv.ParseInt(itemTypeIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid item_type_id", http.StatusBadRequest)
-		return
+	var results []domain.Asset
+	var err error
+
+	if itemTypeIDStr != "" {
+		itemTypeID, err2 := strconv.ParseInt(itemTypeIDStr, 10, 64)
+		if err2 != nil {
+			http.Error(w, "invalid item_type_id", http.StatusBadRequest)
+			return
+		}
+		results, err = h.repo.ListAssetsByItemType(r.Context(), itemTypeID)
+	} else {
+		results, err = h.repo.ListAssets(r.Context())
 	}
 
-	results, err := h.repo.ListAssetsByItemType(r.Context(), itemTypeID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -849,6 +852,25 @@ func (h *Handler) RefurbishAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ListMaintenanceLogs(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
+	idStr = strings.TrimSuffix(idStr, "/maintenance-logs")
+	assetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	results, err := h.repo.ListMaintenanceLogs(r.Context(), assetID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
 
 // Build Spec Handlers

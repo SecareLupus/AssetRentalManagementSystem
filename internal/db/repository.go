@@ -19,6 +19,7 @@ type Repository interface {
 	// Assets
 	CreateAsset(ctx context.Context, a *domain.Asset) error
 	GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error)
+	ListAssets(ctx context.Context) ([]domain.Asset, error)
 	ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error)
 	UpdateAsset(ctx context.Context, a *domain.Asset) error
 	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error
