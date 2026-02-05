@@ -11,10 +11,12 @@ import (
 	_ "github.com/desmond/rental-management-system/cmd/server/docs" // Setup for Swagger docs
 	"github.com/desmond/rental-management-system/internal/api"
 	"github.com/desmond/rental-management-system/internal/db"
+	"github.com/desmond/rental-management-system/internal/domain"
 	"github.com/desmond/rental-management-system/internal/fleet"
 	"github.com/desmond/rental-management-system/internal/mqtt"
 	"github.com/desmond/rental-management-system/internal/worker"
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // @title Rental Management System API
@@ -58,6 +60,36 @@ func main() {
 	}
 
 	repo := db.NewSqlRepository(conn)
+
+	// Seed Admin User
+	adminUser := os.Getenv("ADMIN_USERNAME")
+	adminPass := os.Getenv("ADMIN_PASSWORD")
+	if adminUser != "" && adminPass != "" {
+		ctx := context.Background()
+		existing, err := repo.GetUserByUsername(ctx, adminUser)
+		if err != nil {
+			log.Printf("Error checking for admin user: %v", err)
+		} else if existing == nil {
+			log.Printf("Creating default admin user: %s", adminUser)
+			hash, err := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
+			if err != nil {
+				log.Printf("Failed to hash admin password: %v", err)
+			} else {
+				user := &domain.User{
+					Username:     adminUser,
+					PasswordHash: string(hash),
+					Email:        "admin@example.com", // Default email
+					Role:         domain.UserRoleAdmin,
+					IsEnabled:    true,
+				}
+				if err := repo.CreateUser(ctx, user); err != nil {
+					log.Printf("Failed to create admin user: %v", err)
+				} else {
+					log.Printf("Admin user created successfully")
+				}
+			}
+		}
+	}
 
 	// MQTT Setup
 	mqttBroker := os.Getenv("MQTT_BROKER")

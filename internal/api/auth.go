@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -43,12 +44,15 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Login attempt for username: %s", req.Username)
 	user, err := h.repo.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {
+		log.Printf("Error fetching user: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if user == nil {
+		log.Printf("User not found: %s", req.Username)
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}

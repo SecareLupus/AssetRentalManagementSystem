@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { DeveloperProvider, useDeveloper } from './context/DeveloperContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import Catalog from './pages/Catalog';
 import ItemTypeDetails from './pages/ItemTypeDetails';
@@ -13,8 +14,9 @@ import ProvisioningInterface from './pages/ProvisioningInterface';
 import WarehouseKiosk from './pages/WarehouseKiosk';
 import IntelligenceOverview from './pages/IntelligenceOverview';
 import AvailabilityHeatmap from './pages/AvailabilityHeatmap';
+import Login from './pages/Login';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut } from 'lucide-react';
 import './App.css';
 
 const DevToggle = () => {
@@ -82,6 +84,12 @@ const NavLink = ({ to, icon: Icon, label }) => {
 };
 
 function AppContent() {
+  const { isAuthenticated, user, logout } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   return (
     <div className="app-container" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)', color: 'var(--text)' }}>
       {/* Sidebar Nav */}
@@ -116,8 +124,26 @@ function AppContent() {
 
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
-            <Settings size={20} /> Settings
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', color: 'var(--text-muted)', cursor: 'not-allowed', fontSize: '0.875rem' }}>
+                <Settings size={20} /> Settings
+            </div>
+            <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: '0.75rem' }}>
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.username || 'User'}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role || 'Viewer'}</div>
+                </div>
+                <button 
+                  onClick={logout}
+                  style={{ background: 'transparent', color: 'var(--text-muted)', padding: '0.25rem' }}
+                  title="Logout"
+                >
+                    <LogOut size={18} />
+                </button>
+            </div>
           </div>
         </div>
 
@@ -150,11 +176,13 @@ function AppContent() {
 
 function App() {
   return (
-    <DeveloperProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </DeveloperProvider>
+    <AuthProvider>
+      <DeveloperProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </DeveloperProvider>
+    </AuthProvider>
   );
 }
 

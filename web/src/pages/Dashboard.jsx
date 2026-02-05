@@ -4,10 +4,10 @@ import { LayoutDashboard, Box, Calendar, AlertCircle, ChevronRight, Activity } f
 
 const Dashboard = () => {
     const [stats, setStats] = useState({
-        totalItems: 0,
+        totalAssets: 0,
         availableAssets: 0,
-        pendingReservations: 0,
-        activeAlerts: 4
+        pendingRequests: 0,
+        activeAlerts: 0
     });
     const [itemTypes, setItemTypes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -15,9 +15,20 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('/v1/catalog/item-types');
-                setItemTypes(response.data || []);
-                setStats(prev => ({ ...prev, totalItems: response.data?.length || 0 }));
+                const [typesRes, statsRes] = await Promise.all([
+                    axios.get('/v1/catalog/item-types'),
+                    axios.get('/v1/dashboard/stats')
+                ]);
+                
+                setItemTypes(typesRes.data || []);
+                
+                const s = statsRes.data || {};
+                setStats({
+                    totalAssets: s.total_assets || 0,
+                    availableAssets: s.assets_by_status?.available || 0,
+                    pendingRequests: s.active_rentals || 0,
+                    activeAlerts: s.recent_alerts_count || 0
+                });
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
             } finally {
@@ -42,10 +53,10 @@ const Dashboard = () => {
                 marginBottom: '3rem'
             }}>
                 {[
-                    { label: 'Total Item Types', value: stats.totalItems, icon: Box, color: 'var(--primary)' },
-                    { label: 'Available Assets', value: '42', icon: Activity, color: 'var(--success)' },
-                    { label: 'Pending Requests', value: '12', icon: Calendar, color: 'var(--warning)' },
-                    { label: 'System Alerts', value: '0', icon: AlertCircle, color: 'var(--error)' },
+                    { label: 'Total Item Types', value: itemTypes.length, icon: Box, color: 'var(--primary)' },
+                    { label: 'Available Assets', value: stats.availableAssets, icon: Activity, color: 'var(--success)' },
+                    { label: 'Pending Requests', value: stats.pendingRequests, icon: Calendar, color: 'var(--warning)' },
+                    { label: 'System Alerts', value: stats.activeAlerts, icon: AlertCircle, color: 'var(--error)' },
                 ].map((stat, i) => (
                     <div key={i} className="glass" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
