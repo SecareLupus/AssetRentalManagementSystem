@@ -22,20 +22,34 @@ This service is API-first, providing robust management for rental reservations (
 
 ### Setup Test Environment
 
-The fastest way to spin up the required database and MQTT broker is via Docker Compose:
+The fastest way to spin up the entire stack (App, Database, and MQTT broker) is via Docker Compose:
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
+
+This will:
+
+1. Build the Go application container.
+2. Start a PostgreSQL database instance.
+3. Start a Mosquitto MQTT broker.
+4. Expose the API at `http://localhost:8080`.
 
 ### Configuration
 
-The following environment variables can be used to configure the service:
+The following environment variables can be used to configure the service. You can create a `.env` file based on `.env.example` for local overrides:
 
-| Variable       | Description                  | Default                                                                 |
-| -------------- | ---------------------------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/rental_db?sslmode=disable` |
-| `MQTT_BROKER`  | MQTT broker URL              | `tcp://localhost:1883`                                                  |
+```bash
+cp .env.example .env
+```
+
+| Variable            | Description                          | Default                                                                 |
+| ------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
+| `DATABASE_URL`      | PostgreSQL connection string         | `postgres://postgres:postgres@localhost:5432/rental_db?sslmode=disable` |
+| `MQTT_BROKER`       | MQTT broker URL                      | `tcp://localhost:1883`                                                  |
+| `POSTGRES_USER`     | DB User (used by docker-compose)     | `postgres`                                                              |
+| `POSTGRES_PASSWORD` | DB Password (used by docker-compose) | `postgres`                                                              |
+| `POSTGRES_DB`       | DB Name (used by docker-compose)     | `rental_db`                                                             |
 
 ### Database Migrations
 

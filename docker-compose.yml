@@ -19,5 +19,16 @@ services:
     volumes:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
 
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/rental_db?sslmode=disable}
+      - MQTT_BROKER=${MQTT_BROKER:-tcp://mqtt:1883}
+    depends_on:
+      - db
+      - mqtt
+
 volumes:
   postgres_data:
