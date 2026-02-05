@@ -1,8 +1,8 @@
-# Rental Management System - Phase II Roadmap
+# Rental Management System - Milestone II Roadmap
 
 Building upon the solid backend foundation, the next phases focus on security, user interaction, and operational intelligence.
 
-## Phase 1: Identity & Access Management (IAM)
+## Phase 7: Identity & Access Management (IAM)
 
 Secure the API and define user roles to support the varied workflows (Management vs. Technical Operations).
 
@@ -12,20 +12,20 @@ Secure the API and define user roles to support the varied workflows (Management
 - [x] Create Authorization Middleware (RBAC) for API endpoints.
 - [x] Add `CreatedBy` / `UpdatedBy` audit trails to existing core entities (`RentAction`, `Asset`, etc.).
 
-## Phase 2: Reference UI & API Visualization
+## Phase 8: Reference UI & API Visualization
 
 Establish the frontend not just as a tool, but as a live reference implementation for the API.
 
 - [x] **OpenAPI Integration**: specific annotations to Go handlers and generate `swagger.json` (using swaggo/swag).
 - [x] **Frontend Foundation**: Initialize React/Vite with a "Developer Mode" context.
 - [x] **API Inspector Component**: A global UI overlay that listens to network requests and displays:
-    -   The exact HTTP method and URL used.
-    -   The Request Body / Headers sent.
-    -   The Response received.
-    -   Relevant documentation excerpt for that endpoint.
+  - The exact HTTP method and URL used.
+  - The Request Body / Headers sent.
+  - The Response received.
+  - Relevant documentation excerpt for that endpoint.
 - [x] **Dashboard Implementation**: Build the "Commander's Dashboard" utilizing this new Inspector system.
 
-## Phase 3: Catalog & Reservation (Self-Documenting)
+## Phase 9: Catalog & Reservation (Self-Documenting)
 
 Enable users to browse inventory and request equipment (The "Rent" core loop) with full transparency.
 
@@ -35,7 +35,7 @@ Enable users to browse inventory and request equipment (The "Rent" core loop) wi
 - [x] **Approval Workflow UI**: Interface for Managers to review, approve, or reject requests.
 - [x] **Integration Points**: Ensure every button/action in these views triggers the API Inspector log.
 
-## Phase 4: Fleet Services & Maintenance Station
+## Phase 10: Fleet Services & Maintenance Station
 
 Tools for the Technician persona to manage the physical lifecycle of devices.
 
@@ -44,7 +44,7 @@ Tools for the Technician persona to manage the physical lifecycle of devices.
 - [x] **Provisioning Interface**: Step-by-step wizard for `ProvisionAction` (setting Test Bits, verifying firmware).
 - [x] **Check-in/Check-out Kiosk**: Simplified view for scanning assets in and out of the warehouse.
 
-## Phase 5: Planning & Intelligence Engine
+## Phase 11: Planning & Intelligence Engine
 
 Leverage the data to provide predictive insights and reporting.
 
