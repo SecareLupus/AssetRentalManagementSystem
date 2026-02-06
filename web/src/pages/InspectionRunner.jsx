@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { ClipboardCheck, ArrowLeft, Save, CheckCircle2, AlertTriangle, Camera } from 'lucide-react';
 
 const InspectionRunner = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [asset, setAsset] = useState(null);
     const [templates, setTemplates] = useState([]);
     const [responses, setResponses] = useState({}); // { templateId: { status: 'pass/fail', notes: '' } }
@@ -40,7 +42,7 @@ const InspectionRunner = () => {
         setSubmitting(true);
         try {
             const submission = {
-                performed_by: 'Inspector Tech',
+                performed_by: user?.username || 'Inspector Tech',
                 responses: Object.entries(responses).map(([templId, resp]) => ({
                     template_id: parseInt(templId),
                     value: resp.status,

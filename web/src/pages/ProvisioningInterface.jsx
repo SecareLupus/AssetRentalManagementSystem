@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { Zap, ArrowLeft, Play, CheckCircle, Save, Settings, Database, Activity } from 'lucide-react';
 
 const ProvisioningInterface = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [asset, setAsset] = useState(null);
     const [buildSpecs, setBuildSpecs] = useState([]);
     const [selectedSpec, setSelectedSpec] = useState('');
@@ -37,18 +39,43 @@ const ProvisioningInterface = () => {
         try {
             await axios.post(`/v1/inventory/assets/${id}/provision`, {
                 build_spec_id: parseInt(selectedSpec),
-                performed_by: 'Tech Station #1'
+                performed_by: user?.username || 'Tech Station #1'
             });
-            addLog("Build spec assigned. Flashing sequence started.");
-
-            // Simulating progress
-            setTimeout(() => addLog("Verifying firmware integrity..."), 1000);
-            setTimeout(() => addLog("Applying security keys..."), 2000);
-            setTimeout(() => addLog("System ready for final check."), 3000);
+            addLog("Build spec assigned. Status polling active.");
         } catch (err) {
             addLog("ERROR: API rejected provisioning start.");
+            setProvisioning(false);
         }
     };
+
+    // Polling for real-time status
+    useEffect(() => {
+        let interval;
+        if (provisioning) {
+            interval = setInterval(async () => {
+                try {
+                    const res = await axios.get(`/v1/inventory/assets/${id}`);
+                    const newAsset = res.data;
+                    setAsset(newAsset);
+
+                    if (newAsset.status === 'available') {
+                        addLog("System ready for final check.");
+                        setProvisioning(false);
+                        clearInterval(interval);
+                    } else if (newAsset.status === 'maintenance') {
+                         addLog("Provisioning halted: Manual intervention required.");
+                         setProvisioning(false);
+                         clearInterval(interval);
+                    } else {
+                         addLog(`Device Status: ${newAsset.status}...`);
+                    }
+                } catch (err) {
+                    addLog("Communication error while polling status.");
+                }
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [provisioning, id]);
 
     const completeProvisioning = async () => {
         try {

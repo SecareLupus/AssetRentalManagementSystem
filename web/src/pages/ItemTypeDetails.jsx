@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info, Plus } from 'lucide-react';
+import { ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info, Plus, Package } from 'lucide-react';
 import { GlassCard, PageHeader, StatusBadge } from '../components/Shared';
 
 const ItemTypeDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [item, setItem] = useState(null);
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -70,8 +71,19 @@ const ItemTypeDetails = () => {
         }
     };
 
-    if (loading) return <div style={{ padding: '4rem', textAlign: 'center' }}>Loading details...</div>;
-    if (!item) return <div style={{ padding: '4rem', textAlign: 'center' }}>Item not found.</div>;
+    const handleDelete = async () => {
+        if (window.confirm("Are you sure you want to archive this item type? This will make it unavailable for new reservations.")) {
+            try {
+                await axios.delete(`/v1/catalog/item-types/${id}`);
+                navigate('/catalog');
+            } catch (err) {
+                alert("Failed to delete item type.");
+            }
+        }
+    };
+
+    if (loading) return <div style={{ padding: '4rem', textAlign: 'center' }}>Loading...</div>;
+    if (!item) return <div style={{ padding: '4rem', textAlign: 'center' }}>Item type not found.</div>;
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -84,7 +96,7 @@ const ItemTypeDetails = () => {
                 <div>
                     <PageHeader 
                         title={item.name} 
-                        subtitle={<span>Code: <code>{item.code}</code></span>}
+                        subtitle={<span>Code: <code>{item.code}</code> | Kind: <span style={{ textTransform: 'capitalize' }}>{item.kind}</span></span>}
                         actions={
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                 <span style={{ background: 'var(--primary)20', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '2rem', fontSize: '0.875rem', fontWeight: 600 }}>
@@ -92,6 +104,9 @@ const ItemTypeDetails = () => {
                                 </span>
                                 <button onClick={() => setShowEditModal(true)} className="glass" style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem' }}>
                                     Edit
+                                </button>
+                                <button onClick={handleDelete} className="glass" style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem', color: 'var(--error)', borderColor: 'var(--error)30' }}>
+                                    <Package size={16} /> Archive Type
                                 </button>
                             </div>
                         }

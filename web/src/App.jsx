@@ -15,8 +15,11 @@ import WarehouseKiosk from './pages/WarehouseKiosk';
 import IntelligenceOverview from './pages/IntelligenceOverview';
 import AvailabilityHeatmap from './pages/AvailabilityHeatmap';
 import Login from './pages/Login';
+import AdminCenter from './pages/AdminCenter';
+import PlanningSimulator from './pages/PlanningSimulator';
+import FleetReports from './pages/FleetReports';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3 } from 'lucide-react';
 import './App.css';
 
 const DevToggle = ({ collapsed }) => {
@@ -133,10 +136,13 @@ function AppContent() {
           <NavLink to="/tech" icon={Wrench} label="Maintenance" collapsed={collapsed} />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" collapsed={collapsed} />
           <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" collapsed={collapsed} />
+          <NavLink to="/simulator" icon={Calculator} label="Fleet Simulator" collapsed={collapsed} />
+          <NavLink to="/reports" icon={BarChart3} label="Fleet Reports" collapsed={collapsed} />
 
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+             <NavLink to="/admin" icon={ShieldAlert} label="System Admin" collapsed={collapsed} />
              <NavLink to="#" icon={Settings} label="Settings" collapsed={collapsed} />
             
              <div style={{ padding: '0.75rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem', justifyContent: collapsed ? 'center' : 'flex-start' }}>
@@ -180,6 +186,9 @@ function AppContent() {
           <Route path="/kiosk" element={<WarehouseKiosk />} />
           <Route path="/intelligence" element={<IntelligenceOverview />} />
           <Route path="/analytics/heatmap" element={<AvailabilityHeatmap />} />
+          <Route path="/admin" element={<AdminCenter />} />
+          <Route path="/simulator" element={<PlanningSimulator />} />
+          <Route path="/reports" element={<FleetReports />} />
         </Routes>
       </main>
 

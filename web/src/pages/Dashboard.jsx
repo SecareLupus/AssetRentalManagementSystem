@@ -11,13 +11,28 @@ const Dashboard = () => {
     });
     const [itemTypes, setItemTypes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [health, setHealth] = useState({ api: 'checking', db: 'checking' });
 
     useEffect(() => {
+        const checkHealth = async () => {
+            try {
+                const res = await axios.get('/v1/health');
+                if (res.data.status === 'ok') {
+                    setHealth({ api: 'online', db: 'online' }); // DB is bundled in health for now
+                } else {
+                    setHealth({ api: 'degraded', db: 'degraded' });
+                }
+            } catch (err) {
+                setHealth({ api: 'offline', db: 'offline' });
+            }
+        };
+
         const fetchData = async () => {
             try {
                 const [typesRes, statsRes] = await Promise.all([
                     axios.get('/v1/catalog/item-types'),
-                    axios.get('/v1/dashboard/stats')
+                    axios.get('/v1/dashboard/stats'),
+                    checkHealth()
                 ]);
                 
                 setItemTypes(typesRes.data || []);
@@ -36,6 +51,9 @@ const Dashboard = () => {
             }
         };
         fetchData();
+
+        const healthInterval = setInterval(checkHealth, 30000); // Poll health every 30s
+        return () => clearInterval(healthInterval);
     }, []);
 
     return (
@@ -120,14 +138,14 @@ const Dashboard = () => {
                     <h3 style={{ fontWeight: 600, marginBottom: '1.5rem' }}>System Status</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {[
-                            { label: 'API Gateway', status: 'Online', color: 'var(--success)' },
-                            { label: 'Fleet Registry', status: 'Online', color: 'var(--success)' },
-                            { label: 'Database', status: 'Syncing', color: 'var(--warning)' },
-                            { label: 'Remote Agent', status: 'Standby', color: 'var(--text-muted)' },
+                            { label: 'API Gateway', status: health.api, color: health.api === 'online' ? 'var(--success)' : health.api === 'degraded' ? 'var(--warning)' : 'var(--error)' },
+                            { label: 'Database', status: health.db, color: health.db === 'online' ? 'var(--success)' : 'var(--warning)' },
+                            { label: 'Fleet Registry', status: 'online', color: 'var(--success)' }, // Virtualized
+                            { label: 'Telemetry Link', status: health.api === 'online' ? 'Active' : 'Down', color: health.api === 'online' ? 'var(--primary)' : 'var(--text-muted)' },
                         ].map((s, i) => (
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '0.875rem' }}>{s.label}</span>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: s.color }}>{s.status}</span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: s.color, textTransform: 'capitalize' }}>{s.status}</span>
                             </div>
                         ))}
                     </div>

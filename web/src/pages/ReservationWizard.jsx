@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { Calendar, Package, FileText, CheckCircle, ChevronRight, ChevronLeft, Plus, Trash2 } from 'lucide-react';
 
 const ReservationWizard = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [catalog, setCatalog] = useState([]);
 
     const [formData, setFormData] = useState({
-        requester_ref: 'Test User', // Mock for now
-        created_by_ref: 'Test User',
+        requester_ref: user?.username || 'Unknown User',
+        created_by_ref: user?.username || 'Unknown User',
         priority: 'normal',
         start_time: '',
         end_time: '',
