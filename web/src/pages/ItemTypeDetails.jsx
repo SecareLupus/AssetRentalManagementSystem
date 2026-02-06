@@ -71,13 +71,18 @@ const ItemTypeDetails = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (window.confirm("Are you sure you want to archive this item type? This will make it unavailable for new reservations.")) {
+    const toggleArchive = async () => {
+        const action = item.is_active ? "archive" : "restore";
+        if (window.confirm(`Are you sure you want to ${action} this item type?`)) {
             try {
-                await axios.delete(`/v1/catalog/item-types/${id}`);
-                navigate('/catalog');
+                if (item.is_active) {
+                    await axios.delete(`/v1/catalog/item-types/${id}`);
+                } else {
+                    await axios.put(`/v1/catalog/item-types/${id}`, { ...item, is_active: true });
+                }
+                fetchData();
             } catch (err) {
-                alert("Failed to delete item type.");
+                alert(`Failed to ${action} item type.`);
             }
         }
     };
@@ -105,8 +110,17 @@ const ItemTypeDetails = () => {
                                 <button onClick={() => setShowEditModal(true)} className="glass" style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem' }}>
                                     Edit
                                 </button>
-                                <button onClick={handleDelete} className="glass" style={{ padding: '0.4rem 0.75rem', fontSize: '0.875rem', color: 'var(--error)', borderColor: 'var(--error)30' }}>
-                                    <Package size={16} /> Archive Type
+                                <button 
+                                    onClick={toggleArchive} 
+                                    className="glass" 
+                                    style={{ 
+                                        padding: '0.4rem 0.75rem', 
+                                        fontSize: '0.875rem', 
+                                        color: item.is_active ? 'var(--error)' : 'var(--success)', 
+                                        borderColor: item.is_active ? 'var(--error)30' : 'var(--success)30' 
+                                    }}
+                                >
+                                    <Package size={16} /> {item.is_active ? 'Archive Type' : 'Restore Type'}
                                 </button>
                             </div>
                         }
@@ -211,9 +225,35 @@ const ItemTypeDetails = () => {
                     <GlassCard style={{ width: '500px', padding: '2rem' }}>
                         <h2 style={{ marginBottom: '1.5rem' }}>Edit Item Type</h2>
                         <form onSubmit={handleEditSubmit}>
-                            <div style={{ marginBottom: '1rem' }}>
+                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name</label>
                                 <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem' }}>Critical Shortage Threshold</label>
+                                    <input 
+                                        type="number"
+                                        value={editForm.metadata?.critical_shortage_threshold || 0} 
+                                        onChange={e => setEditForm({
+                                            ...editForm, 
+                                            metadata: { ...editForm.metadata, critical_shortage_threshold: parseInt(e.target.value) }
+                                        })} 
+                                        style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} 
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem' }}>Forecast Horizon (Days)</label>
+                                    <input 
+                                        type="number"
+                                        value={editForm.metadata?.forecast_horizon_days || 14} 
+                                        onChange={e => setEditForm({
+                                            ...editForm, 
+                                            metadata: { ...editForm.metadata, forecast_horizon_days: parseInt(e.target.value) }
+                                        })} 
+                                        style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} 
+                                    />
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" onClick={() => setShowEditModal(false)} className="glass" style={{ padding: '0.5rem 1rem' }}>Cancel</button>

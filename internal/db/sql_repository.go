@@ -255,10 +255,28 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 	return nil
 }
 
-// UpdateAssetStatus updates the status of an asset.
-func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error {
-	query := `UPDATE assets SET status = $1, updated_at = $2 WHERE id = $3`
-	_, err := r.db.ExecContext(ctx, query, status, time.Now(), id)
+// UpdateAssetStatus updates the status of an asset along with optional metadata and location.
+func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error {
+	query := `UPDATE assets SET status = $1, updated_at = $2`
+	args := []interface{}{status, time.Now()}
+	argCount := 3
+
+	if location != nil {
+		query += fmt.Sprintf(", location = $%d", argCount)
+		args = append(args, *location)
+		argCount++
+	}
+
+	if metadata != nil {
+		query += fmt.Sprintf(", metadata = $%d", argCount)
+		args = append(args, metadata)
+		argCount++
+	}
+
+	query += fmt.Sprintf(" WHERE id = $%d", argCount)
+	args = append(args, id)
+
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update asset status: %w", err)
 	}
@@ -463,7 +481,6 @@ func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int
 	}
 
 	// 2. Subtract quantities from overlapping APPROVED reservations
-	// Overlap rule: (startA < endB) AND (endA > startB)
 	query := `
 		SELECT COALESCE(SUM(rai.requested_quantity), 0)
 		FROM rent_action_items rai
@@ -480,7 +497,23 @@ func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int
 		return 0, fmt.Errorf("sum reserved quantity: %w", err)
 	}
 
-	return total - reserved, nil
+	// 3. Subtract Ad-Hoc Usage (Assets checked out/maintenance without a reservation)
+	// For simplicity, we count assets that are NOT available NOW and don't have an
+	// estimated_return_at before the window start.
+	// This is a rough approximation for Phase 20.
+	queryAdHoc := `
+		SELECT COUNT(*) FROM assets 
+		WHERE item_type_id = $1 
+		  AND status IN ('deployed', 'maintenance')
+		  AND (metadata->>'estimated_return_at' IS NULL OR (metadata->>'estimated_return_at')::timestamp > $2)
+	`
+	var adHoc int
+	err = r.db.QueryRowContext(ctx, queryAdHoc, itemTypeID, startTime).Scan(&adHoc)
+	if err != nil {
+		return 0, fmt.Errorf("count ad-hoc usage: %w", err)
+	}
+
+	return total - reserved - adHoc, nil
 }
 
 // AddMaintenanceLog records a new maintenance activity.

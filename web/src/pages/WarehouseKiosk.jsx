@@ -8,6 +8,10 @@ const WarehouseKiosk = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [inventory, setInventory] = useState([]);
+    const [transactionContext, setTransactionContext] = useState({
+        location: '',
+        estimated_return_at: ''
+    });
 
     useEffect(() => {
         const fetchInventory = async () => {
@@ -48,7 +52,15 @@ const WarehouseKiosk = () => {
             // Sequential updates as the backend doesn't have a generic bulk status endpoint yet
             // (Bulk Recall exists but handles a specific flow)
             await Promise.all(scannedAssets.map(a => 
-                axios.patch(`/v1/inventory/assets/${a.id}/status`, { status: newStatus })
+                axios.patch(`/v1/inventory/assets/${a.id}/status`, { 
+                    status: newStatus,
+                    location: transactionContext.location || undefined,
+                    metadata: { 
+                        ...a.metadata, 
+                        estimated_return_at: transactionContext.estimated_return_at || undefined,
+                        transaction_source: 'warehouse_kiosk'
+                    }
+                })
             ));
             
             setMessage({ type: 'success', text: `Successfully updated ${scannedAssets.length} assets to ${newStatus}.` });
@@ -91,6 +103,30 @@ const WarehouseKiosk = () => {
                             <Search size={24} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
                         </div>
                     </form>
+                    
+                    <div className="glass" style={{ padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Destination / Target Location</label>
+                            <input 
+                                type="text" 
+                                className="glass" 
+                                placeholder="e.g. Rack A-1, Client Site X" 
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', color: 'white' }}
+                                value={transactionContext.location}
+                                onChange={e => setTransactionContext({ ...transactionContext, location: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Est. Return Date (Optional)</label>
+                            <input 
+                                type="datetime-local" 
+                                className="glass" 
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', color: 'white' }}
+                                value={transactionContext.estimated_return_at}
+                                onChange={e => setTransactionContext({ ...transactionContext, estimated_return_at: e.target.value })}
+                            />
+                        </div>
+                    </div>
 
                     {message && (
                         <div className="glass" style={{

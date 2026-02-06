@@ -35,7 +35,7 @@ func TestHandler_RepairAsset(t *testing.T) {
 	repo := new(MockRepository)
 	h := NewHandler(repo, nil)
 
-	repo.On("UpdateAssetStatus", mock.Anything, int64(1), domain.AssetStatusMaintenance).Return(nil)
+	repo.On("UpdateAssetStatus", mock.Anything, int64(1), domain.AssetStatusMaintenance, mock.Anything, mock.Anything).Return(nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/inventory/assets/1/repair", nil)
 	w := httptest.NewRecorder()

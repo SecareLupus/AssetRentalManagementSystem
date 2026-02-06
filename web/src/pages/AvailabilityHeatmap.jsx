@@ -37,6 +37,12 @@ const AvailabilityHeatmap = () => {
         fetchTimeline();
     }, [selectedItemType, startDate]);
 
+    const changeStartDate = (days) => {
+        const current = new Date(startDate);
+        current.setDate(current.getDate() + days);
+        setStartDate(current.toISOString().split('T')[0]);
+    };
+
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ marginBottom: '2.5rem' }}>
@@ -84,8 +90,8 @@ const AvailabilityHeatmap = () => {
                                 <CalendarIcon size={20} /> Availability Heatmap
                             </h3>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button className="glass" style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft size={16} /></button>
-                                <button className="glass" style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronRight size={16} /></button>
+                                <button onClick={() => changeStartDate(-7)} className="glass" style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft size={16} /></button>
+                                <button onClick={() => changeStartDate(7)} className="glass" style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronRight size={16} /></button>
                             </div>
                         </div>
 

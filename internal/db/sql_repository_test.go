@@ -98,6 +98,11 @@ func TestSqlRepository_GetAvailableQuantity(t *testing.T) {
 		WithArgs(int64(10), startTime, endTime).
 		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(3))
 
+	// Mock ad-hoc usage
+	mock.ExpectQuery("SELECT COUNT(.+) FROM assets WHERE item_type_id = \\$1 AND status IN").
+		WithArgs(int64(10), startTime).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
 	avail, err := repo.GetAvailableQuantity(ctx, 10, startTime, endTime)
 	assert.NoError(t, err)
 	assert.Equal(t, 7, avail)

@@ -12,15 +12,14 @@ Goal: Fix broken core logic and API integrations to ensure the system is functio
 - [x] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures (SQL `INSERT` column mismatch).
 - [x] **Maintenance Submission**: Resolve failures in submitting inspections (Foreign Key violation `fk_is_template`).
 
-## Phase 20: Usability & UX Refinements
+### Phase 20: Usability & UX Refinements (COMPLETED)
 
-Goal: Smooth out user workflows and improve data presentation clarity.
-
-- [ ] **Wizard Defaults**: Set default dates to today + 7 days; clarify "ASAP" priority.
-- [ ] **Warehouse Inputs**: Add start/end dates and location fields for bulk transactions.
-- [ ] **Intelligence Hub Parameters**: Make Critical Shortage and Forecast Frequency editable in Item Type settings.
-- [ ] **Heatmap Polish**: Fix pagination buttons and ensure bulk checkouts (without schedules) are respected.
-- [ ] **Catalog Archive Cleanup**: Hide the archive button for already archived item types.
+- [x] Reservation Wizard: Remove redundant ASAP checkbox (Start date defaults to today)
+- [x] Item Type Details: Hide archive button for archived items (Archive/Restore toggle)
+- [x] Warehouse Kiosk: Add Destination and Est. Return Date fields for bulk checkouts
+- [x] Item Type Settings: Make Critical Shortage and Forecast Horizon editable
+- [x] Availability Heatmap: Implement pagination (weekly navigation) and subtract ad-hoc usage from availability logic (without schedules) are respected.
+- [x] **Catalog Archive Cleanup**: Hide the archive button for already archived item types.
 
 ## Phase 21: Advanced Management Tooling
 

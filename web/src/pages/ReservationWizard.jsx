@@ -27,7 +27,6 @@ const ReservationWizard = () => {
         priority: 'normal',
         start_time: formatDateForInput(now),
         end_time: formatDateForInput(future),
-        is_asap: false,
         description: '',
         items: [] // { item_kind: 'item_type', item_id: ID, requested_quantity: 1, name: '' }
     });
@@ -133,12 +132,6 @@ const ReservationWizard = () => {
                                     value={formData.end_time} onChange={e => setFormData({ ...formData, end_time: e.target.value })}
                                 />
                             </div>
-                        </div>
-                        <div style={{ marginTop: '2rem' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={formData.is_asap} onChange={e => setFormData({ ...formData, is_asap: e.target.checked })} />
-                                <span>Mark as ASAP Priority</span>
-                            </label>
                         </div>
                     </div>
                 )}

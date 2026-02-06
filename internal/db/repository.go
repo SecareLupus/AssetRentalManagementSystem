@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/desmond/rental-management-system/internal/domain"
@@ -22,7 +23,7 @@ type Repository interface {
 	ListAssets(ctx context.Context) ([]domain.Asset, error)
 	ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error)
 	UpdateAsset(ctx context.Context, a *domain.Asset) error
-	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error
+	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error
 	RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error
 	BulkRecallAssets(ctx context.Context, ids []int64) error
 	DeleteAsset(ctx context.Context, id int64) error

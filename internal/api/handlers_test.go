@@ -76,8 +76,8 @@ func (m *MockRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error
 	return args.Error(0)
 }
 
-func (m *MockRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus) error {
-	args := m.Called(ctx, id, status)
+func (m *MockRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error {
+	args := m.Called(ctx, id, status, location, metadata)
 	return args.Error(0)
 }
 

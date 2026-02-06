@@ -400,7 +400,9 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Status domain.AssetStatus `json:"status"`
+		Status   domain.AssetStatus `json:"status"`
+		Location *string            `json:"location,omitempty"`
+		Metadata json.RawMessage    `json:"metadata,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -408,7 +410,7 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserIDFromContext(r)
-	if err := h.repo.UpdateAssetStatus(r.Context(), id, req.Status); err != nil {
+	if err := h.repo.UpdateAssetStatus(r.Context(), id, req.Status, req.Location, req.Metadata); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -895,7 +897,7 @@ func (h *Handler) RepairAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.UpdateAssetStatus(r.Context(), id, domain.AssetStatusMaintenance); err != nil {
+	if err := h.repo.UpdateAssetStatus(r.Context(), id, domain.AssetStatusMaintenance, nil, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
