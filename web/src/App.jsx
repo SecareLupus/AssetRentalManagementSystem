@@ -19,8 +19,9 @@ import AdminCenter from './pages/AdminCenter';
 import PlanningSimulator from './pages/PlanningSimulator';
 import FleetReports from './pages/FleetReports';
 import InspectionEditor from './pages/InspectionEditor';
+import EntityManager from './pages/EntityManager';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3, Building2 } from 'lucide-react';
 import './App.css';
 
 const DevToggle = ({ collapsed }) => {
@@ -137,6 +138,7 @@ function AppContent() {
           <NavLink to="/tech" icon={Wrench} label="Maintenance" collapsed={collapsed} />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" collapsed={collapsed} />
           <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" collapsed={collapsed} />
+          <NavLink to="/entities" icon={Building2} label="Entity Management" collapsed={collapsed} />
           <NavLink to="/simulator" icon={Calculator} label="Fleet Simulator" collapsed={collapsed} />
           <NavLink to="/reports" icon={BarChart3} label="Fleet Reports" collapsed={collapsed} />
 
@@ -188,6 +190,7 @@ function AppContent() {
           <Route path="/intelligence" element={<IntelligenceOverview />} />
           <Route path="/analytics/heatmap" element={<AvailabilityHeatmap />} />
           <Route path="/admin" element={<AdminCenter />} />
+          <Route path="/entities" element={<EntityManager />} />
           <Route path="/admin/inspections/new" element={<InspectionEditor />} />
           <Route path="/admin/inspections/:id" element={<InspectionEditor />} />
           <Route path="/simulator" element={<PlanningSimulator />} />

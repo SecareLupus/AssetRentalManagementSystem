@@ -353,6 +353,85 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 
+	// Entities (Phase 23)
+	mux.HandleFunc("/v1/entities/companies", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateCompany(w, r)
+		case http.MethodGet:
+			h.ListCompanies(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/companies/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.GetCompany(w, r)
+		} else if r.Method == http.MethodPut {
+			h.UpdateCompany(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/contacts", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateContact(w, r)
+		case http.MethodGet:
+			h.ListContacts(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/sites", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateSite(w, r)
+		case http.MethodGet:
+			h.ListSites(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/locations", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateLocation(w, r)
+		case http.MethodGet:
+			h.ListLocations(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/events", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateEvent(w, r)
+		case http.MethodGet:
+			h.ListEvents(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/events/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/needs") {
+			switch r.Method {
+			case http.MethodPost:
+				h.UpdateEventAssetNeeds(w, r)
+			case http.MethodGet:
+				h.ListEventAssetNeeds(w, r)
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+			return
+		}
+		if r.Method == http.MethodPut {
+			h.UpdateEvent(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Swagger UI (Public)
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 

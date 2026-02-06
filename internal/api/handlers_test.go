@@ -375,3 +375,59 @@ func (m *MockRepository) BulkRecallAssets(ctx context.Context, ids []int64) erro
 	args := m.Called(ctx, ids)
 	return args.Error(0)
 }
+
+func (m *MockRepository) CreateCompany(ctx context.Context, c *domain.Company) error { return nil }
+func (m *MockRepository) GetCompany(ctx context.Context, id int64) (*domain.Company, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListCompanies(ctx context.Context) ([]domain.Company, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateCompany(ctx context.Context, c *domain.Company) error { return nil }
+func (m *MockRepository) CreateContact(ctx context.Context, c *domain.Contact) error { return nil }
+func (m *MockRepository) GetContact(ctx context.Context, id int64) (*domain.Contact, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateContact(ctx context.Context, c *domain.Contact) error { return nil }
+func (m *MockRepository) CreateSite(ctx context.Context, s *domain.Site) error       { return nil }
+func (m *MockRepository) GetSite(ctx context.Context, id int64) (*domain.Site, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateSite(ctx context.Context, s *domain.Site) error         { return nil }
+func (m *MockRepository) CreateLocation(ctx context.Context, l *domain.Location) error { return nil }
+func (m *MockRepository) GetLocation(ctx context.Context, id int64) (*domain.Location, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListLocations(ctx context.Context, siteID, parentID *int64) ([]domain.Location, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateLocation(ctx context.Context, l *domain.Location) error { return nil }
+func (m *MockRepository) CreateEvent(ctx context.Context, e *domain.Event) error       { return nil }
+func (m *MockRepository) GetEvent(ctx context.Context, id int64) (*domain.Event, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListEvents(ctx context.Context, companyID *int64) ([]domain.Event, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateEvent(ctx context.Context, e *domain.Event) error { return nil }
+func (m *MockRepository) CreateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+	return nil
+}
+func (m *MockRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+	return nil
+}
+func (m *MockRepository) CreateInspection(ctx context.Context, ins *domain.InspectionSubmission) error {
+	return nil
+}
+func (m *MockRepository) ListInspections(ctx context.Context, assetID *int64) ([]domain.InspectionSubmission, error) {
+	return nil, nil
+}

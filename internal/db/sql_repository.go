@@ -1216,3 +1216,305 @@ func (r *SqlRepository) BulkRecallAssets(ctx context.Context, ids []int64) error
 	}
 	return nil
 }
+
+// Companies
+
+func (r *SqlRepository) CreateCompany(ctx context.Context, c *domain.Company) error {
+	now := time.Now()
+	c.CreatedAt = now
+	c.UpdatedAt = now
+	query := `INSERT INTO companies (name, legal_name, description, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, c.Name, c.LegalName, c.Description, c.Metadata, c.CreatedAt, c.UpdatedAt).Scan(&c.ID)
+}
+
+func (r *SqlRepository) GetCompany(ctx context.Context, id int64) (*domain.Company, error) {
+	query := `SELECT id, name, legal_name, description, metadata, created_at, updated_at FROM companies WHERE id = $1`
+	var c domain.Company
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&c.ID, &c.Name, &c.LegalName, &c.Description, &c.Metadata, &c.CreatedAt, &c.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &c, err
+}
+
+func (r *SqlRepository) ListCompanies(ctx context.Context) ([]domain.Company, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, name, legal_name, description, metadata, created_at, updated_at FROM companies ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.Company
+	for rows.Next() {
+		var c domain.Company
+		if err := rows.Scan(&c.ID, &c.Name, &c.LegalName, &c.Description, &c.Metadata, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, c)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateCompany(ctx context.Context, c *domain.Company) error {
+	c.UpdatedAt = time.Now()
+	query := `UPDATE companies SET name = $1, legal_name = $2, description = $3, metadata = $4, updated_at = $5 WHERE id = $6`
+	_, err := r.db.ExecContext(ctx, query, c.Name, c.LegalName, c.Description, c.Metadata, c.UpdatedAt, c.ID)
+	return err
+}
+
+// Contacts
+
+func (r *SqlRepository) CreateContact(ctx context.Context, c *domain.Contact) error {
+	now := time.Now()
+	c.CreatedAt = now
+	c.UpdatedAt = now
+	query := `INSERT INTO contacts (company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, c.CompanyID, c.FirstName, c.LastName, c.Email, c.Phone, c.Role, c.Metadata, c.CreatedAt, c.UpdatedAt).Scan(&c.ID)
+}
+
+func (r *SqlRepository) GetContact(ctx context.Context, id int64) (*domain.Contact, error) {
+	query := `SELECT id, company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at FROM contacts WHERE id = $1`
+	var c domain.Contact
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&c.ID, &c.CompanyID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.Role, &c.Metadata, &c.CreatedAt, &c.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &c, err
+}
+
+func (r *SqlRepository) ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error) {
+	query := `SELECT id, company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at FROM contacts`
+	var args []interface{}
+	if companyID != nil {
+		query += ` WHERE company_id = $1`
+		args = append(args, *companyID)
+	}
+	query += ` ORDER BY last_name, first_name`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.Contact
+	for rows.Next() {
+		var c domain.Contact
+		if err := rows.Scan(&c.ID, &c.CompanyID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.Role, &c.Metadata, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, c)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateContact(ctx context.Context, c *domain.Contact) error {
+	c.UpdatedAt = time.Now()
+	query := `UPDATE contacts SET company_id = $1, first_name = $2, last_name = $3, email = $4, phone = $5, role = $6, metadata = $7, updated_at = $8 WHERE id = $9`
+	_, err := r.db.ExecContext(ctx, query, c.CompanyID, c.FirstName, c.LastName, c.Email, c.Phone, c.Role, c.Metadata, c.UpdatedAt, c.ID)
+	return err
+}
+
+// Sites
+
+func (r *SqlRepository) CreateSite(ctx context.Context, s *domain.Site) error {
+	now := time.Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
+	query := `INSERT INTO sites (company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, s.CompanyID, s.Name, s.AddressStreet, s.AddressCity, s.AddressState, s.AddressZip, s.AddressCountry, s.Metadata, s.CreatedAt, s.UpdatedAt).Scan(&s.ID)
+}
+
+func (r *SqlRepository) GetSite(ctx context.Context, id int64) (*domain.Site, error) {
+	query := `SELECT id, company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at FROM sites WHERE id = $1`
+	var s domain.Site
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.CompanyID, &s.Name, &s.AddressStreet, &s.AddressCity, &s.AddressState, &s.AddressZip, &s.AddressCountry, &s.Metadata, &s.CreatedAt, &s.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &s, err
+}
+
+func (r *SqlRepository) ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error) {
+	query := `SELECT id, company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at FROM sites`
+	var args []interface{}
+	if companyID != nil {
+		query += ` WHERE company_id = $1`
+		args = append(args, *companyID)
+	}
+	query += ` ORDER BY name`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.Site
+	for rows.Next() {
+		var s domain.Site
+		if err := rows.Scan(&s.ID, &s.CompanyID, &s.Name, &s.AddressStreet, &s.AddressCity, &s.AddressState, &s.AddressZip, &s.AddressCountry, &s.Metadata, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, s)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateSite(ctx context.Context, s *domain.Site) error {
+	s.UpdatedAt = time.Now()
+	query := `UPDATE sites SET name = $1, address_street = $2, address_city = $3, address_state = $4, address_zip = $5, address_country = $6, metadata = $7, updated_at = $8 WHERE id = $9`
+	_, err := r.db.ExecContext(ctx, query, s.Name, s.AddressStreet, s.AddressCity, s.AddressState, s.AddressZip, s.AddressCountry, s.Metadata, s.UpdatedAt, s.ID)
+	return err
+}
+
+// Locations
+
+func (r *SqlRepository) CreateLocation(ctx context.Context, l *domain.Location) error {
+	now := time.Now()
+	l.CreatedAt = now
+	l.UpdatedAt = now
+	query := `INSERT INTO locations (site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, l.SiteID, l.ParentID, l.Name, l.LocationType, l.PresumedAssetNeeds, l.Metadata, l.CreatedAt, l.UpdatedAt).Scan(&l.ID)
+}
+
+func (r *SqlRepository) GetLocation(ctx context.Context, id int64) (*domain.Location, error) {
+	query := `SELECT id, site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at FROM locations WHERE id = $1`
+	var l domain.Location
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&l.ID, &l.SiteID, &l.ParentID, &l.Name, &l.LocationType, &l.PresumedAssetNeeds, &l.Metadata, &l.CreatedAt, &l.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &l, err
+}
+
+func (r *SqlRepository) ListLocations(ctx context.Context, siteID *int64, parentID *int64) ([]domain.Location, error) {
+	query := `SELECT id, site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at FROM locations WHERE 1=1`
+	var args []interface{}
+	idx := 1
+	if siteID != nil {
+		query += fmt.Sprintf(` AND site_id = $%d`, idx)
+		args = append(args, *siteID)
+		idx++
+	}
+	if parentID != nil {
+		query += fmt.Sprintf(` AND parent_id = $%d`, idx)
+		args = append(args, *parentID)
+		idx++
+	} else if siteID != nil {
+		// If site provided but no parent, often we want root locations
+		query += ` AND parent_id IS NULL`
+	}
+	query += ` ORDER BY name`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.Location
+	for rows.Next() {
+		var l domain.Location
+		if err := rows.Scan(&l.ID, &l.SiteID, &l.ParentID, &l.Name, &l.LocationType, &l.PresumedAssetNeeds, &l.Metadata, &l.CreatedAt, &l.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, l)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateLocation(ctx context.Context, l *domain.Location) error {
+	l.UpdatedAt = time.Now()
+	query := `UPDATE locations SET name = $1, location_type = $2, presumed_asset_needs = $3, metadata = $4, updated_at = $5 WHERE id = $6`
+	_, err := r.db.ExecContext(ctx, query, l.Name, l.LocationType, l.PresumedAssetNeeds, l.Metadata, l.UpdatedAt, l.ID)
+	return err
+}
+
+// Events
+
+func (r *SqlRepository) CreateEvent(ctx context.Context, e *domain.Event) error {
+	now := time.Now()
+	e.CreatedAt = now
+	e.UpdatedAt = now
+	query := `INSERT INTO events (company_id, name, description, start_time, end_time, status, parent_event_id, recurrence_rule, last_confirmed_at, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, e.CompanyID, e.Name, e.Description, e.StartTime, e.EndTime, e.Status, e.ParentEventID, e.RecurrenceRule, e.LastConfirmedAt, e.Metadata, e.CreatedAt, e.UpdatedAt).Scan(&e.ID)
+}
+
+func (r *SqlRepository) GetEvent(ctx context.Context, id int64) (*domain.Event, error) {
+	query := `SELECT id, company_id, name, description, start_time, end_time, status, parent_event_id, recurrence_rule, last_confirmed_at, metadata, created_at, updated_at FROM events WHERE id = $1`
+	var e domain.Event
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&e.ID, &e.CompanyID, &e.Name, &e.Description, &e.StartTime, &e.EndTime, &e.Status, &e.ParentEventID, &e.RecurrenceRule, &e.LastConfirmedAt, &e.Metadata, &e.CreatedAt, &e.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &e, err
+}
+
+func (r *SqlRepository) ListEvents(ctx context.Context, companyID *int64) ([]domain.Event, error) {
+	query := `SELECT id, company_id, name, description, start_time, end_time, status, parent_event_id, recurrence_rule, last_confirmed_at, metadata, created_at, updated_at FROM events`
+	var args []interface{}
+	if companyID != nil {
+		query += ` WHERE company_id = $1`
+		args = append(args, *companyID)
+	}
+	query += ` ORDER BY start_time`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.Event
+	for rows.Next() {
+		var e domain.Event
+		if err := rows.Scan(&e.ID, &e.CompanyID, &e.Name, &e.Description, &e.StartTime, &e.EndTime, &e.Status, &e.ParentEventID, &e.RecurrenceRule, &e.LastConfirmedAt, &e.Metadata, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, e)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateEvent(ctx context.Context, e *domain.Event) error {
+	e.UpdatedAt = time.Now()
+	query := `UPDATE events SET name = $1, description = $2, start_time = $3, end_time = $4, status = $5, parent_event_id = $6, recurrence_rule = $7, last_confirmed_at = $8, metadata = $9, updated_at = $10 WHERE id = $11`
+	_, err := r.db.ExecContext(ctx, query, e.Name, e.Description, e.StartTime, e.EndTime, e.Status, e.ParentEventID, e.RecurrenceRule, e.LastConfirmedAt, e.Metadata, e.UpdatedAt, e.ID)
+	return err
+}
+
+// EventAssetNeeds
+
+func (r *SqlRepository) CreateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+	now := time.Now()
+	ean.CreatedAt = now
+	ean.UpdatedAt = now
+	query := `INSERT INTO event_asset_needs (event_id, item_type_id, quantity, is_assumed, location_id, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, ean.EventID, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.LocationID, ean.Metadata, ean.CreatedAt, ean.UpdatedAt).Scan(&ean.ID)
+}
+
+func (r *SqlRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, event_id, item_type_id, quantity, is_assumed, location_id, metadata, created_at, updated_at FROM event_asset_needs WHERE event_id = $1`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.EventAssetNeed
+	for rows.Next() {
+		var ean domain.EventAssetNeed
+		if err := rows.Scan(&ean.ID, &ean.EventID, &ean.ItemTypeID, &ean.Quantity, &ean.IsAssumed, &ean.LocationID, &ean.Metadata, &ean.CreatedAt, &ean.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, ean)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+	ean.UpdatedAt = time.Now()
+	query := `UPDATE event_asset_needs SET item_type_id = $1, quantity = $2, is_assumed = $3, location_id = $4, metadata = $5, updated_at = $6 WHERE id = $7`
+	_, err := r.db.ExecContext(ctx, query, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.LocationID, ean.Metadata, ean.UpdatedAt, ean.ID)
+	return err
+}

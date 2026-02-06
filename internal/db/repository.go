@@ -44,7 +44,7 @@ type Repository interface {
 	AddMaintenanceLog(ctx context.Context, log *domain.MaintenanceLog) error
 	ListMaintenanceLogs(ctx context.Context, assetID int64) ([]domain.MaintenanceLog, error)
 
-	// Dynamic	// Inspections
+	// Maintenance & Inspections
 	CreateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error
 	UpdateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error
 	DeleteInspectionTemplate(ctx context.Context, id int64) error
@@ -53,6 +53,36 @@ type Repository interface {
 	GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error)
 	SetItemTypeInspections(ctx context.Context, itemTypeID int64, templateIDs []int64) error
 	CreateInspectionSubmission(ctx context.Context, is *domain.InspectionSubmission) error
+
+	// Entity Management
+	CreateCompany(ctx context.Context, c *domain.Company) error
+	GetCompany(ctx context.Context, id int64) (*domain.Company, error)
+	ListCompanies(ctx context.Context) ([]domain.Company, error)
+	UpdateCompany(ctx context.Context, c *domain.Company) error
+
+	CreateContact(ctx context.Context, c *domain.Contact) error
+	GetContact(ctx context.Context, id int64) (*domain.Contact, error)
+	ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error)
+	UpdateContact(ctx context.Context, c *domain.Contact) error
+
+	CreateSite(ctx context.Context, s *domain.Site) error
+	GetSite(ctx context.Context, id int64) (*domain.Site, error)
+	ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error)
+	UpdateSite(ctx context.Context, s *domain.Site) error
+
+	CreateLocation(ctx context.Context, l *domain.Location) error
+	GetLocation(ctx context.Context, id int64) (*domain.Location, error)
+	ListLocations(ctx context.Context, siteID *int64, parentID *int64) ([]domain.Location, error)
+	UpdateLocation(ctx context.Context, l *domain.Location) error
+
+	CreateEvent(ctx context.Context, e *domain.Event) error
+	GetEvent(ctx context.Context, id int64) (*domain.Event, error)
+	ListEvents(ctx context.Context, companyID *int64) ([]domain.Event, error)
+	UpdateEvent(ctx context.Context, e *domain.Event) error
+
+	CreateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error
+	ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error)
+	UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error
 
 	// Build Specs
 	CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error

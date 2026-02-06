@@ -1,45 +1,20 @@
-# Rental Management System - Milestone V Roadmap
+# Rental Management System - Milestone VI Roadmap
 
-This milestone focuses on fixing issues identified during testing and preparing for the next steps of development.
+This milestone focuses on closing the loop between deployment, to target, to maintenance, to inspection, to re-deployment.
 
-## Phase 19: Operational Integrity (Critical Fixes)
+## Phase 23: Entity Management
 
-Goal: Fix broken core logic and API integrations to ensure the system is functionally sound.
+Goal: Implement first class entities to represent the deployment targets: Companies, Company Contacts, Company Sites (Facilities), Company Locations (Rooms), Company Events (Projects), Event Asset Needs.
 
-- [x] **Dashboard Interactivity**: Fix non-interactive category list items and "View All" button.
-- [x] **Catalog Core Fixes**: Fix "Filters" and "Add to Cart" buttons.
-- [x] **Item Type Actions**: Fix "Request Reservation" button and make asset list interactive.
-- [x] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures (SQL `INSERT` column mismatch).
-- [x] **Maintenance Submission**: Resolve failures in submitting inspections (Foreign Key violation `fk_is_template`).
+### Companies
 
-## Phase 20: Usability & UX Refinements
-
-- [x] Reservation Wizard: Remove redundant ASAP checkbox (Start date defaults to today)
-- [x] Item Type Details: Hide archive button for archived items (Archive/Restore toggle)
-- [x] Warehouse Kiosk: Add Destination and Est. Return Date fields for bulk checkouts
-- [x] Item Type Settings: Make Critical Shortage and Forecast Horizon editable
-- [x] Availability Heatmap: Implement pagination (weekly navigation) and subtract ad-hoc usage from availability logic (without schedules) are respected.
-- [x] **Catalog Archive Cleanup**: Hide the archive button for already archived item types.
-
-## Phase 21: Advanced Management Tooling
-
-Goal: Implement specialized editors and complex simulation logic.
-
-- [x] **Feature Management**: Enable editing of "Supported Features" and implement functional logic for assigned features.
-- [x] **Inspection Template Editor**: Implement a UI for creating and managing custom inspection templates.
-- [x] **Scannable Tag Editor**: Implement alias-to-asset mapping with regex support for third-party tags (QR extraction).
-- [x] **Simulator Enhancements**: Fix "Launch Simulator" button navigation and update logic to treat assets from non-overlapping scenarios as available.
-- [x] **Forecast Controls**: Implement a "Snooze" option for service forecasts on devices stuck in the field.
-
-## Phase 22: Integration & Connectivity
-
-Goal: Extend the system reach into deep device management and third party service integration.
-
-- [x] **Event & Action Framework**: Confirm implementation of Event Driven Architecture model, with MQTT as the event bus.
-- [x] **Third Party API Integration**: Implement a pluggable interface for integration with generic outside REST services.
-  - [x] **Entity Sync**: Implement a method for treating an outside API as a source of truth for Entity (Asset, Location, Contact) data.
-  - [x] **Action Execution**: Implement a method for executing actions on an outside API in response to events in the Rental Management System.
-- [x] **Remote Monitoring & Status**: Implement a pluggable interface for remote monitoring and live status updates of devices using existing device management tools.
+- [ ] **Company Management**: Implement a UI for creating and managing companies.
+- [ ] **Company Contact Management**: Implement a UI for creating and managing company contacts. Contacts represent individuals who may be associated with a company.
+- [ ] **Company Site Management**: Implement a UI for creating and managing company site. Sites represent facilities utilized by a company which possess a mailing address.
+- [ ] **Company Location Management**: Implement a UI for creating and managing company locations. Locations represent physical spaces within a company site. Locations may be nested to represent subspaces. Locations may have presumed asset needs, which will be applied to an Event Asset Need Calculation automatically (unless overridden), if that location is included in the event.
+- [ ] **Company Event Management**: Implement a UI for creating and managing company events. Events have a start and end date, belong to a company, and may reference any number of Contacts, Sites, Locations, and Asset Needs which are disconnected from a given location.
+- [ ] **Company Event Asset Need Management**: Implement a UI for creating and managing company asset needs for each event.
+- [ ] **Company, Site, Location, Event, and Asset Need API Integration**: Implement a pluggable interface for integration with generic outside REST services.
 
 ## Future Plans
 
