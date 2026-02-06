@@ -59,3 +59,13 @@ func (c *Client) Publish(topic string, qos byte, retained bool, payload interfac
 	}
 	return nil
 }
+
+func (c *Client) Subscribe(topic string, qos byte, callback func(topic string, payload []byte)) error {
+	token := c.pahoClient.Subscribe(topic, qos, func(c paho.Client, m paho.Message) {
+		callback(m.Topic(), m.Payload())
+	})
+	if token.Wait() && token.Error() != nil {
+		return fmt.Errorf("MQTT subscribe: %w", token.Error())
+	}
+	return nil
+}

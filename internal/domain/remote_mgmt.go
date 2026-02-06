@@ -31,6 +31,7 @@ type DeviceInfo struct {
 type RemoteManager interface {
 	GetDeviceInfo(ctx context.Context, remoteID string) (*DeviceInfo, error)
 	ApplyPowerAction(ctx context.Context, remoteID string, action RemotePowerAction) error
+	GetDevicePulse(ctx context.Context, remoteID string) (float64, error) // Returns signal strength or health metric
 }
 
 type RemoteManagerProvider interface {

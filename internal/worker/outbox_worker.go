@@ -14,6 +14,7 @@ import (
 
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/domain"
+	"github.com/desmond/rental-management-system/internal/integration"
 	"github.com/desmond/rental-management-system/internal/mqtt"
 )
 
@@ -21,12 +22,14 @@ type OutboxWorker struct {
 	repo       db.Repository
 	httpClient *http.Client
 	mqttClient *mqtt.Client
+	is         *integration.IntegrationService
 }
 
-func NewOutboxWorker(repo db.Repository, mqttClient *mqtt.Client) *OutboxWorker {
+func NewOutboxWorker(repo db.Repository, mqttClient *mqtt.Client, is *integration.IntegrationService) *OutboxWorker {
 	return &OutboxWorker{
 		repo:       repo,
 		mqttClient: mqttClient,
+		is:         is,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -95,6 +98,13 @@ func (w *OutboxWorker) DeliverEvent(ctx context.Context, event domain.OutboxEven
 		payload, _ := json.Marshal(event)
 		if err := w.mqttClient.Publish(topic, 1, false, payload); err != nil {
 			log.Printf("MQTT Publish failed: %v", err)
+		}
+	}
+
+	// Dispatch to Third-Party Integrations
+	if w.is != nil {
+		if err := w.is.HandleEvent(ctx, event); err != nil {
+			log.Printf("Integration dispatch failed: %v", err)
 		}
 	}
 

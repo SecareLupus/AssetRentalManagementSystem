@@ -31,17 +31,21 @@ Goal: Implement specialized editors and complex simulation logic.
 - [x] **Simulator Enhancements**: Fix "Launch Simulator" button navigation and update logic to treat assets from non-overlapping scenarios as available.
 - [x] **Forecast Controls**: Implement a "Snooze" option for service forecasts on devices stuck in the field.
 
-## Phase 22: Enterprise Connectivity & Specialized Personas
+## Phase 22: Integration & Connectivity
 
-Goal: Extend the system reach into deep device management and field operations.
+Goal: Extend the system reach into deep device management and third party service integration.
 
-- [ ] **Remote Management Interface**: Implement a pluggable interface for generic service integration. Connect frontend to Real-time Device controls.
-- [ ] **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
-- [ ] **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
-- [ ] **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.
+- [x] **Event & Action Framework**: Confirm implementation of Event Driven Architecture model, with MQTT as the event bus.
+- [x] **Third Party API Integration**: Implement a pluggable interface for integration with generic outside REST services.
+  - [x] **Entity Sync**: Implement a method for treating an outside API as a source of truth for Entity (Asset, Location, Contact) data.
+  - [x] **Action Execution**: Implement a method for executing actions on an outside API in response to events in the Rental Management System.
+- [x] **Remote Monitoring & Status**: Implement a pluggable interface for remote monitoring and live status updates of devices using existing device management tools.
 
 ## Future Plans
 
 - [ ] **Multi-Facility Synchronization**: Global inventory visibility across geographically distributed sites.
 - [ ] **AI-Driven Logistics**: Predictive maintenance and automated reordering based on utilization trends.
 - [ ] **Third-Party Logistics (3PL) Integration**: Connect with shipping partners for automated dispatch.
+- [ ] **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
+- [ ] **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
+- [ ] **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.

@@ -36,6 +36,11 @@ func (m *MockRemoteManager) ApplyPowerAction(ctx context.Context, remoteID strin
 	return nil
 }
 
+func (m *MockRemoteManager) GetDevicePulse(ctx context.Context, remoteID string) (float64, error) {
+	// Return a simulated health pulse
+	return 0.92, nil
+}
+
 func (m *MockRemoteManager) GetName() string {
 	return "mock-provider"
 }

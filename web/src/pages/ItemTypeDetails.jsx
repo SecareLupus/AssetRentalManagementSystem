@@ -165,7 +165,12 @@ const ItemTypeDetails = () => {
                                         onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                                     >
                                         <div>
-                                            <div style={{ fontWeight: 600 }}>{asset.asset_tag || asset.serial_number || `Asset #${asset.id}`}</div>
+                                            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {asset.asset_tag || asset.serial_number || `Asset #${asset.id}`}
+                                                {item.supported_features?.remote_management && asset.remote_management_id && (
+                                                    <div className="pulse" style={{ width: '8px', height: '8px', background: 'var(--success)', borderRadius: '50%', boxShadow: '0 0 8px var(--success)' }} title="Live Connectivity Active" />
+                                                )}
+                                            </div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{asset.location || 'Unknown Location'}</div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>

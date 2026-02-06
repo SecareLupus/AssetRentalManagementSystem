@@ -13,6 +13,7 @@ import (
 	"github.com/desmond/rental-management-system/internal/db"
 	"github.com/desmond/rental-management-system/internal/domain"
 	"github.com/desmond/rental-management-system/internal/fleet"
+	"github.com/desmond/rental-management-system/internal/integration"
 	"github.com/desmond/rental-management-system/internal/mqtt"
 	"github.com/desmond/rental-management-system/internal/worker"
 	_ "github.com/lib/pq"
@@ -104,6 +105,14 @@ func main() {
 		log.Printf("Warning: Failed to connect to MQTT broker: %v", err)
 	} else {
 		defer mqttClient.Disconnect()
+
+		// Setup MQTT Command Ingest
+		cmdHandler := mqtt.NewCommandHandler(repo)
+		if err := mqttClient.Subscribe("rms/commands/#", 1, cmdHandler.HandleCommand); err != nil {
+			log.Printf("Warning: Failed to subscribe to MQTT commands: %v", err)
+		} else {
+			log.Printf("MQTT: Subscribed to rms/commands/#")
+		}
 	}
 
 	// Remote Management Setup
@@ -111,8 +120,20 @@ func main() {
 	mockMgr := fleet.NewMockRemoteManager()
 	registry.Register("mock-provider", mockMgr)
 
+	// Generic REST Remote Manager registration example
+	restMgr := fleet.NewRESTRemoteManager("https://api.remote-monitoring.test", "monitoring-secret")
+	registry.Register("generic-rest-utility", restMgr)
+
+	// Third-Party Integration Setup
+	is := integration.NewIntegrationService()
+	restProv := integration.NewRESTProvider("External-CRM", "https://api.external-crm.test", "secret-key", repo)
+	is.RegisterProvider(restProv)
+
+	// Run initial sync
+	go is.SyncAll(context.Background())
+
 	// Workers
-	outboxWorker := worker.NewOutboxWorker(repo, mqttClient)
+	outboxWorker := worker.NewOutboxWorker(repo, mqttClient, is)
 	go outboxWorker.Start(context.Background(), 5*time.Second)
 
 	healthWorker := worker.NewHealthWorker(repo, mqttClient, registry)
