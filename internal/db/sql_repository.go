@@ -1518,3 +1518,30 @@ func (r *SqlRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.Ev
 	_, err := r.db.ExecContext(ctx, query, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.LocationID, ean.Metadata, ean.UpdatedAt, ean.ID)
 	return err
 }
+
+// Delete methods for entities
+
+func (r *SqlRepository) DeleteCompany(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM companies WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) DeleteContact(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM contacts WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) DeleteSite(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM sites WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) DeleteLocation(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM locations WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) DeleteEvent(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM events WHERE id = $1", id)
+	return err
+}

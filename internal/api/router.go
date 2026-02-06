@@ -365,11 +365,14 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 	mux.HandleFunc("/v1/entities/companies/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			h.GetCompany(w, r)
-		} else if r.Method == http.MethodPut {
+		case http.MethodPut:
 			h.UpdateCompany(w, r)
-		} else {
+		case http.MethodDelete:
+			h.DeleteCompany(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
@@ -379,6 +382,18 @@ func NewRouter(h *Handler) http.Handler {
 			h.CreateContact(w, r)
 		case http.MethodGet:
 			h.ListContacts(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/contacts/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetContact(w, r)
+		case http.MethodPut:
+			h.UpdateContact(w, r)
+		case http.MethodDelete:
+			h.DeleteContact(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -393,12 +408,36 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+	mux.HandleFunc("/v1/entities/sites/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetSite(w, r)
+		case http.MethodPut:
+			h.UpdateSite(w, r)
+		case http.MethodDelete:
+			h.DeleteSite(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 	mux.HandleFunc("/v1/entities/locations", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			h.CreateLocation(w, r)
 		case http.MethodGet:
 			h.ListLocations(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/entities/locations/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetLocation(w, r)
+		case http.MethodPut:
+			h.UpdateLocation(w, r)
+		case http.MethodDelete:
+			h.DeleteLocation(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -425,9 +464,14 @@ func NewRouter(h *Handler) http.Handler {
 			}
 			return
 		}
-		if r.Method == http.MethodPut {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetEvent(w, r)
+		case http.MethodPut:
 			h.UpdateEvent(w, r)
-		} else {
+		case http.MethodDelete:
+			h.DeleteEvent(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})

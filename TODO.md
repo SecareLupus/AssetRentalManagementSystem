@@ -8,13 +8,40 @@ Goal: Implement first class entities to represent the deployment targets: Compan
 
 ### Companies
 
-- [ ] **Company Management**: Implement a UI for creating and managing companies.
-- [ ] **Company Contact Management**: Implement a UI for creating and managing company contacts. Contacts represent individuals who may be associated with a company.
-- [ ] **Company Site Management**: Implement a UI for creating and managing company site. Sites represent facilities utilized by a company which possess a mailing address.
-- [ ] **Company Location Management**: Implement a UI for creating and managing company locations. Locations represent physical spaces within a company site. Locations may be nested to represent subspaces. Locations may have presumed asset needs, which will be applied to an Event Asset Need Calculation automatically (unless overridden), if that location is included in the event.
-- [ ] **Company Event Management**: Implement a UI for creating and managing company events. Events have a start and end date, belong to a company, and may reference any number of Contacts, Sites, Locations, and Asset Needs which are disconnected from a given location.
-- [ ] **Company Event Asset Need Management**: Implement a UI for creating and managing company asset needs for each event.
-- [ ] **Company, Site, Location, Event, and Asset Need API Integration**: Implement a pluggable interface for integration with generic outside REST services.
+- [x] **Company Management**: Implement a UI for creating and managing companies.
+- [x] **Company Contact Management**: Implement a UI for creating and managing company contacts. Contacts represent individuals who may be associated with a company.
+- [x] **Company Site Management**: Implement a UI for creating and managing company site. Sites represent facilities utilized by a company which possess a mailing address.
+- [x] **Company Location Management**: Implement a UI for creating and managing company locations. Locations represent physical spaces within a company site. Locations may be nested to represent subspaces. Locations may have presumed asset needs, which will be applied to an Event Asset Need Calculation automatically (unless overridden), if that location is included in the event.
+- [x] **Company Event Management**: Implement a UI for creating and managing company events. Events have a start and end date, belong to a company, and may reference any number of Contacts, Sites, Locations, and Asset Needs which are disconnected from a given location.
+- [x] **Company Event Asset Need Management**: Implement a UI for creating and managing company asset needs for each event.
+- [x] **Company, Site, Location, Event, and Asset Need API Integration**: Implement a pluggable interface for integration with generic outside REST services.
+
+## Phase 24: Structural Consolidation (Places & Roles)
+
+Goal: Converge the physical and organizational data models toward Schema.org standards to support infinite nesting and multi-faceted relationships.
+
+### Unified Place Model
+- [ ] **Recursive Place Schema**: Consolidate `Site` and `Location` into a single recursive `Place` entity. Add `contained_in_place_id` and optional `PostalAddress` fields.
+- [ ] **Data Migration (Sites to Places)**: Execute SQL migrations to port facility data into the unified model while maintaining referential integrity for existing assets.
+- [ ] **Hierarchical Entity Manager**: Update the `EntityManager` UI to support an arbitrary depth of nested places (Site > Building > Room > Cabinet).
+
+### Personnel & Organizations
+- [ ] **Person/Organization Decoupling**: Refactor `Contact` as a standalone `Person` entity that can have multiple `OrganizationRole` relationships.
+- [ ] **ContactPoint Implementation**: Implement `ContactPoint` to manage communication lines (email/phone) scoped to specific organizations or events.
+
+## Phase 25: Logistics Modernization (Reservations & Demands)
+
+Goal: Transition from monolithic action records to a more flexible Reservation/Demand ecosystem for predictive logistics and partial fulfillment.
+
+### Intent & Fulfillment
+- [ ] **RentalReservation Model**: Implement a first-class `RentalReservation` entity to track "intent to rent" separate from the act of movement.
+- [ ] **Granular Action Logging**: Implement specific `CheckOutAction` and `ReturnAction` entities linked to a parent Reservation.
+- [ ] **Partial Fulfillment Engine**: Update fulfillment logic to allow multiple check-out events for a single reservation (staggered delivery).
+
+### Offer/Demand Ecosystem
+- [ ] **Logistics Demand Model**: Replace `EventAssetNeed` with the `Demand` model, incorporating `businessFunction` and `eligibleDuration`.
+- [ ] **Standardized Vocabulary**: Align API JSON tags with Schema.org vocabulary (camelCase, JSON-LD context) while providing a compatibility layer for internal legacy IDs.
+- [ ] **Pre-Fulfillment Validation**: Implement standard validation logic that checks `Asset` availability against global `Demand` timelines across all facilities.
 
 ## Future Plans
 

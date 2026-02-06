@@ -431,3 +431,9 @@ func (m *MockRepository) CreateInspection(ctx context.Context, ins *domain.Inspe
 func (m *MockRepository) ListInspections(ctx context.Context, assetID *int64) ([]domain.InspectionSubmission, error) {
 	return nil, nil
 }
+
+func (m *MockRepository) DeleteCompany(ctx context.Context, id int64) error  { return nil }
+func (m *MockRepository) DeleteSite(ctx context.Context, id int64) error     { return nil }
+func (m *MockRepository) DeleteLocation(ctx context.Context, id int64) error { return nil }
+func (m *MockRepository) DeleteEvent(ctx context.Context, id int64) error    { return nil }
+func (m *MockRepository) DeleteContact(ctx context.Context, id int64) error  { return nil }
