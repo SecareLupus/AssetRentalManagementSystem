@@ -12,7 +12,7 @@ Goal: Fix broken core logic and API integrations to ensure the system is functio
 - [x] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures (SQL `INSERT` column mismatch).
 - [x] **Maintenance Submission**: Resolve failures in submitting inspections (Foreign Key violation `fk_is_template`).
 
-### Phase 20: Usability & UX Refinements (COMPLETED)
+## Phase 20: Usability & UX Refinements
 
 - [x] Reservation Wizard: Remove redundant ASAP checkbox (Start date defaults to today)
 - [x] Item Type Details: Hide archive button for archived items (Archive/Restore toggle)
@@ -25,11 +25,11 @@ Goal: Fix broken core logic and API integrations to ensure the system is functio
 
 Goal: Implement specialized editors and complex simulation logic.
 
-- [ ] **Feature Management**: Enable editing of "Supported Features" and implement functional logic for assigned features.
-- [ ] **Inspection Template Editor**: Implement a UI for creating and managing custom inspection templates.
-- [ ] **Scannable Tag Editor**: Implement alias-to-asset mapping with regex support for third-party tags (QR extraction).
-- [ ] **Simulator Enhancements**: Fix "Launch Simulator" button and update logic to treat assets from non-overlapping scenarios as available.
-- [ ] **Forecast Controls**: Implement a "Snooze" option for service forecasts on devices stuck in the field.
+- [x] **Feature Management**: Enable editing of "Supported Features" and implement functional logic for assigned features.
+- [x] **Inspection Template Editor**: Implement a UI for creating and managing custom inspection templates.
+- [x] **Scannable Tag Editor**: Implement alias-to-asset mapping with regex support for third-party tags (QR extraction).
+- [x] **Simulator Enhancements**: Fix "Launch Simulator" button navigation and update logic to treat assets from non-overlapping scenarios as available.
+- [x] **Forecast Controls**: Implement a "Snooze" option for service forecasts on devices stuck in the field.
 
 ## Phase 22: Enterprise Connectivity & Specialized Personas
 

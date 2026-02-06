@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter } from 'lucide-react';
+import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter, Trash2 } from 'lucide-react';
+import { GlassCard } from '../components/Shared';
 
 const AdminCenter = () => {
     const [activeTab, setActiveTab] = useState('recall'); // 'recall' | 'recon'
@@ -17,11 +18,28 @@ const AdminCenter = () => {
     const [scannedTags, setScannedTags] = useState('');
     const [reconReport, setReconReport] = useState(null);
 
+    // Inspection Templates State
+    const [templates, setTemplates] = useState([]);
+
     useEffect(() => {
         if (activeTab === 'recall') {
             fetchRecallableItems();
+        } else if (activeTab === 'inspections') {
+            fetchTemplates();
         }
     }, [activeTab]);
+
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/v1/catalog/inspection-templates');
+            setTemplates(res.data || []);
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to fetch inspection templates.' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchRecallableItems = async () => {
         setLoading(true);
@@ -89,6 +107,7 @@ const AdminCenter = () => {
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
                 <TabButton active={activeTab === 'recall'} onClick={() => setActiveTab('recall')} icon={RefreshCw} label="Bulk Recall" />
                 <TabButton active={activeTab === 'recon'} onClick={() => setActiveTab('recon')} icon={ClipboardCheck} label="Inventory Recon" />
+                <TabButton active={activeTab === 'inspections'} onClick={() => setActiveTab('inspections')} icon={ClipboardCheck} label="Inspection Templates" />
             </div>
 
             {message && (
@@ -152,6 +171,48 @@ const AdminCenter = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'inspections' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Active Templates</h2>
+                        <a href="/admin/inspections/new" className="btn-primary" style={{ textDecoration: 'none' }}>
+                             Create Template
+                        </a>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {templates.map(t => (
+                            <GlassCard key={t.id} style={{ padding: '1.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                    <h4 style={{ fontWeight: 800 }}>{t.name}</h4>
+                                    <button 
+                                        onClick={async () => {
+                                            if (window.confirm("Delete this template?")) {
+                                                await axios.delete(`/v1/catalog/inspection-templates/${t.id}`);
+                                                fetchTemplates();
+                                            }
+                                        }}
+                                        style={{ background: 'transparent', color: 'var(--text-muted)' }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', minHeight: '3rem' }}>{t.description || 'No description provided.'}</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Created: {new Date(t.created_at).toLocaleDateString()}</span>
+                                    <a href={`/admin/inspections/${t.id}`} style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>Edit Details</a>
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                    {templates.length === 0 && !loading && (
+                        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                            No templates found. Click "Create Template" to get started.
+                        </div>
+                    )}
                 </div>
             )}
 

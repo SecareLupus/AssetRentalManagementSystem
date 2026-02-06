@@ -18,6 +18,7 @@ import Login from './pages/Login';
 import AdminCenter from './pages/AdminCenter';
 import PlanningSimulator from './pages/PlanningSimulator';
 import FleetReports from './pages/FleetReports';
+import InspectionEditor from './pages/InspectionEditor';
 import ApiInspector from './components/ApiInspector';
 import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3 } from 'lucide-react';
 import './App.css';
@@ -187,6 +188,8 @@ function AppContent() {
           <Route path="/intelligence" element={<IntelligenceOverview />} />
           <Route path="/analytics/heatmap" element={<AvailabilityHeatmap />} />
           <Route path="/admin" element={<AdminCenter />} />
+          <Route path="/admin/inspections/new" element={<InspectionEditor />} />
+          <Route path="/admin/inspections/:id" element={<InspectionEditor />} />
           <Route path="/simulator" element={<PlanningSimulator />} />
           <Route path="/reports" element={<FleetReports />} />
         </Routes>

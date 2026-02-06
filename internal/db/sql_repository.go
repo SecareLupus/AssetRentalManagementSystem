@@ -586,6 +586,119 @@ func (r *SqlRepository) CreateInspectionTemplate(ctx context.Context, it *domain
 	return tx.Commit()
 }
 
+// ListInspectionTemplates returns all inspection templates.
+func (r *SqlRepository) ListInspectionTemplates(ctx context.Context) ([]domain.InspectionTemplate, error) {
+	query := `SELECT id, name, description, created_at, updated_at FROM inspection_templates ORDER BY name`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query all templates: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.InspectionTemplate
+	for rows.Next() {
+		var it domain.InspectionTemplate
+		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.CreatedAt, &it.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan template: %w", err)
+		}
+		results = append(results, it)
+	}
+	return results, nil
+}
+
+// UpdateInspectionTemplate updates a template and its fields.
+func (r *SqlRepository) UpdateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	it.UpdatedAt = time.Now()
+	_, err = tx.ExecContext(ctx, "UPDATE inspection_templates SET name = $1, description = $2, updated_at = $3 WHERE id = $4",
+		it.Name, it.Description, it.UpdatedAt, it.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update template info: %w", err)
+	}
+
+	// Simplest approach for fields: delete and re-insert
+	_, err = tx.ExecContext(ctx, "DELETE FROM inspection_fields WHERE template_id = $1", it.ID)
+	if err != nil {
+		return fmt.Errorf("clear old fields: %w", err)
+	}
+
+	for i := range it.Fields {
+		f := &it.Fields[i]
+		f.TemplateID = it.ID
+		err = tx.QueryRowContext(ctx, "INSERT INTO inspection_fields (template_id, label, field_type, required, display_order) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+			f.TemplateID, f.Label, f.Type, f.Required, f.DisplayOrder,
+		).Scan(&f.ID)
+		if err != nil {
+			return fmt.Errorf("re-insert field: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// DeleteInspectionTemplate removes a template.
+func (r *SqlRepository) DeleteInspectionTemplate(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM inspection_templates WHERE id = $1", id)
+	return err
+}
+
+// SetItemTypeInspections syncs the assignment of templates to an item type.
+func (r *SqlRepository) SetItemTypeInspections(ctx context.Context, itemTypeID int64, templateIDs []int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM item_type_inspections WHERE item_type_id = $1", itemTypeID)
+	if err != nil {
+		return fmt.Errorf("clear old assignments: %w", err)
+	}
+
+	for _, tid := range templateIDs {
+		_, err = tx.ExecContext(ctx, "INSERT INTO item_type_inspections (item_type_id, template_id) VALUES ($1, $2)", itemTypeID, tid)
+		if err != nil {
+			return fmt.Errorf("insert assignment (it:%d, t:%d): %w", itemTypeID, tid, err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetInspectionTemplate retrieves a single template with its fields.
+func (r *SqlRepository) GetInspectionTemplate(ctx context.Context, id int64) (*domain.InspectionTemplate, error) {
+	query := `SELECT id, name, description, created_at, updated_at FROM inspection_templates WHERE id = $1`
+	var it domain.InspectionTemplate
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&it.ID, &it.Name, &it.Description, &it.CreatedAt, &it.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query template: %w", err)
+	}
+
+	rows, err := r.db.QueryContext(ctx, "SELECT id, template_id, label, field_type, required, display_order FROM inspection_fields WHERE template_id = $1 ORDER BY display_order", it.ID)
+	if err != nil {
+		return nil, fmt.Errorf("query fields: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f domain.InspectionField
+		if err := rows.Scan(&f.ID, &f.TemplateID, &f.Label, &f.Type, &f.Required, &f.DisplayOrder); err != nil {
+			return nil, err
+		}
+		it.Fields = append(it.Fields, f)
+	}
+	return &it, nil
+}
+
 // GetInspectionTemplatesForItemType retrieves templates assigned to a specific category.
 func (r *SqlRepository) GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error) {
 	query := `
@@ -626,8 +739,8 @@ func (r *SqlRepository) GetInspectionTemplatesForItemType(ctx context.Context, i
 	return templates, nil
 }
 
-// SubmitInspection records a completed inspection form.
-func (r *SqlRepository) SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error {
+// CreateInspectionSubmission records a new inspection result.
+func (r *SqlRepository) CreateInspectionSubmission(ctx context.Context, is *domain.InspectionSubmission) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

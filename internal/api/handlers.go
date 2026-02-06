@@ -804,6 +804,104 @@ func (h *Handler) CreateInspectionTemplate(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(it)
 }
 
+func (h *Handler) ListInspectionTemplates(w http.ResponseWriter, r *http.Request) {
+	templates, err := h.repo.ListInspectionTemplates(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templates)
+}
+
+func (h *Handler) GetInspectionTemplate(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/catalog/inspection-templates/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	it, err := h.repo.GetInspectionTemplate(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if it == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(it)
+}
+
+func (h *Handler) UpdateInspectionTemplate(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/catalog/inspection-templates/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var it domain.InspectionTemplate
+	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	it.ID = id
+
+	if err := h.repo.UpdateInspectionTemplate(r.Context(), &it); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(it)
+}
+
+func (h *Handler) DeleteInspectionTemplate(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/catalog/inspection-templates/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.DeleteInspectionTemplate(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) SetItemTypeInspections(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/catalog/item-types/")
+	idStr = strings.TrimSuffix(idStr, "/inspections")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		TemplateIDs []int64 `json:"template_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.SetItemTypeInspections(r.Context(), id, req.TemplateIDs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) GetRequiredInspections(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	idStr = strings.TrimSuffix(idStr, "/required-inspections")
@@ -845,7 +943,7 @@ func (h *Handler) SubmitInspection(w http.ResponseWriter, r *http.Request) {
 	}
 	is.AssetID = assetID
 
-	if err := h.repo.SubmitInspection(r.Context(), &is); err != nil {
+	if err := h.repo.CreateInspectionSubmission(r.Context(), &is); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -53,12 +53,35 @@ const PlanningSimulator = () => {
     };
 
     const getSimulatedImpact = () => {
-        const impactedAssets = scenarios.reduce((acc, s) => acc + s.quantity, 0);
-        const remainingAvailable = stats.availableAssets - impactedAssets;
+        if (scenarios.length === 0) {
+            return { impactedAssets: 0, remainingAvailable: stats.availableAssets, utilizationDelta: 0 };
+        }
+
+        // To find the peak impact, we check all dates where a scenario starts or ends
+        const criticalDates = new Set();
+        scenarios.forEach(s => {
+            criticalDates.add(s.startDate);
+            criticalDates.add(s.endDate);
+        });
+
+        const sortedDates = Array.from(criticalDates).sort();
+        let peakImpact = 0;
+
+        sortedDates.forEach(date => {
+            const currentImpact = scenarios.reduce((acc, s) => {
+                if (date >= s.startDate && date <= s.endDate) {
+                    return acc + s.quantity;
+                }
+                return acc;
+            }, 0);
+            if (currentImpact > peakImpact) peakImpact = currentImpact;
+        });
+
+        const remainingAvailable = stats.availableAssets - peakImpact;
         return {
-            impactedAssets,
+            impactedAssets: peakImpact,
             remainingAvailable,
-            utilizationDelta: ((impactedAssets / (stats.totalAssets || 1)) * 100).toFixed(1)
+            utilizationDelta: ((peakImpact / (stats.totalAssets || 1)) * 100).toFixed(1)
         };
     };
 

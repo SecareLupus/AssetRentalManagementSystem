@@ -95,11 +95,14 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 	mux.HandleFunc("/v1/catalog/inspection-templates", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			h.CreateInspectionTemplate(w, r)
-			return
+		case http.MethodGet:
+			h.ListInspectionTemplates(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 	mux.HandleFunc("/v1/fleet/build-specs", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -122,6 +125,15 @@ func NewRouter(h *Handler) http.Handler {
 	})
 
 	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/inspections") {
+			if r.Method == http.MethodPost {
+				h.SetItemTypeInspections(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			h.GetItemType(w, r)
@@ -129,6 +141,19 @@ func NewRouter(h *Handler) http.Handler {
 			h.UpdateItemType(w, r)
 		case http.MethodDelete:
 			h.DeleteItemType(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/v1/catalog/inspection-templates/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetInspectionTemplate(w, r)
+		case http.MethodPut:
+			h.UpdateInspectionTemplate(w, r)
+		case http.MethodDelete:
+			h.DeleteInspectionTemplate(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}

@@ -139,12 +139,46 @@ func (m *MockRepository) CreateInspectionTemplate(ctx context.Context, it *domai
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error) {
-	args := m.Called(ctx, itemTypeID)
+func (m *MockRepository) UpdateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error {
+	args := m.Called(ctx, it)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteInspectionTemplate(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListInspectionTemplates(ctx context.Context) ([]domain.InspectionTemplate, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]domain.InspectionTemplate), args.Error(1)
 }
 
-func (m *MockRepository) SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error {
+func (m *MockRepository) GetInspectionTemplate(ctx context.Context, id int64) (*domain.InspectionTemplate, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.InspectionTemplate), args.Error(1)
+}
+
+func (m *MockRepository) GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error) {
+	args := m.Called(ctx, itemTypeID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.InspectionTemplate), args.Error(1)
+}
+
+func (m *MockRepository) SetItemTypeInspections(ctx context.Context, itemTypeID int64, templateIDs []int64) error {
+	args := m.Called(ctx, itemTypeID, templateIDs)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CreateInspectionSubmission(ctx context.Context, is *domain.InspectionSubmission) error {
 	args := m.Called(ctx, is)
 	return args.Error(0)
 }

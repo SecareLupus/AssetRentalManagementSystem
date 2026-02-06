@@ -229,6 +229,33 @@ const ItemTypeDetails = () => {
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name</label>
                                 <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
                             </div>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>Enabled Features</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                    {[
+                                        { key: 'remote_management', label: 'Remote Mgmt' },
+                                        { key: 'provisioning', label: 'Provisioning' },
+                                        { key: 'refurbishment', label: 'Refurbishment' },
+                                        { key: 'build_spec_tracking', label: 'Build Specs' }
+                                    ].map(f => (
+                                        <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={editForm.supported_features?.[f.key] || false} 
+                                                onChange={e => setEditForm({
+                                                    ...editForm,
+                                                    supported_features: {
+                                                        ...(editForm.supported_features || {}),
+                                                        [f.key]: e.target.checked
+                                                    }
+                                                })}
+                                            />
+                                            {f.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem' }}>Critical Shortage Threshold</label>
@@ -250,6 +277,30 @@ const ItemTypeDetails = () => {
                                         onChange={e => setEditForm({
                                             ...editForm, 
                                             metadata: { ...editForm.metadata, forecast_horizon_days: parseInt(e.target.value) }
+                                        })} 
+                                        style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem' }}>Tag Auto-Mapping (Regex)</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <input 
+                                        placeholder="Display Pattern (e.g. SN:XXXXX)"
+                                        value={editForm.metadata?.tag_display_pattern || ''} 
+                                        onChange={e => setEditForm({
+                                            ...editForm, 
+                                            metadata: { ...editForm.metadata, tag_display_pattern: e.target.value }
+                                        })} 
+                                        style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} 
+                                    />
+                                    <input 
+                                        placeholder="Regex (e.g. SN:([0-9A-Z]+))"
+                                        value={editForm.metadata?.tag_extract_regex || ''} 
+                                        onChange={e => setEditForm({
+                                            ...editForm, 
+                                            metadata: { ...editForm.metadata, tag_extract_regex: e.target.value }
                                         })} 
                                         style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} 
                                     />

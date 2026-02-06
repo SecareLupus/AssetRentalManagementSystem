@@ -84,7 +84,16 @@ const IntelligenceOverview = () => {
                         {forecasts.map((f, i) => (
                             <div key={i} style={{ padding: '1rem', borderBottom: i < forecasts.length - 1 ? '1px solid var(--border)' : 'none' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ fontWeight: 600 }}>{f.asset_tag}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontWeight: 600 }}>{f.asset_tag}</span>
+                                        <button 
+                                            className="glass" 
+                                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.65rem' }}
+                                            onClick={() => alert("Forecast snoozed for 7 days (Logic placeholder)")}
+                                        >
+                                            Snooze
+                                        </button>
+                                    </div>
                                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: f.urgency_score > 0.9 ? 'var(--error)' : 'var(--warning)' }}>
                                         {(f.urgency_score * 100).toFixed(0)}% URGENT
                                     </span>
@@ -108,7 +117,7 @@ const IntelligenceOverview = () => {
                     <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 1.5rem' }}>
                         Simulate large-scale deployment requests without committing. See how a new project would impact future fleet health.
                     </p>
-                    <button className="btn-primary">Launch Simulator</button>
+                    <Link to="/simulator" className="btn-primary" style={{ textDecoration: 'none' }}>Launch Simulator</Link>
                 </div>
             </div>
         </div>

@@ -13,23 +13,51 @@ const WarehouseKiosk = () => {
         estimated_return_at: ''
     });
 
+    const [itemTypes, setItemTypes] = useState([]);
+
     useEffect(() => {
-        const fetchInventory = async () => {
+        const fetchKioskData = async () => {
             try {
-                const res = await axios.get('/v1/inventory/assets');
-                setInventory(res.data || []);
+                const [assetsRes, typesRes] = await Promise.all([
+                    axios.get('/v1/inventory/assets'),
+                    axios.get('/v1/catalog/item-types')
+                ]);
+                setInventory(assetsRes.data || []);
+                setItemTypes(typesRes.data || []);
             } catch (err) {
-                console.error("Failed to load inventory for kiosk lookup", err);
+                console.error("Failed to load kiosk data", err);
             }
         };
-        fetchInventory();
+        fetchKioskData();
     }, []);
 
     const handleScan = (e) => {
         e.preventDefault();
         setMessage(null);
         
-        const found = inventory.find(a => a.asset_tag === scanTerm || a.serial_number === scanTerm);
+        // 1. Try direct match
+        let found = inventory.find(a => a.asset_tag === scanTerm || a.serial_number === scanTerm);
+        
+        // 2. Try regex extraction if no direct match
+        if (!found) {
+            for (const type of itemTypes) {
+                const regexStr = type.metadata?.tag_extract_regex;
+                if (!regexStr) continue;
+
+                try {
+                    const regex = new RegExp(regexStr);
+                    const match = scanTerm.match(regex);
+                    if (match && (match[1] || match[0])) {
+                        const extracted = match[1] || match[0];
+                        found = inventory.find(a => a.asset_tag === extracted || a.serial_number === extracted);
+                        if (found) break;
+                    }
+                } catch (reErr) {
+                    console.error("Invalid regex for item type", type.id, reErr);
+                }
+            }
+        }
+
         if (found) {
             if (scannedAssets.find(a => a.id === found.id)) {
                 setMessage({ type: 'error', text: 'Asset already in batch.' });

@@ -44,10 +44,15 @@ type Repository interface {
 	AddMaintenanceLog(ctx context.Context, log *domain.MaintenanceLog) error
 	ListMaintenanceLogs(ctx context.Context, assetID int64) ([]domain.MaintenanceLog, error)
 
-	// Dynamic Inspections
+	// Dynamic	// Inspections
 	CreateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error
+	UpdateInspectionTemplate(ctx context.Context, it *domain.InspectionTemplate) error
+	DeleteInspectionTemplate(ctx context.Context, id int64) error
+	ListInspectionTemplates(ctx context.Context) ([]domain.InspectionTemplate, error)
+	GetInspectionTemplate(ctx context.Context, id int64) (*domain.InspectionTemplate, error)
 	GetInspectionTemplatesForItemType(ctx context.Context, itemTypeID int64) ([]domain.InspectionTemplate, error)
-	SubmitInspection(ctx context.Context, is *domain.InspectionSubmission) error
+	SetItemTypeInspections(ctx context.Context, itemTypeID int64, templateIDs []int64) error
+	CreateInspectionSubmission(ctx context.Context, is *domain.InspectionSubmission) error
 
 	// Build Specs
 	CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error
