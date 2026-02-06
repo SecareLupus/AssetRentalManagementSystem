@@ -33,3 +33,57 @@
   - [ ] Heamap pagination buttons don't work
 - [ ] Simulator
   - [ ] Non-overlapping scenarios do not treat the returned assets as available for later scenarios. (The second scenario will report the asset as unavailable)
+
+# Notes
+
+Note #1: Reservation Creation API Query Details
+Endpoint: `POST /v1/rent-actions`
+
+Request:
+
+```
+"{
+	'requester_ref':'admin',
+	'created_by_ref':'admin',
+	'priority':'high',
+	'start_time':'2026-02-07T13:44:00.000Z',
+	'end_time':'2026-02-08T13:44:00.000Z',
+	'is_asap':true,
+	'description':'Throwing them off a cliff, ...',
+	'items' [
+		{
+			'item_kind':'item_type',
+			'item_id':4,
+			'requested_quantity':1,
+			'name':'Encoder Box'
+		}
+	],
+	'status':'draft'
+}"
+```
+
+Response:
+
+```
+"insert rent_action: pq:
+INSERT has more expressions than target columns at position 5:88 (42601)"
+```
+
+Note #2: Maintenance API Query Details
+Endpoint: `POST /v1/inventory/assets/1/inspections`
+
+Request:
+
+```
+"{
+	'performed_by':'admin',
+	'responses':[]
+}"
+```
+
+Response:
+
+```
+"insert submission: pq:
+insert or update on table 'inspection_submissions' violates foreign key constraint 'fk_is_template' (23503)"
+```
