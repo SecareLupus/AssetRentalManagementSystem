@@ -302,7 +302,7 @@ func (r *SqlRepository) CreateRentAction(ctx context.Context, ra *domain.RentAct
 		requester_ref, created_by_ref, approved_by_ref, status, priority, 
 		start_time, end_time, is_asap, description, external_source, 
 		external_ref, schema_org, metadata, created_by_user_id, updated_by_user_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	RETURNING id`
 
 	err = tx.QueryRowContext(ctx, query,

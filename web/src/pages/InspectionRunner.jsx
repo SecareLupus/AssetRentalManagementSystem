@@ -41,18 +41,24 @@ const InspectionRunner = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            const submission = {
-                performed_by: user?.username || 'Inspector Tech',
-                responses: Object.entries(responses).map(([templId, resp]) => ({
+            // Submit each template response as a separate inspection
+            const submissionPromises = Object.entries(responses).map(([templId, resp]) => {
+                const submission = {
                     template_id: parseInt(templId),
-                    value: resp.status,
-                    notes: resp.notes
-                }))
-            };
-            await axios.post(`/v1/inventory/assets/${id}/inspections`, submission);
+                    performed_by: user?.username || 'Inspector Tech',
+                    responses: [
+                        { field_id: 1, value: resp.status }, // We'll use a placeholder field_id or logic for fields later
+                    ]
+                };
+                return axios.post(`/v1/inventory/assets/${id}/inspections`, submission);
+            });
+
+            await Promise.all(submissionPromises);
+            alert("Inspections submitted successfully!");
             navigate('/tech');
         } catch (err) {
-            alert("Failed to submit inspection.");
+            console.error("Inspection submission failed", err);
+            alert("Failed to submit inspection: " + (err.response?.data || err.message));
         } finally {
             setSubmitting(false);
         }

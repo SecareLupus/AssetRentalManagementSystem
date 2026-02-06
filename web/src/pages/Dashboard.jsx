@@ -95,7 +95,13 @@ const Dashboard = () => {
                 <section className="glass" style={{ borderRadius: '1rem', overflow: 'hidden' }}>
                     <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ fontWeight: 600 }}>Catalog Overview</h3>
-                        <button className="btn-primary" style={{ fontSize: '0.75rem' }}>View All</button>
+                        <button 
+                            className="btn-primary" 
+                            style={{ fontSize: '0.75rem' }}
+                            onClick={() => window.location.href = '/catalog'}
+                        >
+                            View All
+                        </button>
                     </div>
                     <div style={{ padding: '1rem' }}>
                         {loading ? (
@@ -114,7 +120,13 @@ const Dashboard = () => {
                                 </thead>
                                 <tbody>
                                     {itemTypes.slice(0, 5).map(it => (
-                                        <tr key={it.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
+                                        <tr 
+                                            key={it.id} 
+                                            style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }}
+                                            onClick={() => window.location.href = `/catalog/${it.id}`}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
                                             <td style={{ padding: '0.75rem' }}><code>{it.code}</code></td>
                                             <td style={{ padding: '0.75rem', fontWeight: 500 }}>{it.name}</td>
                                             <td style={{ padding: '0.75rem' }}>

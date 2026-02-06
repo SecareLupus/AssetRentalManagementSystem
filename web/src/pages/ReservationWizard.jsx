@@ -1,36 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, Package, FileText, CheckCircle, ChevronRight, ChevronLeft, Plus, Trash2 } from 'lucide-react';
 
 const ReservationWizard = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [catalog, setCatalog] = useState([]);
 
+    // Get today's date and 7 days from now as defaults
+    const now = new Date();
+    const future = new Date();
+    future.setDate(now.getDate() + 7);
+
+    const formatDateForInput = (date) => {
+        return date.toISOString().slice(0, 16);
+    };
+
     const [formData, setFormData] = useState({
         requester_ref: user?.username || 'Unknown User',
         created_by_ref: user?.username || 'Unknown User',
         priority: 'normal',
-        start_time: '',
-        end_time: '',
+        start_time: formatDateForInput(now),
+        end_time: formatDateForInput(future),
         is_asap: false,
         description: '',
         items: [] // { item_kind: 'item_type', item_id: ID, requested_quantity: 1, name: '' }
     });
 
     useEffect(() => {
-        axios.get('/v1/catalog/item-types').then(res => setCatalog(res.data || []));
-    }, []);
+        axios.get('/v1/catalog/item-types').then(res => {
+            const items = res.data || [];
+            setCatalog(items);
+
+            // Handle pre-selection from query params
+            const params = new URLSearchParams(location.search);
+            const itemTypeIdFromUrl = params.get('item_type_id');
+            if (itemTypeIdFromUrl) {
+                const targetItem = items.find(it => it.id === parseInt(itemTypeIdFromUrl));
+                if (targetItem) {
+                    addItem(targetItem);
+                }
+            }
+        });
+    }, [location.search]);
 
     const addItem = (item) => {
-        setFormData(prev => ({
-            ...prev,
-            items: [...prev.items, { item_kind: 'item_type', item_id: item.id, requested_quantity: 1, name: item.name }]
-        }));
+        setFormData(prev => {
+            const existingIndex = prev.items.findIndex(i => i.item_id === item.id && i.item_kind === 'item_type');
+            if (existingIndex >= 0) {
+                const newItems = [...prev.items];
+                newItems[existingIndex].requested_quantity += 1;
+                return { ...prev, items: newItems };
+            }
+            return {
+                ...prev,
+                items: [...prev.items, { item_kind: 'item_type', item_id: item.id, requested_quantity: 1, name: item.name }]
+            };
+        });
     };
 
     const removeItem = (index) => {

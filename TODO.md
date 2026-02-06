@@ -6,11 +6,11 @@ This milestone focuses on fixing issues identified during testing and preparing 
 
 Goal: Fix broken core logic and API integrations to ensure the system is functionally sound.
 
-- [ ] **Dashboard Interactivity**: Fix non-interactive category list items and "View All" button.
-- [ ] **Catalog Core Fixes**: Fix "Filters" and "Add to Cart" buttons.
-- [ ] **Item Type Actions**: Fix "Request Reservation" button and make asset list interactive.
-- [ ] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures (SQL `INSERT` column mismatch).
-- [ ] **Maintenance Submission**: Resolve failures in submitting inspections (Foreign Key violation `fk_is_template`).
+- [x] **Dashboard Interactivity**: Fix non-interactive category list items and "View All" button.
+- [x] **Catalog Core Fixes**: Fix "Filters" and "Add to Cart" buttons.
+- [x] **Item Type Actions**: Fix "Request Reservation" button and make asset list interactive.
+- [x] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures (SQL `INSERT` column mismatch).
+- [x] **Maintenance Submission**: Resolve failures in submitting inspections (Foreign Key violation `fk_is_template`).
 
 ## Phase 20: Usability & UX Refinements
 

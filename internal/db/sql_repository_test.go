@@ -20,8 +20,8 @@ func TestSqlRepository_GetItemTypeByID(t *testing.T) {
 	repo := NewSqlRepository(db)
 	ctx := context.Background()
 
-	rows := sqlmock.NewRows([]string{"id", "code", "name", "kind", "is_active", "supported_features", "schema_org", "metadata", "created_at", "updated_at"}).
-		AddRow(1, "SKU123", "Item A", "serialized", true, []byte("{}"), []byte("{}"), []byte("{}"), time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"id", "code", "name", "kind", "is_active", "supported_features", "created_by_user_id", "updated_by_user_id", "schema_org", "metadata", "created_at", "updated_at"}).
+		AddRow(1, "SKU123", "Item A", "serialized", true, []byte("{}"), nil, nil, []byte("{}"), []byte("{}"), time.Now(), time.Now())
 
 	mock.ExpectQuery("SELECT (.+) FROM item_types WHERE id = \\$1").
 		WithArgs(1).
@@ -57,7 +57,12 @@ func TestSqlRepository_CreateRentAction(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("INSERT INTO rent_actions").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(),
+		).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	mock.ExpectQuery("INSERT INTO rent_action_items").

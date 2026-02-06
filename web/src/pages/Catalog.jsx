@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Box, Search, Filter, ChevronRight, CheckCircle2, Clock, Plus } from 'lucide-react';
 import { GlassCard, PageHeader, StatusBadge } from '../components/Shared';
 
 const Catalog = () => {
     const [itemTypes, setItemTypes] = useState([]);
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -123,7 +124,11 @@ const Catalog = () => {
                         />
                         Show Archived
                     </label>
-                    <button className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}>
+                    <button 
+                        className="glass" 
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}
+                        onClick={() => document.querySelector('input[placeholder*="Search"]').focus()}
+                    >
                         <Filter size={18} /> Filters
                     </button>
                 </div>
@@ -172,7 +177,11 @@ const Catalog = () => {
                                 <Link to={`/catalog/${item.id}`} style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                     View Details <ChevronRight size={14} />
                                 </Link>
-                                <button className="btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>
+                                <button 
+                                    className="btn-primary" 
+                                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                    onClick={() => navigate(`/reserve?item_type_id=${item.id}`)}
+                                >
                                     Add to Cart
                                 </button>
                             </div>
