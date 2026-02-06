@@ -1,46 +1,38 @@
-# Rental Management System - Milestone IV Roadmap
+# Rental Management System - Milestone V Roadmap
 
-This milestone focuses on refining the user experience and preparing the system for advanced operational flows.
+This milestone focuses on fixing issues identified during testing and preparing for the next steps of development.
 
-## Phase 16: UX Refinements & Foundations
+## Phase 19: Operational Integrity (Critical Fixes)
 
-Addressing immediate usability issues and establishing a better foundation for the UI.
+Goal: Fix broken core logic and API integrations to ensure the system is functionally sound.
 
-- [x] **Content Pane Z-Layering**: Fix issues where content elements overlap incorrectly.
-- [x] **Menu Pane Interaction**: Fix menu overlapping content and add collapsibility.
-- [x] **Item Creation**: Add functionality to create new items (UI Placeholder).
-- [x] **Reservation UX**: Move "Create Reservation" to the reservations page.
-- [x] **General Polish**: Refactored styles, centralized CSS variables, and created shared components.
+- [ ] **Dashboard Interactivity**: Fix non-interactive category list items and "View All" button.
+- [ ] **Catalog Core Fixes**: Fix "Filters" and "Add to Cart" buttons.
+- [ ] **Item Type Actions**: Fix "Request Reservation" button and make asset list interactive.
+- [ ] **Reservation Wizard Logic**: Fix quantitiy accumulation (avoid duplicate rows) and resolve reservation creation failures.
+- [ ] **Maintenance Submission**: Resolve failures in submitting inspections.
 
-## Phase 17: Frontend API Full Integration
+## Phase 20: Usability & UX Refinements
 
-Goal: Achieve 100% API coverage in the frontend by hooking up all backend calls to their respective UI components.
+Goal: Smooth out user workflows and improve data presentation clarity.
 
-- [x] **API Audit**: Map all backend endpoints to frontend usage; identify gaps.
-- [x] **Catalog Integration**: Implement real `POST` / `PUT` / `DELETE` for Item Types.
-- [x] **Inventory Integration**: Implement specific Asset creation, editing, and status management.
-- [x] **Reservation Lifecycle**: Implement full flow (Submit -> Approve/Reject -> Provision -> Return).
-- [x] **Error Handling**: Standardize API error handling and loading states across the app.
+- [ ] **Wizard Defaults**: Set default dates to today + 7 days; clarify "ASAP" priority.
+- [ ] **Warehouse Inputs**: Add start/end dates and location fields for bulk transactions.
+- [ ] **Intelligence Hub Parameters**: Make Critical Shortage and Forecast Frequency editable in Item Type settings.
+- [ ] **Heatmap Polish**: Fix pagination buttons and ensure bulk checkouts (without schedules) are respected.
+- [ ] **Catalog Archive Cleanup**: Hide the archive button for already archived item types.
 
-## Phase 18: Full System Readiness
+## Phase 21: Advanced Management Tooling
 
-Goal: Bridge the gap from "demo-capable" to "operation-ready" by closing API gaps, removing placeholders, and refining operational utility.
+Goal: Implement specialized editors and complex simulation logic.
 
-- [x] **100% API Coverage & Specialized UI**
-  - [x] **Admin Operations Hub**: Implement Bulk Recall and Inventory Reconciliation views.
-  - [x] **Lifecycle Management**: Implement Archival/Soft-Delete for Item Types in the Catalog.
+- [ ] **Feature Management**: Enable editing of "Supported Features" and implement functional logic for assigned features.
+- [ ] **Inspection Template Editor**: Implement a UI for creating and managing custom inspection templates.
+- [ ] **Scannable Tag Editor**: Implement alias-to-asset mapping with regex support for third-party tags (QR extraction).
+- [ ] **Simulator Enhancements**: Fix "Launch Simulator" button and update logic to treat assets from non-overlapping scenarios as available.
+- [ ] **Forecast Controls**: Implement a "Snooze" option for service forecasts on devices stuck in the field.
 
-- [x] **Data Foundations (Eliminate Placeholders)**
-  - [x] **Auth Integration**: Link all submission metadata directly to the authenticated Session/User ID.
-  - [x] **Reactive Status Tracking**: Replace static timers with real-time polling of Asset `provisioning_status`.
-  - [x] **Live System Health**: Connect dashboard health widgets to real system and service telemetry.
-
-- [x] **Operational Use Case Completion**
-  - [x] **"What-If" Planning Simulator**: Enable interactive capacity testing and shortage simulation in the Intelligence Hub.
-  - [x] **High-Efficiency Batching**: Optimize `WarehouseKiosk` for high-speed barcode scanning with hands-free logic.
-  - [x] **Fleet Utilization Metrics**: Implement advanced reporting for downtime trends and refurbishment efficiency.
-
-## Phase 19: Enterprise Connectivity & Specialized Personas
+## Phase 22: Enterprise Connectivity & Specialized Personas
 
 Goal: Extend the system reach into deep device management and field operations.
 
