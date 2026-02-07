@@ -48,8 +48,8 @@ type Repository interface {
 	ListCheckOutActions(ctx context.Context, reservationID int64) ([]domain.CheckOutAction, error)
 	ListReturnActions(ctx context.Context, reservationID int64) ([]domain.ReturnAction, error)
 	GetRentalFulfillmentStatus(ctx context.Context, reservationID int64) (*domain.RentalFulfillmentStatus, error)
-	BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error
-	BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64) error
+	BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, fromLocationID, toLocationID *int64) error
+	BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error
 
 	// Inventory/Availability
 	GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error)

@@ -55,21 +55,22 @@ func (h *Handler) BatchDispatchAssets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		AssetIDs     []int64 `json:"asset_ids"`
-		ToLocationID *int64  `json:"to_location_id"`
+		AssetIDs       []int64 `json:"asset_ids"`
+		FromLocationID *int64  `json:"from_location_id"`
+		ToLocationID   *int64  `json:"to_location_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	agentID := h.getUserIDFromContext(r)
-	var agentIDVal int64
-	if agentID != nil {
-		agentIDVal = *agentID
+	agentIDVal := h.getUserIDFromContext(r)
+	if agentIDVal == nil {
+		http.Error(w, "agent id missing from context", http.StatusUnauthorized)
+		return
 	}
 
-	if err := h.repo.BatchCheckOut(r.Context(), id, req.AssetIDs, agentIDVal, req.ToLocationID); err != nil {
+	if err := h.repo.BatchCheckOut(r.Context(), id, req.AssetIDs, *agentIDVal, req.FromLocationID, req.ToLocationID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -107,20 +108,21 @@ func (h *Handler) BatchReturnAssets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		AssetIDs []int64 `json:"asset_ids"`
+		AssetIDs     []int64 `json:"asset_ids"`
+		ToLocationID *int64  `json:"to_location_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	agentID := h.getUserIDFromContext(r)
-	var agentIDVal int64
-	if agentID != nil {
-		agentIDVal = *agentID
+	agentIDVal := h.getUserIDFromContext(r)
+	if agentIDVal == nil {
+		http.Error(w, "agent id missing from context", http.StatusUnauthorized)
+		return
 	}
 
-	if err := h.repo.BatchReturn(r.Context(), id, req.AssetIDs, agentIDVal); err != nil {
+	if err := h.repo.BatchReturn(r.Context(), id, req.AssetIDs, *agentIDVal, req.ToLocationID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

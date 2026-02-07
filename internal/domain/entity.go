@@ -77,6 +77,7 @@ type Place struct {
 	OwnerID            *int64          `json:"owner_id,omitempty"` // Company/Org owning the root place
 	Category           *string         `json:"category,omitempty"` // "site", "room", "zone", etc.
 	Address            *PostalAddress  `json:"address,omitempty"`
+	IsInternal         bool            `json:"is_internal"`
 	PresumedDemands    json.RawMessage `json:"presumed_demands,omitempty"`
 	Metadata           json.RawMessage `json:"metadata,omitempty"`
 	CreatedAt          time.Time       `json:"created_at"`

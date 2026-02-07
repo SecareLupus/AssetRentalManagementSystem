@@ -564,6 +564,15 @@ const EntityManager = () => {
                         <option value="cabinet">Hardware Cabinet</option>
                     </select>
                 </div>
+                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', display: 'flex' }}>
+                    <input
+                        type="checkbox"
+                        id="is_internal"
+                        checked={formData.is_internal || false}
+                        onChange={e => setFormData({ ...formData, is_internal: e.target.checked })}
+                    />
+                    <label htmlFor="is_internal" className="form-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Internal Logistics Hub (Warehouse/HQ)</label>
+                </div>
                 <div className="form-group">
                     <label className="form-label">Contextual Description</label>
                     <textarea className="form-input" style={{ height: '60px', resize: 'none' }} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />

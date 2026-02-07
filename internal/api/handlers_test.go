@@ -467,12 +467,12 @@ func (m *MockRepository) GetRentalFulfillmentStatus(ctx context.Context, reserva
 	return args.Get(0).(*domain.RentalFulfillmentStatus), args.Error(1)
 }
 
-func (m *MockRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
-	args := m.Called(ctx, reservationID, assetIDs, agentID, toLocationID)
+func (m *MockRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, fromLocationID, toLocationID *int64) error {
+	args := m.Called(ctx, reservationID, assetIDs, agentID, fromLocationID, toLocationID)
 	return args.Error(0)
 }
 
-func (m *MockRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64) error {
-	args := m.Called(ctx, reservationID, assetIDs, agentID)
+func (m *MockRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
+	args := m.Called(ctx, reservationID, assetIDs, agentID, toLocationID)
 	return args.Error(0)
 }

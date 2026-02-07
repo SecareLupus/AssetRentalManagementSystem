@@ -708,7 +708,7 @@ func (r *SqlRepository) GetRentalFulfillmentStatus(ctx context.Context, reservat
 }
 
 // BatchCheckOut dispatches multiple assets at once and updates reservation status.
-func (r *SqlRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
+func (r *SqlRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, fromLocationID, toLocationID *int64) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -718,9 +718,9 @@ func (r *SqlRepository) BatchCheckOut(ctx context.Context, reservationID int64, 
 	now := time.Now()
 	for _, assetID := range assetIDs {
 		// 1. Create CheckOutAction
-		coQuery := `INSERT INTO check_out_actions (reservation_id, asset_id, agent_id, start_time, to_location_id, action_status)
-		            VALUES ($1, $2, $3, $4, $5, $6)`
-		_, err = tx.ExecContext(ctx, coQuery, reservationID, assetID, agentID, now, toLocationID, "Completed")
+		coQuery := `INSERT INTO check_out_actions (reservation_id, asset_id, agent_id, start_time, from_location_id, to_location_id, action_status)
+		            VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		_, err = tx.ExecContext(ctx, coQuery, reservationID, assetID, agentID, now, fromLocationID, toLocationID, "Completed")
 		if err != nil {
 			return fmt.Errorf("checkout %d: %w", assetID, err)
 		}
@@ -752,7 +752,7 @@ func (r *SqlRepository) BatchCheckOut(ctx context.Context, reservationID int64, 
 }
 
 // BatchReturn returns multiple assets at once.
-func (r *SqlRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64) error {
+func (r *SqlRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -762,16 +762,16 @@ func (r *SqlRepository) BatchReturn(ctx context.Context, reservationID int64, as
 	now := time.Now()
 	for _, assetID := range assetIDs {
 		// 1. Create ReturnAction
-		raQuery := `INSERT INTO return_actions (reservation_id, asset_id, agent_id, start_time, action_status)
-		            VALUES ($1, $2, $3, $4, $5)`
-		_, err = tx.ExecContext(ctx, raQuery, reservationID, assetID, agentID, now, "Completed")
+		raQuery := `INSERT INTO return_actions (reservation_id, asset_id, agent_id, start_time, to_location_id, action_status)
+		            VALUES ($1, $2, $3, $4, $5, $6)`
+		_, err = tx.ExecContext(ctx, raQuery, reservationID, assetID, agentID, now, toLocationID, "Completed")
 		if err != nil {
 			return fmt.Errorf("return %d: %w", assetID, err)
 		}
 
-		// 2. Update Asset to available (assuming it returns to a generic pool, or we could specify warehouse location)
-		assetQuery := `UPDATE assets SET status = 'available', updated_at = $1 WHERE id = $2`
-		_, err = tx.ExecContext(ctx, assetQuery, now, assetID)
+		// 2. Update Asset to available
+		assetQuery := `UPDATE assets SET status = 'available', place_id = $1, updated_at = $2 WHERE id = $3`
+		_, err = tx.ExecContext(ctx, assetQuery, toLocationID, now, assetID)
 		if err != nil {
 			return fmt.Errorf("update asset %d: %w", assetID, err)
 		}
@@ -1705,16 +1705,16 @@ func (r *SqlRepository) CreatePlace(ctx context.Context, p *domain.Place) error 
 	p.CreatedAt = now
 	p.UpdatedAt = now
 	addrJSON, _ := json.Marshal(p.Address)
-	query := `INSERT INTO places (name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.PresumedDemands, p.Metadata, p.CreatedAt, p.UpdatedAt).Scan(&p.ID)
+	query := `INSERT INTO places (name, description, contained_in_place_id, owner_id, category, address, is_internal, presumed_demands, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.IsInternal, p.PresumedDemands, p.Metadata, p.CreatedAt, p.UpdatedAt).Scan(&p.ID)
 }
 
 func (r *SqlRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, error) {
-	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at FROM places WHERE id = $1`
+	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, is_internal, presumed_demands, metadata, created_at, updated_at FROM places WHERE id = $1`
 	var p domain.Place
 	var addrJSON []byte
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -1728,7 +1728,7 @@ func (r *SqlRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, 
 }
 
 func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID *int64) ([]domain.Place, error) {
-	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at FROM places WHERE 1=1`
+	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, is_internal, presumed_demands, metadata, created_at, updated_at FROM places WHERE 1=1`
 	var args []interface{}
 	idx := 1
 	if ownerID != nil {
@@ -1752,7 +1752,7 @@ func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID
 	for rows.Next() {
 		var p domain.Place
 		var addrJSON []byte
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		if len(addrJSON) > 0 {
@@ -1766,8 +1766,8 @@ func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID
 func (r *SqlRepository) UpdatePlace(ctx context.Context, p *domain.Place) error {
 	p.UpdatedAt = time.Now()
 	addrJSON, _ := json.Marshal(p.Address)
-	query := `UPDATE places SET name = $1, description = $2, contained_in_place_id = $3, owner_id = $4, category = $5, address = $6, presumed_demands = $7, metadata = $8, updated_at = $9 WHERE id = $10`
-	_, err := r.db.ExecContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.PresumedDemands, p.Metadata, p.UpdatedAt, p.ID)
+	query := `UPDATE places SET name = $1, description = $2, contained_in_place_id = $3, owner_id = $4, category = $5, address = $6, is_internal = $7, presumed_demands = $8, metadata = $9, updated_at = $10 WHERE id = $11`
+	_, err := r.db.ExecContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.IsInternal, p.PresumedDemands, p.Metadata, p.UpdatedAt, p.ID)
 	return err
 }
 

@@ -222,7 +222,7 @@ func (h *Handler) validateAsset(a *domain.Asset) error {
 		return fmt.Errorf("item_type_id is required")
 	}
 	switch a.Status {
-	case domain.AssetStatusAvailable, domain.AssetStatusReserved, domain.AssetStatusMaintenance, domain.AssetStatusRetired:
+	case domain.AssetStatusAvailable, domain.AssetStatusReserved, domain.AssetStatusMaintenance, domain.AssetStatusRetired, domain.AssetStatusDeployed:
 		// valid
 	case "":
 		a.Status = domain.AssetStatusAvailable
@@ -245,6 +245,18 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.CreatedByUserID = h.getUserIDFromContext(r)
+
+	// Status Inference: If place_id is provided but status is "available" or empty, check if place is internal
+	if a.PlaceID != nil && (a.Status == "" || a.Status == domain.AssetStatusAvailable) {
+		p, err := h.repo.GetPlace(r.Context(), *a.PlaceID)
+		if err == nil && p != nil {
+			if p.IsInternal {
+				a.Status = domain.AssetStatusAvailable
+			} else {
+				a.Status = domain.AssetStatusDeployed
+			}
+		}
+	}
 
 	if err := h.repo.CreateAsset(r.Context(), &a); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
