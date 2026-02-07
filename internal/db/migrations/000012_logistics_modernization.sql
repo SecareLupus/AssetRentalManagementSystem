@@ -29,6 +29,9 @@ ALTER TABLE demands ADD COLUMN event_id BIGINT REFERENCES events(id);
 ALTER TABLE demands ADD COLUMN business_function VARCHAR(191);
 ALTER TABLE demands ADD COLUMN eligible_duration VARCHAR(64);
 ALTER TABLE demands ADD COLUMN place_id BIGINT REFERENCES places(id);
+ALTER TABLE demands ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE demands ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
 
 -- 4. Port event_asset_needs to demands
 -- Map item_type_id to item_id and set kind to 'item_type'
