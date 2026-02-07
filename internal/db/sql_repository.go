@@ -1499,8 +1499,8 @@ func (r *SqlRepository) GetDashboardStats(ctx context.Context) (*domain.Dashboar
 		stats.TotalAssets += count
 	}
 
-	// Active Rentals
-	queryRentals := "SELECT COUNT(*) FROM rent_actions WHERE status = 'approved' OR status = 'ongoing'"
+	// Active Rentals (Confirmed or Partially Fulfilled reservations)
+	queryRentals := "SELECT COUNT(*) FROM rental_reservations WHERE reservation_status IN ('ReservationConfirmed', 'ReservationPartiallyFulfilled')"
 	err = r.db.QueryRowContext(ctx, queryRentals).Scan(&stats.ActiveRentals)
 	if err != nil {
 		return nil, err
@@ -1713,8 +1713,10 @@ func (r *SqlRepository) CreatePlace(ctx context.Context, p *domain.Place) error 
 func (r *SqlRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, error) {
 	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, is_internal, presumed_demands, metadata, created_at, updated_at FROM places WHERE id = $1`
 	var p domain.Place
-	var addrJSON []byte
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt)
+	var addrJSON, demandsJSON, metadataJSON []byte
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &demandsJSON, &metadataJSON, &p.CreatedAt, &p.UpdatedAt,
+	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -1724,7 +1726,9 @@ func (r *SqlRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, 
 	if len(addrJSON) > 0 {
 		json.Unmarshal(addrJSON, &p.Address)
 	}
-	return &p, err
+	p.PresumedDemands = json.RawMessage(demandsJSON)
+	p.Metadata = json.RawMessage(metadataJSON)
+	return &p, nil
 }
 
 func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID *int64) ([]domain.Place, error) {
@@ -1751,13 +1755,17 @@ func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID
 	var results []domain.Place
 	for rows.Next() {
 		var p domain.Place
-		var addrJSON []byte
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var addrJSON, demandsJSON, metadataJSON []byte
+		if err := rows.Scan(
+			&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &demandsJSON, &metadataJSON, &p.CreatedAt, &p.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		if len(addrJSON) > 0 {
 			json.Unmarshal(addrJSON, &p.Address)
 		}
+		p.PresumedDemands = json.RawMessage(demandsJSON)
+		p.Metadata = json.RawMessage(metadataJSON)
 		results = append(results, p)
 	}
 	return results, nil

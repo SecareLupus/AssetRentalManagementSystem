@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, Box, Calendar, AlertCircle, ChevronRight, Activity } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, AlertCircle, ChevronRight, Activity, Package, Terminal } from 'lucide-react';
 
 const Dashboard = () => {
     const [stats, setStats] = useState({
@@ -34,15 +34,16 @@ const Dashboard = () => {
                     axios.get('/v1/dashboard/stats'),
                     checkHealth()
                 ]);
-                
+
                 setItemTypes(typesRes.data || []);
-                
+
                 const s = statsRes.data || {};
                 setStats({
                     totalAssets: s.total_assets || 0,
                     availableAssets: s.assets_by_status?.available || 0,
                     pendingRequests: s.active_rentals || 0,
-                    activeAlerts: s.recent_alerts_count || 0
+                    activeAlerts: s.recent_alerts_count || 0,
+                    pendingOutbox: s.pending_outbox_events || 0
                 });
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
@@ -71,10 +72,12 @@ const Dashboard = () => {
                 marginBottom: '3rem'
             }}>
                 {[
-                    { label: 'Total Item Types', value: itemTypes.length, icon: Box, color: 'var(--primary)' },
+                    { label: 'Total Assets', value: stats.totalAssets, icon: Box, color: 'var(--primary)' },
+                    { label: 'Item Categories', value: itemTypes.length, icon: Package, color: 'var(--primary)' },
                     { label: 'Available Assets', value: stats.availableAssets, icon: Activity, color: 'var(--success)' },
-                    { label: 'Pending Requests', value: stats.pendingRequests, icon: Calendar, color: 'var(--warning)' },
+                    { label: 'Active Rentals', value: stats.pendingRequests, icon: Calendar, color: 'var(--warning)' },
                     { label: 'System Alerts', value: stats.activeAlerts, icon: AlertCircle, color: 'var(--error)' },
+                    { label: 'Pending Outbox', value: stats.pendingOutbox || 0, icon: Terminal, color: 'var(--text-muted)' },
                 ].map((stat, i) => (
                     <div key={i} className="glass" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
@@ -95,8 +98,8 @@ const Dashboard = () => {
                 <section className="glass" style={{ borderRadius: '1rem', overflow: 'hidden' }}>
                     <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ fontWeight: 600 }}>Catalog Overview</h3>
-                        <button 
-                            className="btn-primary" 
+                        <button
+                            className="btn-primary"
                             style={{ fontSize: '0.75rem' }}
                             onClick={() => window.location.href = '/catalog'}
                         >
@@ -120,8 +123,8 @@ const Dashboard = () => {
                                 </thead>
                                 <tbody>
                                     {itemTypes.slice(0, 5).map(it => (
-                                        <tr 
-                                            key={it.id} 
+                                        <tr
+                                            key={it.id}
                                             style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s', cursor: 'pointer' }}
                                             onClick={() => window.location.href = `/catalog/${it.id}`}
                                             onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}

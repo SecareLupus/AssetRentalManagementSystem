@@ -41,8 +41,8 @@ const FleetReports = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ position: 'relative' }}>
-                        <select 
-                            className="glass" 
+                        <select
+                            className="glass"
                             style={{ padding: '0.625rem 2rem 0.625rem 1rem', borderRadius: '0.5rem', appearance: 'none', color: 'white', fontSize: '0.875rem' }}
                             value={timeframe}
                             onChange={(e) => setTimeframe(e.target.value)}
@@ -72,17 +72,17 @@ const FleetReports = () => {
                 <section className="glass" style={{ padding: '2rem', borderRadius: '1.5rem' }}>
                     <h3 style={{ fontWeight: 600, marginBottom: '2rem' }}>Inventory Distribution by Status</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        {Object.entries(stats.assets_by_status || {}).map(([status, count]) => (
+                        {Object.entries(stats?.assets_by_status || {}).map(([status, count]) => (
                             <div key={status}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
                                     <span style={{ textTransform: 'capitalize' }}>{status}</span>
                                     <span style={{ fontWeight: 700 }}>{count} ({((count / (stats.total_assets || 1)) * 100).toFixed(0)}%)</span>
                                 </div>
                                 <div style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <div style={{ 
-                                        width: `${(count / (stats.total_assets || 1)) * 100}%`, 
-                                        height: '100%', 
-                                        background: status === 'available' ? 'var(--success)' : status === 'maintenance' ? 'var(--error)' : status === 'deployed' ? 'var(--primary)' : 'var(--text-muted)' 
+                                    <div style={{
+                                        width: `${(count / (stats.total_assets || 1)) * 100}%`,
+                                        height: '100%',
+                                        background: status === 'available' ? 'var(--success)' : status === 'maintenance' ? 'var(--error)' : status === 'deployed' ? 'var(--primary)' : 'var(--text-muted)'
                                     }} />
                                 </div>
                             </div>
@@ -98,7 +98,7 @@ const FleetReports = () => {
                         <HealthItem label="Recall Response" status="Excellent" value="98%" color="var(--success)" />
                         <HealthItem label="Audit Coverage" status="Incomplete" value="72%" color="var(--warning)" />
                     </div>
-                    
+
                     <div style={{ marginTop: '2.5rem', padding: '1.25rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                             <Package size={18} color="var(--primary)" />

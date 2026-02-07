@@ -84,8 +84,8 @@ const Catalog = () => {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <PageHeader 
-                title="Equipment Catalog" 
+            <PageHeader
+                title="Equipment Catalog"
                 subtitle="Browse and manage fleet assets."
                 actions={
                     <button onClick={() => setShowCreateModal(true)} className="btn-primary">
@@ -94,7 +94,7 @@ const Catalog = () => {
                 }
             />
 
-            {/* Search & Filter Bar */}
+            {/* Search Bar */}
             <GlassCard className="flex-between" style={{ padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -114,23 +114,16 @@ const Catalog = () => {
                         }}
                     />
                 </div>
-                
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                        <input 
-                            type="checkbox" 
-                            checked={includeInactive} 
-                            onChange={(e) => setIncludeInactive(e.target.checked)} 
+                        <input
+                            type="checkbox"
+                            checked={includeInactive}
+                            onChange={(e) => setIncludeInactive(e.target.checked)}
                         />
                         Show Archived
                     </label>
-                    <button 
-                        className="glass" 
-                        style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text)' }}
-                        onClick={() => document.querySelector('input[placeholder*="Search"]').focus()}
-                    >
-                        <Filter size={18} /> Filters
-                    </button>
                 </div>
             </GlassCard>
 
@@ -177,8 +170,8 @@ const Catalog = () => {
                                 <Link to={`/catalog/${item.id}`} style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                     View Details <ChevronRight size={14} />
                                 </Link>
-                                <button 
-                                    className="btn-primary" 
+                                <button
+                                    className="btn-primary"
                                     style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
                                     onClick={() => navigate(`/reserve?item_type_id=${item.id}`)}
                                 >
@@ -189,73 +182,75 @@ const Catalog = () => {
                     ))}
                 </div>
             )}
-            
+
             {/* Create Modal */}
-            {showCreateModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <GlassCard style={{ width: '500px', padding: '2rem' }}>
-                        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 700 }}>Create New Item Type</h2>
-                        <form onSubmit={handleCreateItem}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({...formData, name: e.target.value})}
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                                />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Code (SKU)</label>
-                                    <input 
-                                        type="text" 
+            {
+                showCreateModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                        <GlassCard style={{ width: '500px', padding: '2rem' }}>
+                            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 700 }}>Create New Item Type</h2>
+                            <form onSubmit={handleCreateItem}>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
+                                    <input
+                                        type="text"
                                         required
-                                        value={formData.code}
-                                        onChange={e => setFormData({...formData, code: e.target.value})}
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
                                     />
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Kind</label>
-                                    <select 
-                                        value={formData.kind}
-                                        onChange={e => setFormData({...formData, kind: e.target.value})}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                                    >
-                                        <option value="serialized">Serialized</option>
-                                        <option value="fungible">Fungible</option>
-                                        <option value="kit">Kit</option>
-                                    </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Code (SKU)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.code}
+                                            onChange={e => setFormData({ ...formData, code: e.target.value })}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Kind</label>
+                                        <select
+                                            value={formData.kind}
+                                            onChange={e => setFormData({ ...formData, kind: e.target.value })}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                                        >
+                                            <option value="serialized">Serialized</option>
+                                            <option value="fungible">Fungible</option>
+                                            <option value="kit">Kit</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Supported Features</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                    {Object.keys(formData.supported_features).map(feature => (
-                                        <label key={feature} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                                            <input 
-                                                type="checkbox"
-                                                checked={formData.supported_features[feature]}
-                                                onChange={() => handleFeatureChange(feature)}
-                                            />
-                                            <span style={{ textTransform: 'capitalize' }}>{feature.replace(/_/g, ' ')}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
 
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowCreateModal(false)} className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem' }}>Cancel</button>
-                                <button type="submit" className="btn-primary">Create Item</button>
-                            </div>
-                        </form>
-                    </GlassCard>
-                </div>
-            )}
-        </div>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Supported Features</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                        {Object.keys(formData.supported_features).map(feature => (
+                                            <label key={feature} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.supported_features[feature]}
+                                                    onChange={() => handleFeatureChange(feature)}
+                                                />
+                                                <span style={{ textTransform: 'capitalize' }}>{feature.replace(/_/g, ' ')}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                    <button type="button" onClick={() => setShowCreateModal(false)} className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem' }}>Cancel</button>
+                                    <button type="submit" className="btn-primary">Create Item</button>
+                                </div>
+                            </form>
+                        </GlassCard>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 
