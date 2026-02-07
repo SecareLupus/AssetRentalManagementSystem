@@ -35,14 +35,24 @@ Goal: Converge the physical and organizational data models toward Schema.org sta
 Goal: Transition from monolithic action records to a more flexible Reservation/Demand ecosystem for predictive logistics and partial fulfillment.
 
 ### Intent & Fulfillment
-- [ ] **RentalReservation Model**: Implement a first-class `RentalReservation` entity to track "intent to rent" separate from the act of movement.
-- [ ] **Granular Action Logging**: Implement specific `CheckOutAction` and `ReturnAction` entities linked to a parent Reservation.
+- [x] **RentalReservation Model**: Implement a first-class `RentalReservation` entity to track "intent to rent" separate from the act of movement.
+- [x] **Granular Action Logging**: Implement specific `CheckOutAction` and `ReturnAction` entities linked to a parent Reservation.
 - [ ] **Partial Fulfillment Engine**: Update fulfillment logic to allow multiple check-out events for a single reservation (staggered delivery).
 
 ### Offer/Demand Ecosystem
-- [ ] **Logistics Demand Model**: Replace `EventAssetNeed` with the `Demand` model, incorporating `businessFunction` and `eligibleDuration`.
-- [ ] **Standardized Vocabulary**: Align API JSON tags with Schema.org vocabulary (camelCase, JSON-LD context) while providing a compatibility layer for internal legacy IDs.
-- [ ] **Pre-Fulfillment Validation**: Implement standard validation logic that checks `Asset` availability against global `Demand` timelines across all facilities.
+- [x] **Logistics Demand Model**: Replace `EventAssetNeed` with the `Demand` model, incorporating `businessFunction` and `eligibleDuration`.
+- [x] **Standardized Vocabulary**: Align API JSON tags with Schema.org vocabulary (camelCase, JSON-LD context) while providing a compatibility layer for internal legacy IDs.
+- [x] **Pre-Fulfillment Validation**: Implement standard validation logic that checks `Asset` availability against global `Demand` timelines across all facilities.
+
+## Phase 26: Fulfillment Orchestration
+
+Goal: Implement the "Engine" that manages the delta between intent (Reservations) and reality (Movements).
+
+### Workflow & Logic
+- [ ] **Fulfillment State Machine**: Implement service logic to calculate "Remaining Needs" by comparing Demands vs. CheckOutActions.
+- [ ] **Staggered Checkout Workflow**: Implement API to batch-dispatch assets, auto-generating `CheckOutAction` records and updating `Asset` statuses in one transaction.
+- [ ] **Status Auto-Promotion**: Implement logic to transition `RentalReservation` status to `PartiallyFulfilled` or `Fulfilled` based on actual asset movement.
+- [ ] **Return Pipeline**: Implement the return-to-warehouse workflow that reconciles `CheckOutActions` with `ReturnActions`.
 
 ## Future Plans
 

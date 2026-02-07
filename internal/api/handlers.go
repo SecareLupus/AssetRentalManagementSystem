@@ -489,16 +489,16 @@ func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-// ListRentActions returns all rent actions.
-// @Summary List Rent Actions
-// @Description Returns all rent actions (reservations).
-// @Tags RentActions
+// ListRentalReservations returns all rental reservations.
+// @Summary List Rental Reservations
+// @Description Returns all rental reservations.
+// @Tags Logistics
 // @Produce json
-// @Success 200 {array} domain.RentAction
+// @Success 200 {array} domain.RentalReservation
 // @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions [get]
-func (h *Handler) ListRentActions(w http.ResponseWriter, r *http.Request) {
-	results, err := h.repo.ListRentActions(r.Context())
+// @Router /logistics/reservations [get]
+func (h *Handler) ListRentalReservations(w http.ResponseWriter, r *http.Request) {
+	results, err := h.repo.ListRentalReservations(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -508,35 +508,31 @@ func (h *Handler) ListRentActions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-// RentAction Handlers
-
-// CreateRentAction creates a new reservation request.
-// @Summary Create Rent Action
-// @Description Creates a new rent action (reservation).
-// @Tags RentActions
+// CreateRentalReservation creates a new reservation request.
+// @Summary Create Rental Reservation
+// @Description Creates a new rental reservation with demands.
+// @Tags Logistics
 // @Accept json
 // @Produce json
-// @Param rent_action body domain.RentAction true "Rent Action Data"
-// @Success 201 {object} domain.RentAction
+// @Param reservation body domain.RentalReservation true "Reservation Data"
+// @Success 201 {object} domain.RentalReservation
 // @Failure 400 {string} string "Invalid request"
 // @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions [post]
-func (h *Handler) CreateRentAction(w http.ResponseWriter, r *http.Request) {
-	var ra domain.RentAction
-	if err := json.NewDecoder(r.Body).Decode(&ra); err != nil {
+// @Router /logistics/reservations [post]
+func (h *Handler) CreateRentalReservation(w http.ResponseWriter, r *http.Request) {
+	var rr domain.RentalReservation
+	if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	ra.CreatedByUserID = h.getUserIDFromContext(r)
-
-	if err := h.repo.CreateRentAction(r.Context(), &ra); err != nil {
+	if err := h.repo.CreateRentalReservation(r.Context(), &rr); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Append Outbox Event
-	payload, _ := json.Marshal(ra)
+	payload, _ := json.Marshal(rr)
 	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
 		Type:    domain.EventRentalSubmitted,
 		Payload: payload,
@@ -544,103 +540,50 @@ func (h *Handler) CreateRentAction(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ra)
+	json.NewEncoder(w).Encode(rr)
 }
 
-// GetRentAction retrieves a rent action by ID.
-// @Summary Get Rent Action
-// @Description Retrieves a rent action by its ID.
-// @Tags RentActions
+// GetRentalReservation retrieves a reservation by ID.
+// @Summary Get Rental Reservation
+// @Description Retrieves a rental reservation by its ID.
+// @Tags Logistics
 // @Produce json
-// @Param id path int true "Rent Action ID"
-// @Success 200 {object} domain.RentAction
+// @Param id path int true "Reservation ID"
+// @Success 200 {object} domain.RentalReservation
 // @Failure 404 {string} string "Not Found"
 // @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions/{id} [get]
-func (h *Handler) GetRentAction(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+// @Router /logistics/reservations/{id} [get]
+func (h *Handler) GetRentalReservation(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/logistics/reservations/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	rr, err := h.repo.GetRentalReservationByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ra == nil {
+	if rr == nil {
 		http.NotFound(w, r)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ra)
+	json.NewEncoder(w).Encode(rr)
 }
 
-// SubmitRentAction submits a draft rent action for approval.
-// @Summary Submit Rent Action
-// @Description Transitions a rent action from Draft to Pending.
-// @Tags RentActions
-// @Param id path int true "Rent Action ID"
+// ApproveRentalReservation approves a pending reservation.
+// @Summary Approve Rental Reservation
+// @Description Transitions a reservation to Confirmed status. Checks availability.
+// @Tags Logistics
+// @Param id path int true "Reservation ID"
 // @Success 204 {string} string "No Content"
-// @Failure 400 {string} string "Invalid State Transition"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions/{id}/submit [post]
-func (h *Handler) SubmitRentAction(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
-	idStr = strings.TrimSuffix(idStr, "/submit")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-
-	ra, err := h.repo.GetRentActionByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if ra == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	if err := ra.Submit(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "", time.Time{}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Append Outbox Event
-	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status})
-	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
-		Type:    domain.EventRentalSubmitted,
-		Payload: payload,
-	})
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// ApproveRentAction approves a pending rent action.
-// @Summary Approve Rent Action
-// @Description Transitions a rent action from Pending to Approved. Checks availability.
-// @Tags RentActions
-// @Param id path int true "Rent Action ID"
-// @Success 204 {string} string "No Content"
-// @Failure 400 {string} string "Invalid State Transition"
-// @Failure 409 {string} string "Insufficient Inventory"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions/{id}/approve [post]
-func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+// @Router /logistics/reservations/{id}/approve [post]
+func (h *Handler) ApproveRentalReservation(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/logistics/reservations/")
 	idStr = strings.TrimSuffix(idStr, "/approve")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -648,45 +591,38 @@ func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ra, err := h.repo.GetRentActionByID(r.Context(), id)
+	rr, err := h.repo.GetRentalReservationByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ra == nil {
+	if rr == nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	// Basic Availability Check
-	for _, item := range ra.Items {
-		if item.ItemKind == "item_type" {
-			avail, err := h.repo.GetAvailableQuantity(r.Context(), item.ItemID, ra.StartTime, ra.EndTime)
+	// Availability Check
+	for _, d := range rr.Demands {
+		if d.ItemKind == "item_type" {
+			avail, err := h.repo.GetAvailableQuantity(r.Context(), d.ItemID, rr.StartTime, rr.EndTime)
 			if err != nil {
 				http.Error(w, "availability check failed: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if avail < item.RequestedQuantity {
-				http.Error(w, fmt.Sprintf("insufficient inventory for item_type %d: requested %d, available %d", item.ItemID, item.RequestedQuantity, avail), http.StatusConflict)
+			if avail < d.Quantity {
+				http.Error(w, fmt.Sprintf("insufficient inventory for item_type %d: requested %d, available %d", d.ItemID, d.Quantity, avail), http.StatusConflict)
 				return
 			}
 		}
 	}
 
-	if err := ra.Approve(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	ra.UpdatedByUserID = h.getUserIDFromContext(r)
-
-	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "approved_at", *ra.ApprovedAt); err != nil {
+	if err := h.repo.UpdateRentalReservationStatus(r.Context(), id, domain.ReservationStatusConfirmed); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Append Outbox Event
-	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status, "approved_at": ra.ApprovedAt})
+	payload, _ := json.Marshal(map[string]interface{}{"reservation_id": id, "status": domain.ReservationStatusConfirmed})
 	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
 		Type:    domain.EventRentalApproved,
 		Payload: payload,
@@ -695,18 +631,9 @@ func (h *Handler) ApproveRentAction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// RejectRentAction rejects a pending rent action.
-// @Summary Reject Rent Action
-// @Description Transitions a rent action from Pending to Rejected.
-// @Tags RentActions
-// @Param id path int true "Rent Action ID"
-// @Success 204 {string} string "No Content"
-// @Failure 400 {string} string "Invalid State Transition"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions/{id}/reject [post]
-func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+// RejectRentalReservation rejects a pending reservation.
+func (h *Handler) RejectRentalReservation(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/logistics/reservations/")
 	idStr = strings.TrimSuffix(idStr, "/reject")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -714,22 +641,7 @@ func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ra, err := h.repo.GetRentActionByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if ra == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	if err := ra.Reject(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "rejected_at", *ra.RejectedAt); err != nil {
+	if err := h.repo.UpdateRentalReservationStatus(r.Context(), id, domain.ReservationStatusCancelled); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -737,18 +649,9 @@ func (h *Handler) RejectRentAction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// CancelRentAction cancels a rent action.
-// @Summary Cancel Rent Action
-// @Description Cancels a rent action.
-// @Tags RentActions
-// @Param id path int true "Rent Action ID"
-// @Success 204 {string} string "No Content"
-// @Failure 400 {string} string "Invalid State Transition"
-// @Failure 404 {string} string "Not Found"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /rent-actions/{id}/cancel [post]
-func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/rent-actions/")
+// CancelRentalReservation cancels a reservation.
+func (h *Handler) CancelRentalReservation(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/logistics/reservations/")
 	idStr = strings.TrimSuffix(idStr, "/cancel")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -756,32 +659,10 @@ func (h *Handler) CancelRentAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ra, err := h.repo.GetRentActionByID(r.Context(), id)
-	if err != nil {
+	if err := h.repo.UpdateRentalReservationStatus(r.Context(), id, domain.ReservationStatusCancelled); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ra == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	if err := ra.Cancel(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.UpdateRentActionStatus(r.Context(), id, ra.Status, "cancelled_at", *ra.CancelledAt); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Append Outbox Event
-	payload, _ := json.Marshal(map[string]interface{}{"rent_action_id": id, "status": ra.Status, "cancelled_at": ra.CancelledAt})
-	h.repo.AppendEvent(r.Context(), nil, &domain.OutboxEvent{
-		Type:    domain.EventAssetTransitioned, // We could define a more specific event if needed
-		Payload: payload,
-	})
 
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -315,8 +315,10 @@ func (r *SqlRepository) DeleteAsset(ctx context.Context, id int64) error {
 	return nil
 }
 
-// CreateRentAction creates a new rent action and its associated items.
-func (r *SqlRepository) CreateRentAction(ctx context.Context, ra *domain.RentAction) error {
+// Logistics
+
+// CreateRentalReservation creates a new rental reservation and its associated demands.
+func (r *SqlRepository) CreateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -324,162 +326,289 @@ func (r *SqlRepository) CreateRentAction(ctx context.Context, ra *domain.RentAct
 	defer tx.Rollback()
 
 	now := time.Now()
-	ra.CreatedAt = now
-	ra.UpdatedAt = now
+	rr.CreatedAt = now
+	rr.UpdatedAt = now
+	if rr.BookingTime.IsZero() {
+		rr.BookingTime = now
+	}
 
-	query := `INSERT INTO rent_actions (
-		requester_ref, created_by_ref, approved_by_ref, status, priority, 
-		start_time, end_time, is_asap, description, external_source, 
-		external_ref, schema_org, metadata, created_by_user_id, updated_by_user_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+	query := `INSERT INTO rental_reservations (
+		reservation_name, reservation_status, under_name_id, booking_time, 
+		start_time, end_time, provider_id, metadata, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	RETURNING id`
 
 	err = tx.QueryRowContext(ctx, query,
-		ra.RequesterRef, ra.CreatedByRef, ra.ApprovedByRef, ra.Status, ra.Priority,
-		ra.StartTime, ra.EndTime, ra.IsASAP, ra.Description, ra.ExternalSource,
-		ra.ExternalRef, ra.SchemaOrg, ra.Metadata, ra.CreatedByUserID, ra.UpdatedByUserID, ra.CreatedAt, ra.UpdatedAt,
-	).Scan(&ra.ID)
+		rr.ReservationName, rr.ReservationStatus, rr.UnderNameID, rr.BookingTime,
+		rr.StartTime, rr.EndTime, rr.ProviderID, rr.Metadata, rr.CreatedAt, rr.UpdatedAt,
+	).Scan(&rr.ID)
 	if err != nil {
-		return fmt.Errorf("insert rent_action: %w", err)
+		return fmt.Errorf("insert rental_reservation: %w", err)
 	}
 
-	for i := range ra.Items {
-		item := &ra.Items[i]
-		item.RentActionID = ra.ID
-		itemQuery := `INSERT INTO rent_action_items (
-			rent_action_id, item_kind, item_id, requested_quantity, allocated_quantity, notes, metadata
-		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	for i := range rr.Demands {
+		d := &rr.Demands[i]
+		d.ReservationID = rr.ID
+		d.CreatedAt = now
+		d.UpdatedAt = now
+		dQuery := `INSERT INTO demands (
+			reservation_id, event_id, item_kind, item_id, requested_quantity, 
+			business_function, eligible_duration, place_id, metadata, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 
-		err = tx.QueryRowContext(ctx, itemQuery,
-			item.RentActionID, item.ItemKind, item.ItemID, item.RequestedQuantity,
-			item.AllocatedQuantity, item.Notes, item.Metadata,
-		).Scan(&item.ID)
+		err = tx.QueryRowContext(ctx, dQuery,
+			d.ReservationID, d.EventID, d.ItemKind, d.ItemID, d.Quantity,
+			d.BusinessFunction, d.EligibleDuration, d.PlaceID, d.Metadata, d.CreatedAt, d.UpdatedAt,
+		).Scan(&d.ID)
 		if err != nil {
-			return fmt.Errorf("insert rent_action_item: %w", err)
+			return fmt.Errorf("insert demand: %w", err)
 		}
 	}
 
 	return tx.Commit()
 }
 
-// GetRentActionByID retrieves a rent action by its ID, including its line items.
-func (r *SqlRepository) GetRentActionByID(ctx context.Context, id int64) (*domain.RentAction, error) {
-	query := `SELECT id, requester_ref, created_by_ref, approved_by_ref, status, priority, 
-	                 start_time, end_time, is_asap, description, external_source, 
-	                 external_ref, schema_org, metadata, approved_at, rejected_at, 
-	                 cancelled_at, created_at, updated_at 
-	          FROM rent_actions WHERE id = $1`
+// GetRentalReservationByID retrieves a reservation by its ID, including its demands.
+func (r *SqlRepository) GetRentalReservationByID(ctx context.Context, id int64) (*domain.RentalReservation, error) {
+	query := `SELECT id, reservation_name, reservation_status, under_name_id, booking_time, 
+	                 start_time, end_time, provider_id, metadata, created_at, updated_at 
+	          FROM rental_reservations WHERE id = $1`
 
-	var ra domain.RentAction
-	var schemaOrgJSON, metadataJSON []byte
+	var rr domain.RentalReservation
+	var metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&ra.ID, &ra.RequesterRef, &ra.CreatedByRef, &ra.ApprovedByRef, &ra.Status, &ra.Priority,
-		&ra.StartTime, &ra.EndTime, &ra.IsASAP, &ra.Description, &ra.ExternalSource,
-		&ra.ExternalRef, &schemaOrgJSON, &metadataJSON, &ra.ApprovedAt, &ra.RejectedAt,
-		&ra.CancelledAt, &ra.CreatedAt, &ra.UpdatedAt,
+		&rr.ID, &rr.ReservationName, &rr.ReservationStatus, &rr.UnderNameID, &rr.BookingTime,
+		&rr.StartTime, &rr.EndTime, &rr.ProviderID, &metadataJSON, &rr.CreatedAt, &rr.UpdatedAt,
 	)
-	if err == nil {
-		ra.SchemaOrg = json.RawMessage(schemaOrgJSON)
-		ra.Metadata = json.RawMessage(metadataJSON)
-	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("scan rent_action: %w", err)
+		return nil, fmt.Errorf("scan rental_reservation: %w", err)
 	}
+	rr.Metadata = json.RawMessage(metadataJSON)
 
-	itemQuery := `SELECT id, rent_action_id, item_kind, item_id, requested_quantity, allocated_quantity, notes, metadata 
-	              FROM rent_action_items WHERE rent_action_id = $1`
+	demandQuery := `SELECT id, reservation_id, event_id, item_kind, item_id, requested_quantity, 
+	                       business_function, eligible_duration, place_id, metadata, created_at, updated_at 
+	                FROM demands WHERE reservation_id = $1`
 
-	rows, err := r.db.QueryContext(ctx, itemQuery, id)
+	rows, err := r.db.QueryContext(ctx, demandQuery, id)
 	if err != nil {
-		return nil, fmt.Errorf("query rent_action_items: %w", err)
+		return nil, fmt.Errorf("query demands: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var item domain.RentActionItem
-		var metadataJSON []byte
-		if err := rows.Scan(&item.ID, &item.RentActionID, &item.ItemKind, &item.ItemID, &item.RequestedQuantity, &item.AllocatedQuantity, &item.Notes, &metadataJSON); err != nil {
-			return nil, fmt.Errorf("scan rent_action_item: %w", err)
+		var d domain.Demand
+		var dMetadataJSON []byte
+		if err := rows.Scan(
+			&d.ID, &d.ReservationID, &d.EventID, &d.ItemKind, &d.ItemID, &d.Quantity,
+			&d.BusinessFunction, &d.EligibleDuration, &d.PlaceID, &dMetadataJSON, &d.CreatedAt, &d.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan demand: %w", err)
 		}
-		item.Metadata = json.RawMessage(metadataJSON)
-		ra.Items = append(ra.Items, item)
+		d.Metadata = json.RawMessage(dMetadataJSON)
+		rr.Demands = append(rr.Demands, d)
 	}
 
-	return &ra, nil
+	return &rr, nil
 }
 
-// ListRentActions returns all rent actions.
-func (r *SqlRepository) ListRentActions(ctx context.Context) ([]domain.RentAction, error) {
-	query := `SELECT id, requester_ref, created_by_ref, created_by_user_id, approved_by_ref, status, priority, 
-	                 start_time, end_time, is_asap, description, external_source, 
-	                 external_ref, schema_org, metadata, approved_at, rejected_at, 
-	                 cancelled_at, created_at, updated_at 
-	          FROM rent_actions ORDER BY created_at DESC`
+// ListRentalReservations returns all rental reservations.
+func (r *SqlRepository) ListRentalReservations(ctx context.Context) ([]domain.RentalReservation, error) {
+	query := `SELECT id, reservation_name, reservation_status, under_name_id, booking_time, 
+	                 start_time, end_time, provider_id, metadata, created_at, updated_at 
+	          FROM rental_reservations ORDER BY created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("query rent_actions: %w", err)
+		return nil, fmt.Errorf("query rental_reservations: %w", err)
 	}
 	defer rows.Close()
 
-	var results []domain.RentAction
+	var results []domain.RentalReservation
 	for rows.Next() {
-		var ra domain.RentAction
-		var schemaOrgJSON, metadataJSON []byte
+		var rr domain.RentalReservation
+		var metadataJSON []byte
 		err := rows.Scan(
-			&ra.ID, &ra.RequesterRef, &ra.CreatedByRef, &ra.CreatedByUserID, &ra.ApprovedByRef, &ra.Status, &ra.Priority,
-			&ra.StartTime, &ra.EndTime, &ra.IsASAP, &ra.Description, &ra.ExternalSource,
-			&ra.ExternalRef, &schemaOrgJSON, &metadataJSON, &ra.ApprovedAt, &ra.RejectedAt,
-			&ra.CancelledAt, &ra.CreatedAt, &ra.UpdatedAt,
+			&rr.ID, &rr.ReservationName, &rr.ReservationStatus, &rr.UnderNameID, &rr.BookingTime,
+			&rr.StartTime, &rr.EndTime, &rr.ProviderID, &metadataJSON, &rr.CreatedAt, &rr.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan rent_action: %w", err)
+			return nil, fmt.Errorf("scan rental_reservation: %w", err)
 		}
-		ra.SchemaOrg = json.RawMessage(schemaOrgJSON)
-		ra.Metadata = json.RawMessage(metadataJSON)
-		results = append(results, ra)
+		rr.Metadata = json.RawMessage(metadataJSON)
+		results = append(results, rr)
 	}
 	return results, nil
 }
 
-// UpdateRentAction updates an existing rent action.
-func (r *SqlRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAction) error {
-	ra.UpdatedAt = time.Now()
-	query := `UPDATE rent_actions SET 
-		requester_ref = $1, created_by_ref = $2, approved_by_ref = $3, status = $4, 
-		priority = $5, start_time = $6, end_time = $7, is_asap = $8, 
-		description = $9, external_source = $10, external_ref = $11, 
-		schema_org = $12, metadata = $13, approved_at = $14, rejected_at = $15, 
-		cancelled_at = $16, updated_at = $17 
-		WHERE id = $18`
+// UpdateRentalReservation updates an existing reservation.
+func (r *SqlRepository) UpdateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error {
+	rr.UpdatedAt = time.Now()
+	query := `UPDATE rental_reservations SET 
+		reservation_name = $1, reservation_status = $2, under_name_id = $3, booking_time = $4, 
+		start_time = $5, end_time = $6, provider_id = $7, metadata = $8, updated_at = $9 
+		WHERE id = $10`
 
 	_, err := r.db.ExecContext(ctx, query,
-		ra.RequesterRef, ra.CreatedByRef, ra.ApprovedByRef, ra.Status,
-		ra.Priority, ra.StartTime, ra.EndTime, ra.IsASAP,
-		ra.Description, ra.ExternalSource, ra.ExternalRef,
-		ra.SchemaOrg, ra.Metadata, ra.ApprovedAt, ra.RejectedAt,
-		ra.CancelledAt, ra.UpdatedAt, ra.ID,
+		rr.ReservationName, rr.ReservationStatus, rr.UnderNameID, rr.BookingTime,
+		rr.StartTime, rr.EndTime, rr.ProviderID, rr.Metadata, rr.UpdatedAt, rr.ID,
 	)
 	if err != nil {
-		return fmt.Errorf("update rent_action: %w", err)
+		return fmt.Errorf("update rental_reservation: %w", err)
 	}
 	return nil
 }
 
-// UpdateRentActionStatus updates only the status and a specific timestamp field for a rent action.
-func (r *SqlRepository) UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error {
-	var query string
-	if timestampField != "" {
-		query = fmt.Sprintf("UPDATE rent_actions SET status = $1, %s = $2, updated_at = $2 WHERE id = $3", timestampField)
-		_, err := r.db.ExecContext(ctx, query, status, timestampValue, id)
-		return err
-	}
-	query = "UPDATE rent_actions SET status = $1, updated_at = $2 WHERE id = $3"
+// UpdateRentalReservationStatus updates only the status for a reservation.
+func (r *SqlRepository) UpdateRentalReservationStatus(ctx context.Context, id int64, status domain.RentalReservationStatus) error {
+	query := "UPDATE rental_reservations SET reservation_status = $1, updated_at = $2 WHERE id = $3"
 	_, err := r.db.ExecContext(ctx, query, status, time.Now(), id)
 	return err
+}
+
+// Demand Methods
+
+func (r *SqlRepository) CreateDemand(ctx context.Context, d *domain.Demand) error {
+	now := time.Now()
+	d.CreatedAt = now
+	d.UpdatedAt = now
+	query := `INSERT INTO demands (
+		reservation_id, event_id, item_kind, item_id, requested_quantity, 
+		business_function, eligible_duration, place_id, metadata, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+
+	err := r.db.QueryRowContext(ctx, query,
+		d.ReservationID, d.EventID, d.ItemKind, d.ItemID, d.Quantity,
+		d.BusinessFunction, d.EligibleDuration, d.PlaceID, d.Metadata, d.CreatedAt, d.UpdatedAt,
+	).Scan(&d.ID)
+	return err
+}
+
+func (r *SqlRepository) ListDemandsByReservation(ctx context.Context, reservationID int64) ([]domain.Demand, error) {
+	query := `SELECT id, reservation_id, event_id, item_kind, item_id, requested_quantity, 
+	                 business_function, eligible_duration, place_id, metadata, created_at, updated_at 
+	          FROM demands WHERE reservation_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, reservationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.Demand
+	for rows.Next() {
+		var d domain.Demand
+		var metadataJSON []byte
+		if err := rows.Scan(&d.ID, &d.ReservationID, &d.EventID, &d.ItemKind, &d.ItemID, &d.Quantity, &d.BusinessFunction, &d.EligibleDuration, &d.PlaceID, &metadataJSON, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, err
+		}
+		d.Metadata = json.RawMessage(metadataJSON)
+		results = append(results, d)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) ListDemandsByEvent(ctx context.Context, eventID int64) ([]domain.Demand, error) {
+	query := `SELECT id, reservation_id, event_id, item_kind, item_id, requested_quantity, 
+	                 business_function, eligible_duration, place_id, metadata, created_at, updated_at 
+	          FROM demands WHERE event_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.Demand
+	for rows.Next() {
+		var d domain.Demand
+		var metadataJSON []byte
+		if err := rows.Scan(&d.ID, &d.ReservationID, &d.EventID, &d.ItemKind, &d.ItemID, &d.Quantity, &d.BusinessFunction, &d.EligibleDuration, &d.PlaceID, &metadataJSON, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, err
+		}
+		d.Metadata = json.RawMessage(metadataJSON)
+		results = append(results, d)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateDemand(ctx context.Context, d *domain.Demand) error {
+	d.UpdatedAt = time.Now()
+	query := `UPDATE demands SET 
+		reservation_id = $1, event_id = $2, item_kind = $3, item_id = $4, requested_quantity = $5, 
+		business_function = $6, eligible_duration = $7, place_id = $8, metadata = $9, updated_at = $10 
+		WHERE id = $11`
+	_, err := r.db.ExecContext(ctx, query, d.ReservationID, d.EventID, d.ItemKind, d.ItemID, d.Quantity, d.BusinessFunction, d.EligibleDuration, d.PlaceID, d.Metadata, d.UpdatedAt, d.ID)
+	return err
+}
+
+func (r *SqlRepository) DeleteDemand(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM demands WHERE id = $1", id)
+	return err
+}
+
+// Action Methods
+
+func (r *SqlRepository) CreateCheckOutAction(ctx context.Context, co *domain.CheckOutAction) error {
+	query := `INSERT INTO check_out_actions (
+		reservation_id, asset_id, agent_id, recipient_id, start_time, 
+		from_location_id, to_location_id, action_status, metadata
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, co.ReservationID, co.AssetID, co.AgentID, co.RecipientID, co.StartTime, co.FromLocation, co.ToLocation, co.Status, co.Metadata).Scan(&co.ID)
+}
+
+func (r *SqlRepository) CreateReturnAction(ctx context.Context, ra *domain.ReturnAction) error {
+	query := `INSERT INTO return_actions (
+		reservation_id, asset_id, agent_id, start_time, 
+		from_location_id, to_location_id, action_status, metadata
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, ra.ReservationID, ra.AssetID, ra.AgentID, ra.StartTime, ra.FromLocation, ra.ToLocation, ra.Status, ra.Metadata).Scan(&ra.ID)
+}
+
+func (r *SqlRepository) ListCheckOutActions(ctx context.Context, reservationID int64) ([]domain.CheckOutAction, error) {
+	query := `SELECT id, reservation_id, asset_id, agent_id, recipient_id, start_time, 
+	                 from_location_id, to_location_id, action_status, metadata 
+	          FROM check_out_actions WHERE reservation_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, reservationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.CheckOutAction
+	for rows.Next() {
+		var co domain.CheckOutAction
+		var metadataJSON []byte
+		if err := rows.Scan(&co.ID, &co.ReservationID, &co.AssetID, &co.AgentID, &co.RecipientID, &co.StartTime, &co.FromLocation, &co.ToLocation, &co.Status, &metadataJSON); err != nil {
+			return nil, err
+		}
+		co.Metadata = json.RawMessage(metadataJSON)
+		results = append(results, co)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) ListReturnActions(ctx context.Context, reservationID int64) ([]domain.ReturnAction, error) {
+	query := `SELECT id, reservation_id, asset_id, agent_id, start_time, 
+	                 from_location_id, to_location_id, action_status, metadata 
+	          FROM return_actions WHERE reservation_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, reservationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.ReturnAction
+	for rows.Next() {
+		var ra domain.ReturnAction
+		var metadataJSON []byte
+		if err := rows.Scan(&ra.ID, &ra.ReservationID, &ra.AssetID, &ra.AgentID, &ra.StartTime, &ra.FromLocation, &ra.ToLocation, &ra.Status, &metadataJSON); err != nil {
+			return nil, err
+		}
+		ra.Metadata = json.RawMessage(metadataJSON)
+		results = append(results, ra)
+	}
+	return results, nil
 }
 
 // GetAvailableQuantity calculates the available inventory for an item type in a given time window.
@@ -491,16 +620,17 @@ func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int
 		return 0, fmt.Errorf("count assets: %w", err)
 	}
 
-	// 2. Subtract quantities from overlapping APPROVED reservations
+	// 2. Subtract quantities from overlapping CONFIRMED reservations
+	// Schema.org: ReservationConfirmed
 	query := `
-		SELECT COALESCE(SUM(rai.requested_quantity), 0)
-		FROM rent_action_items rai
-		JOIN rent_actions ra ON rai.rent_action_id = ra.id
-		WHERE rai.item_kind = 'item_type' 
-		  AND rai.item_id = $1
-		  AND ra.status = 'approved'
-		  AND ra.start_time < $3
-		  AND ra.end_time > $2
+		SELECT COALESCE(SUM(d.requested_quantity), 0)
+		FROM demands d
+		JOIN rental_reservations rr ON d.reservation_id = rr.id
+		WHERE d.item_kind = 'item_type' 
+		  AND d.item_id = $1
+		  AND rr.reservation_status = 'ReservationConfirmed'
+		  AND rr.start_time < $3
+		  AND rr.end_time > $2
 	`
 	var reserved int
 	err = r.db.QueryRowContext(ctx, query, itemTypeID, startTime, endTime).Scan(&reserved)
@@ -508,10 +638,7 @@ func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int
 		return 0, fmt.Errorf("sum reserved quantity: %w", err)
 	}
 
-	// 3. Subtract Ad-Hoc Usage (Assets checked out/maintenance without a reservation)
-	// For simplicity, we count assets that are NOT available NOW and don't have an
-	// estimated_return_at before the window start.
-	// This is a rough approximation for Phase 20.
+	// 3. Subtract Ad-Hoc Usage
 	queryAdHoc := `
 		SELECT COUNT(*) FROM assets 
 		WHERE item_type_id = $1 

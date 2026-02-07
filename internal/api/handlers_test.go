@@ -91,31 +91,31 @@ func (m *MockRepository) DeleteAsset(ctx context.Context, id int64) error {
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateRentAction(ctx context.Context, ra *domain.RentAction) error {
-	args := m.Called(ctx, ra)
+func (m *MockRepository) CreateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error {
+	args := m.Called(ctx, rr)
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetRentActionByID(ctx context.Context, id int64) (*domain.RentAction, error) {
+func (m *MockRepository) GetRentalReservationByID(ctx context.Context, id int64) (*domain.RentalReservation, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*domain.RentAction), args.Error(1)
+	return args.Get(0).(*domain.RentalReservation), args.Error(1)
 }
 
-func (m *MockRepository) ListRentActions(ctx context.Context) ([]domain.RentAction, error) {
+func (m *MockRepository) ListRentalReservations(ctx context.Context) ([]domain.RentalReservation, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]domain.RentAction), args.Error(1)
+	return args.Get(0).([]domain.RentalReservation), args.Error(1)
 }
 
-func (m *MockRepository) UpdateRentAction(ctx context.Context, ra *domain.RentAction) error {
-	args := m.Called(ctx, ra)
+func (m *MockRepository) UpdateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error {
+	args := m.Called(ctx, rr)
 	return args.Error(0)
 }
 
-func (m *MockRepository) UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error {
-	args := m.Called(ctx, id, status, timestampField, timestampValue)
+func (m *MockRepository) UpdateRentalReservationStatus(ctx context.Context, id int64, status domain.RentalReservationStatus) error {
+	args := m.Called(ctx, id, status)
 	return args.Error(0)
 }
 
@@ -267,29 +267,29 @@ func TestHandler_GetCatalog(t *testing.T) {
 	assert.Equal(t, "Item 1", response[0].Name)
 }
 
-func TestHandler_ApproveRentAction(t *testing.T) {
+func TestHandler_ApproveRentalReservation(t *testing.T) {
 	repo := new(MockRepository)
 	h := NewHandler(repo, nil)
 
-	ra := &domain.RentAction{
-		ID:        1,
-		Status:    domain.RentActionStatusPending,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Hour),
-		Items: []domain.RentActionItem{
-			{ItemKind: "item_type", ItemID: 10, RequestedQuantity: 1},
+	rr := &domain.RentalReservation{
+		ID:                1,
+		ReservationStatus: domain.ReservationStatusPending,
+		StartTime:         time.Now(),
+		EndTime:           time.Now().Add(time.Hour),
+		Demands: []domain.Demand{
+			{ItemKind: "item_type", ItemID: 10, Quantity: 1},
 		},
 	}
 
-	repo.On("GetRentActionByID", mock.Anything, int64(1)).Return(ra, nil)
+	repo.On("GetRentalReservationByID", mock.Anything, int64(1)).Return(rr, nil)
 	repo.On("GetAvailableQuantity", mock.Anything, int64(10), mock.Anything, mock.Anything).Return(5, nil)
-	repo.On("UpdateRentActionStatus", mock.Anything, int64(1), domain.RentActionStatusApproved, "approved_at", mock.Anything).Return(nil)
-	repo.On("AppendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil) // Added
+	repo.On("UpdateRentalReservationStatus", mock.Anything, int64(1), domain.ReservationStatusConfirmed).Return(nil)
+	repo.On("AppendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/rent-actions/1/approve", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v1/logistics/reservations/1/approve", nil)
 	w := httptest.NewRecorder()
 
-	h.ApproveRentAction(w, req)
+	h.ApproveRentalReservation(w, req)
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	repo.AssertExpectations(t)
@@ -421,14 +421,33 @@ func (m *MockRepository) ListEvents(ctx context.Context, companyID *int64) ([]do
 	return nil, nil
 }
 func (m *MockRepository) UpdateEvent(ctx context.Context, e *domain.Event) error { return nil }
-func (m *MockRepository) CreateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+func (m *MockRepository) CreateDemand(ctx context.Context, d *domain.Demand) error {
 	return nil
 }
-func (m *MockRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error) {
+func (m *MockRepository) ListDemandsByReservation(ctx context.Context, reservationID int64) ([]domain.Demand, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
+func (m *MockRepository) ListDemandsByEvent(ctx context.Context, eventID int64) ([]domain.Demand, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateDemand(ctx context.Context, d *domain.Demand) error {
 	return nil
+}
+func (m *MockRepository) DeleteDemand(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *MockRepository) CreateCheckOutAction(ctx context.Context, coa *domain.CheckOutAction) error {
+	return nil
+}
+func (m *MockRepository) CreateReturnAction(ctx context.Context, ra *domain.ReturnAction) error {
+	return nil
+}
+func (m *MockRepository) ListCheckOutActions(ctx context.Context, reservationID int64) ([]domain.CheckOutAction, error) {
+	return nil, nil
+}
+func (m *MockRepository) ListReturnActions(ctx context.Context, reservationID int64) ([]domain.ReturnAction, error) {
+	return nil, nil
 }
 func (m *MockRepository) CreateInspection(ctx context.Context, ins *domain.InspectionSubmission) error {
 	return nil

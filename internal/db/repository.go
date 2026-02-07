@@ -30,12 +30,23 @@ type Repository interface {
 
 	GetDashboardStats(ctx context.Context) (*domain.DashboardStats, error)
 
-	// RentActions
-	CreateRentAction(ctx context.Context, ra *domain.RentAction) error
-	GetRentActionByID(ctx context.Context, id int64) (*domain.RentAction, error)
-	ListRentActions(ctx context.Context) ([]domain.RentAction, error)
-	UpdateRentAction(ctx context.Context, ra *domain.RentAction) error
-	UpdateRentActionStatus(ctx context.Context, id int64, status domain.RentActionStatus, timestampField string, timestampValue time.Time) error
+	// Logistics
+	CreateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error
+	GetRentalReservationByID(ctx context.Context, id int64) (*domain.RentalReservation, error)
+	ListRentalReservations(ctx context.Context) ([]domain.RentalReservation, error)
+	UpdateRentalReservation(ctx context.Context, rr *domain.RentalReservation) error
+	UpdateRentalReservationStatus(ctx context.Context, id int64, status domain.RentalReservationStatus) error
+
+	CreateDemand(ctx context.Context, d *domain.Demand) error
+	ListDemandsByReservation(ctx context.Context, reservationID int64) ([]domain.Demand, error)
+	ListDemandsByEvent(ctx context.Context, eventID int64) ([]domain.Demand, error)
+	UpdateDemand(ctx context.Context, d *domain.Demand) error
+	DeleteDemand(ctx context.Context, id int64) error
+
+	CreateCheckOutAction(ctx context.Context, co *domain.CheckOutAction) error
+	CreateReturnAction(ctx context.Context, ra *domain.ReturnAction) error
+	ListCheckOutActions(ctx context.Context, reservationID int64) ([]domain.CheckOutAction, error)
+	ListReturnActions(ctx context.Context, reservationID int64) ([]domain.ReturnAction, error)
 
 	// Inventory/Availability
 	GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error)
@@ -85,9 +96,8 @@ type Repository interface {
 	UpdateEvent(ctx context.Context, e *domain.Event) error
 	DeleteEvent(ctx context.Context, id int64) error
 
-	CreateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error
-	ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error)
-	UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error
+	// Demands (event context)
+	// These are also handled via CreateDemand/ListDemandsByEvent
 
 	// Build Specs
 	CreateBuildSpec(ctx context.Context, bs *domain.BuildSpec) error

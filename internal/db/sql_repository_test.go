@@ -34,7 +34,7 @@ func TestSqlRepository_GetItemTypeByID(t *testing.T) {
 	assert.Equal(t, "SKU123", it.Code)
 }
 
-func TestSqlRepository_CreateRentAction(t *testing.T) {
+func TestSqlRepository_CreateRentalReservation(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -44,36 +44,29 @@ func TestSqlRepository_CreateRentAction(t *testing.T) {
 	repo := NewSqlRepository(db)
 	ctx := context.Background()
 
-	ra := &domain.RentAction{
-		RequesterRef: "user-1",
-		CreatedByRef: "admin-1",
-		Status:       "draft",
-		StartTime:    time.Now(),
-		EndTime:      time.Now().Add(time.Hour),
-		Items: []domain.RentActionItem{
-			{ItemKind: "item_type", ItemID: 10, RequestedQuantity: 1},
+	rr := &domain.RentalReservation{
+		ID:                0,
+		ReservationName:   "Test Reservation",
+		ReservationStatus: domain.ReservationStatusPending,
+		StartTime:         time.Now(),
+		EndTime:           time.Now().Add(time.Hour),
+		Demands: []domain.Demand{
+			{ItemKind: "item_type", ItemID: 10, Quantity: 1},
 		},
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO rent_actions").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-		).
+	mock.ExpectQuery("INSERT INTO rental_reservations").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	mock.ExpectQuery("INSERT INTO rent_action_items").
-		WithArgs(1, "item_type", 10, 1, 0, sqlmock.AnyArg(), sqlmock.AnyArg()).
+	mock.ExpectQuery("INSERT INTO demands").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(100))
 	mock.ExpectCommit()
 
-	err = repo.CreateRentAction(ctx, ra)
+	err = repo.CreateRentalReservation(ctx, rr)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(1), ra.ID)
-	assert.Equal(t, int64(100), ra.Items[0].ID)
+	assert.Equal(t, int64(1), rr.ID)
+	assert.Equal(t, int64(100), rr.Demands[0].ID)
 }
 
 func TestSqlRepository_GetAvailableQuantity(t *testing.T) {
@@ -93,8 +86,8 @@ func TestSqlRepository_GetAvailableQuantity(t *testing.T) {
 		WithArgs(int64(10)).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(10))
 
-	// Mock overlapping reserved quantity
-	mock.ExpectQuery("SELECT COALESCE(.+) FROM rent_action_items rai JOIN rent_actions ra").
+	// Mock overlapping reserved quantity (Confirmed status)
+	mock.ExpectQuery("SELECT COALESCE(.+) FROM demands d JOIN rental_reservations rr").
 		WithArgs(int64(10), startTime, endTime).
 		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(3))
 

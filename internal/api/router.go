@@ -293,38 +293,34 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	// Rent Actions
-	mux.HandleFunc("/v1/rent-actions", func(w http.ResponseWriter, r *http.Request) {
+	// Logistics (Reservations & Demands)
+	mux.HandleFunc("/v1/logistics/reservations", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			h.CreateRentAction(w, r)
+			h.CreateRentalReservation(w, r)
 		case http.MethodGet:
-			h.ListRentActions(w, r)
+			h.ListRentalReservations(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/rent-actions/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/submit") {
-			h.SubmitRentAction(w, r)
-			return
-		}
+	mux.HandleFunc("/v1/logistics/reservations/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/approve") {
-			h.ApproveRentAction(w, r)
+			h.ApproveRentalReservation(w, r)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/reject") {
-			h.RejectRentAction(w, r)
+			h.RejectRentalReservation(w, r)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/cancel") {
-			h.CancelRentAction(w, r)
+			h.CancelRentalReservation(w, r)
 			return
 		}
 
 		switch r.Method {
 		case http.MethodGet:
-			h.GetRentAction(w, r)
+			h.GetRentalReservation(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -442,12 +438,12 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 	mux.HandleFunc("/v1/entities/events/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/needs") {
+		if strings.HasSuffix(r.URL.Path, "/demands") {
 			switch r.Method {
 			case http.MethodPost:
-				h.UpdateEventAssetNeeds(w, r)
+				h.UpdateEventDemands(w, r)
 			case http.MethodGet:
-				h.ListEventAssetNeeds(w, r)
+				h.ListEventDemands(w, r)
 			default:
 				w.WriteHeader(http.StatusMethodNotAllowed)
 			}

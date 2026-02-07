@@ -317,35 +317,35 @@ func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// EventAssetNeeds
+// Demands (Successor to EventAssetNeeds)
 
-func (h *Handler) ListEventAssetNeeds(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListEventDemands(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/events/")
-	idStr = strings.TrimSuffix(idStr, "/needs")
+	idStr = strings.TrimSuffix(idStr, "/demands")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid event id", http.StatusBadRequest)
 		return
 	}
-	needs, err := h.repo.ListEventAssetNeeds(r.Context(), id)
+	demands, err := h.repo.ListDemandsByEvent(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(needs)
+	json.NewEncoder(w).Encode(demands)
 }
 
-func (h *Handler) UpdateEventAssetNeeds(w http.ResponseWriter, r *http.Request) {
-	var needs []domain.EventAssetNeed
-	if err := json.NewDecoder(r.Body).Decode(&needs); err != nil {
+func (h *Handler) UpdateEventDemands(w http.ResponseWriter, r *http.Request) {
+	var demands []domain.Demand
+	if err := json.NewDecoder(r.Body).Decode(&demands); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	for _, n := range needs {
-		if n.ID > 0 {
-			h.repo.UpdateEventAssetNeed(r.Context(), &n)
+	for _, d := range demands {
+		if d.ID > 0 {
+			h.repo.UpdateDemand(r.Context(), &d)
 		} else {
-			h.repo.CreateEventAssetNeed(r.Context(), &n)
+			h.repo.CreateDemand(r.Context(), &d)
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
