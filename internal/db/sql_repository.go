@@ -138,9 +138,14 @@ func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Ass
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("scan asset: %w", err)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
+	if err != nil {
+		return nil, fmt.Errorf("get asset by id: %w", err)
+	}
+	a.SchemaOrg = json.RawMessage(schemaOrgJSON)
+	a.Metadata = json.RawMessage(metadataJSON)
 	return &a, nil
 }
 
@@ -151,14 +156,14 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 	a.UpdatedAt = now
 
 	query := `INSERT INTO assets (
-		item_type_id, asset_tag, serial_number, status, location, assigned_to, 
+		item_type_id, asset_tag, serial_number, status, place_id, location, assigned_to, 
 		mesh_node_id, wireguard_hostname, management_url, build_spec_version, provisioning_status, 
 		firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
 		usage_hours, next_service_hours, schema_org, metadata, created_by_user_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`
 
 	err := r.db.QueryRowContext(ctx, query,
-		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID, a.Location, a.AssignedTo,
 		a.MeshNodeID, a.WireguardHostname, a.ManagementURL, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
 		a.UsageHours, a.NextServiceHours, a.SchemaOrg, a.Metadata, a.CreatedByUserID, a.CreatedAt, a.UpdatedAt,
@@ -171,7 +176,7 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 
 // ListAssets returns all assets.
 func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, place_id, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
 	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets`
@@ -187,7 +192,7 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 		var a domain.Asset
 		var schemaOrgJSON, metadataJSON []byte
 		if err := rows.Scan(
-			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.PlaceID, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
 			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
@@ -202,7 +207,7 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 
 // ListAssetsByItemType returns assets belonging to a specific item type.
 func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, place_id, location, assigned_to, mesh_node_id, wireguard_hostname, management_url, 
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
 	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE item_type_id = $1`
@@ -218,7 +223,7 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 		var a domain.Asset
 		var schemaOrgJSON, metadataJSON []byte
 		if err := rows.Scan(
-			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
+			&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.PlaceID, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 			&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
 			&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 		); err != nil {
@@ -236,15 +241,15 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 	a.UpdatedAt = time.Now()
 	query := `UPDATE assets SET 
 		item_type_id = $1, asset_tag = $2, serial_number = $3, status = $4, 
-		location = $5, assigned_to = $6, mesh_node_id = $7, wireguard_hostname = $8,
-		management_url = $9, build_spec_version = $10, provisioning_status = $11, firmware_version = $12,
-		hostname = $13, remote_management_id = $14, current_build_spec_id = $15, last_inspection_at = $16,
-		usage_hours = $17, next_service_hours = $18, updated_by_user_id = $19, schema_org = $20, 
-		metadata = $21, updated_at = $22
-		WHERE id = $23`
+		place_id = $5, location = $6, assigned_to = $7, mesh_node_id = $8, wireguard_hostname = $9,
+		management_url = $10, build_spec_version = $11, provisioning_status = $12, firmware_version = $13,
+		hostname = $14, remote_management_id = $15, current_build_spec_id = $16, last_inspection_at = $17,
+		usage_hours = $18, next_service_hours = $19, updated_by_user_id = $20, schema_org = $21, 
+		metadata = $22, updated_at = $23
+		WHERE id = $24`
 
 	_, err := r.db.ExecContext(ctx, query,
-		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.Location, a.AssignedTo,
+		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID, a.Location, a.AssignedTo,
 		a.MeshNodeID, a.WireguardHostname, a.ManagementURL, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
 		a.UsageHours, a.NextServiceHours, a.UpdatedByUserID, a.SchemaOrg, a.Metadata, a.UpdatedAt, a.ID,
@@ -256,10 +261,16 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 }
 
 // UpdateAssetStatus updates the status of an asset along with optional metadata and location.
-func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error {
+func (r *SqlRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, placeID *int64, location *string, metadata json.RawMessage) error {
 	query := `UPDATE assets SET status = $1, updated_at = $2`
 	args := []interface{}{status, time.Now()}
 	argCount := 3
+
+	if placeID != nil {
+		query += fmt.Sprintf(", place_id = $%d", argCount)
+		args = append(args, *placeID)
+		argCount++
+	}
 
 	if location != nil {
 		query += fmt.Sprintf(", location = $%d", argCount)
@@ -1264,147 +1275,170 @@ func (r *SqlRepository) UpdateCompany(ctx context.Context, c *domain.Company) er
 
 // Contacts
 
-func (r *SqlRepository) CreateContact(ctx context.Context, c *domain.Contact) error {
+// People & Roles
+
+func (r *SqlRepository) CreatePerson(ctx context.Context, p *domain.Person) error {
 	now := time.Now()
-	c.CreatedAt = now
-	c.UpdatedAt = now
-	query := `INSERT INTO contacts (company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, c.CompanyID, c.FirstName, c.LastName, c.Email, c.Phone, c.Role, c.Metadata, c.CreatedAt, c.UpdatedAt).Scan(&c.ID)
+	p.CreatedAt = now
+	p.UpdatedAt = now
+	query := `INSERT INTO people (given_name, family_name, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := r.db.QueryRowContext(ctx, query, p.GivenName, p.FamilyName, p.Metadata, p.CreatedAt, p.UpdatedAt).Scan(&p.ID)
+	if err != nil {
+		return err
+	}
+	for i := range p.ContactPoints {
+		cp := &p.ContactPoints[i]
+		_, err := r.db.ExecContext(ctx, `INSERT INTO contact_points (person_id, email, phone, contact_type) VALUES ($1, $2, $3, $4)`, p.ID, cp.Email, cp.Phone, cp.Type)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (r *SqlRepository) GetContact(ctx context.Context, id int64) (*domain.Contact, error) {
-	query := `SELECT id, company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at FROM contacts WHERE id = $1`
-	var c domain.Contact
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&c.ID, &c.CompanyID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.Role, &c.Metadata, &c.CreatedAt, &c.UpdatedAt)
+func (r *SqlRepository) GetPerson(ctx context.Context, id int64) (*domain.Person, error) {
+	var p domain.Person
+	err := r.db.QueryRowContext(ctx, `SELECT id, given_name, family_name, metadata, created_at, updated_at FROM people WHERE id = $1`, id).Scan(&p.ID, &p.GivenName, &p.FamilyName, &p.Metadata, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return &c, err
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT email, phone, contact_type FROM contact_points WHERE person_id = $1`, id)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var cp domain.ContactPoint
+			if err := rows.Scan(&cp.Email, &cp.Phone, &cp.Type); err == nil {
+				p.ContactPoints = append(p.ContactPoints, cp)
+			}
+		}
+	}
+	return &p, nil
 }
 
-func (r *SqlRepository) ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error) {
-	query := `SELECT id, company_id, first_name, last_name, email, phone, role, metadata, created_at, updated_at FROM contacts`
-	var args []interface{}
-	if companyID != nil {
-		query += ` WHERE company_id = $1`
-		args = append(args, *companyID)
-	}
-	query += ` ORDER BY last_name, first_name`
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
+func (r *SqlRepository) ListPeople(ctx context.Context) ([]domain.Person, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, given_name, family_name, metadata, created_at, updated_at FROM people ORDER BY family_name, given_name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.Contact
+	var results []domain.Person
 	for rows.Next() {
-		var c domain.Contact
-		if err := rows.Scan(&c.ID, &c.CompanyID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.Role, &c.Metadata, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var p domain.Person
+		if err := rows.Scan(&p.ID, &p.GivenName, &p.FamilyName, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
-		results = append(results, c)
+		results = append(results, p)
 	}
 	return results, nil
 }
 
-func (r *SqlRepository) UpdateContact(ctx context.Context, c *domain.Contact) error {
-	c.UpdatedAt = time.Now()
-	query := `UPDATE contacts SET company_id = $1, first_name = $2, last_name = $3, email = $4, phone = $5, role = $6, metadata = $7, updated_at = $8 WHERE id = $9`
-	_, err := r.db.ExecContext(ctx, query, c.CompanyID, c.FirstName, c.LastName, c.Email, c.Phone, c.Role, c.Metadata, c.UpdatedAt, c.ID)
-	return err
-}
-
-// Sites
-
-func (r *SqlRepository) CreateSite(ctx context.Context, s *domain.Site) error {
-	now := time.Now()
-	s.CreatedAt = now
-	s.UpdatedAt = now
-	query := `INSERT INTO sites (company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, s.CompanyID, s.Name, s.AddressStreet, s.AddressCity, s.AddressState, s.AddressZip, s.AddressCountry, s.Metadata, s.CreatedAt, s.UpdatedAt).Scan(&s.ID)
-}
-
-func (r *SqlRepository) GetSite(ctx context.Context, id int64) (*domain.Site, error) {
-	query := `SELECT id, company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at FROM sites WHERE id = $1`
-	var s domain.Site
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.CompanyID, &s.Name, &s.AddressStreet, &s.AddressCity, &s.AddressState, &s.AddressZip, &s.AddressCountry, &s.Metadata, &s.CreatedAt, &s.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &s, err
-}
-
-func (r *SqlRepository) ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error) {
-	query := `SELECT id, company_id, name, address_street, address_city, address_state, address_zip, address_country, metadata, created_at, updated_at FROM sites`
-	var args []interface{}
-	if companyID != nil {
-		query += ` WHERE company_id = $1`
-		args = append(args, *companyID)
-	}
-	query += ` ORDER BY name`
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
+func (r *SqlRepository) UpdatePerson(ctx context.Context, p *domain.Person) error {
+	p.UpdatedAt = time.Now()
+	_, err := r.db.ExecContext(ctx, `UPDATE people SET given_name = $1, family_name = $2, metadata = $3, updated_at = $4 WHERE id = $5`, p.GivenName, p.FamilyName, p.Metadata, p.UpdatedAt, p.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer rows.Close()
-	var results []domain.Site
-	for rows.Next() {
-		var s domain.Site
-		if err := rows.Scan(&s.ID, &s.CompanyID, &s.Name, &s.AddressStreet, &s.AddressCity, &s.AddressState, &s.AddressZip, &s.AddressCountry, &s.Metadata, &s.CreatedAt, &s.UpdatedAt); err != nil {
-			return nil, err
-		}
-		results = append(results, s)
+	// Sync contact points (delete and re-insert for simplicity)
+	_, _ = r.db.ExecContext(ctx, `DELETE FROM contact_points WHERE person_id = $1`, p.ID)
+	for _, cp := range p.ContactPoints {
+		_, _ = r.db.ExecContext(ctx, `INSERT INTO contact_points (person_id, email, phone, contact_type) VALUES ($1, $2, $3, $4)`, p.ID, cp.Email, cp.Phone, cp.Type)
 	}
-	return results, nil
+	return nil
 }
 
-func (r *SqlRepository) UpdateSite(ctx context.Context, s *domain.Site) error {
-	s.UpdatedAt = time.Now()
-	query := `UPDATE sites SET name = $1, address_street = $2, address_city = $3, address_state = $4, address_zip = $5, address_country = $6, metadata = $7, updated_at = $8 WHERE id = $9`
-	_, err := r.db.ExecContext(ctx, query, s.Name, s.AddressStreet, s.AddressCity, s.AddressState, s.AddressZip, s.AddressCountry, s.Metadata, s.UpdatedAt, s.ID)
+func (r *SqlRepository) DeletePerson(ctx context.Context, id int64) error {
+	_, _ = r.db.ExecContext(ctx, `DELETE FROM contact_points WHERE person_id = $1`, id)
+	_, err := r.db.ExecContext(ctx, "DELETE FROM people WHERE id = $1", id)
 	return err
 }
 
-// Locations
-
-func (r *SqlRepository) CreateLocation(ctx context.Context, l *domain.Location) error {
-	now := time.Now()
-	l.CreatedAt = now
-	l.UpdatedAt = now
-	query := `INSERT INTO locations (site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, l.SiteID, l.ParentID, l.Name, l.LocationType, l.PresumedAssetNeeds, l.Metadata, l.CreatedAt, l.UpdatedAt).Scan(&l.ID)
+func (r *SqlRepository) CreateOrganizationRole(ctx context.Context, or *domain.OrganizationRole) error {
+	query := `INSERT INTO organization_roles (person_id, organization_id, role_name, start_date, end_date, metadata)
+	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, or.PersonID, or.OrganizationID, or.RoleName, or.StartDate, or.EndDate, or.Metadata).Scan(&or.ID)
 }
 
-func (r *SqlRepository) GetLocation(ctx context.Context, id int64) (*domain.Location, error) {
-	query := `SELECT id, site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at FROM locations WHERE id = $1`
-	var l domain.Location
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&l.ID, &l.SiteID, &l.ParentID, &l.Name, &l.LocationType, &l.PresumedAssetNeeds, &l.Metadata, &l.CreatedAt, &l.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &l, err
-}
-
-func (r *SqlRepository) ListLocations(ctx context.Context, siteID *int64, parentID *int64) ([]domain.Location, error) {
-	query := `SELECT id, site_id, parent_id, name, location_type, presumed_asset_needs, metadata, created_at, updated_at FROM locations WHERE 1=1`
+func (r *SqlRepository) ListOrganizationRoles(ctx context.Context, orgID *int64, personID *int64) ([]domain.OrganizationRole, error) {
+	query := `SELECT id, person_id, organization_id, role_name, start_date, end_date, metadata FROM organization_roles WHERE 1=1`
 	var args []interface{}
 	idx := 1
-	if siteID != nil {
-		query += fmt.Sprintf(` AND site_id = $%d`, idx)
-		args = append(args, *siteID)
+	if orgID != nil {
+		query += fmt.Sprintf(` AND organization_id = $%d`, idx)
+		args = append(args, *orgID)
+		idx++
+	}
+	if personID != nil {
+		query += fmt.Sprintf(` AND person_id = $%d`, idx)
+		args = append(args, *personID)
+		idx++
+	}
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.OrganizationRole
+	for rows.Next() {
+		var or domain.OrganizationRole
+		if err := rows.Scan(&or.ID, &or.PersonID, &or.OrganizationID, &or.RoleName, &or.StartDate, &or.EndDate, &or.Metadata); err != nil {
+			return nil, err
+		}
+		results = append(results, or)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) DeleteOrganizationRole(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM organization_roles WHERE id = $1", id)
+	return err
+}
+
+// Places
+
+func (r *SqlRepository) CreatePlace(ctx context.Context, p *domain.Place) error {
+	now := time.Now()
+	p.CreatedAt = now
+	p.UpdatedAt = now
+	addrJSON, _ := json.Marshal(p.Address)
+	query := `INSERT INTO places (name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.PresumedDemands, p.Metadata, p.CreatedAt, p.UpdatedAt).Scan(&p.ID)
+}
+
+func (r *SqlRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, error) {
+	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at FROM places WHERE id = $1`
+	var p domain.Place
+	var addrJSON []byte
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(addrJSON) > 0 {
+		json.Unmarshal(addrJSON, &p.Address)
+	}
+	return &p, err
+}
+
+func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID *int64) ([]domain.Place, error) {
+	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, presumed_demands, metadata, created_at, updated_at FROM places WHERE 1=1`
+	var args []interface{}
+	idx := 1
+	if ownerID != nil {
+		query += fmt.Sprintf(` AND owner_id = $%d`, idx)
+		args = append(args, *ownerID)
 		idx++
 	}
 	if parentID != nil {
-		query += fmt.Sprintf(` AND parent_id = $%d`, idx)
+		query += fmt.Sprintf(` AND contained_in_place_id = $%d`, idx)
 		args = append(args, *parentID)
 		idx++
-	} else if siteID != nil {
-		// If site provided but no parent, often we want root locations
-		query += ` AND parent_id IS NULL`
 	}
 	query += ` ORDER BY name`
 
@@ -1413,21 +1447,31 @@ func (r *SqlRepository) ListLocations(ctx context.Context, siteID *int64, parent
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.Location
+	var results []domain.Place
 	for rows.Next() {
-		var l domain.Location
-		if err := rows.Scan(&l.ID, &l.SiteID, &l.ParentID, &l.Name, &l.LocationType, &l.PresumedAssetNeeds, &l.Metadata, &l.CreatedAt, &l.UpdatedAt); err != nil {
+		var p domain.Place
+		var addrJSON []byte
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.PresumedDemands, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
-		results = append(results, l)
+		if len(addrJSON) > 0 {
+			json.Unmarshal(addrJSON, &p.Address)
+		}
+		results = append(results, p)
 	}
 	return results, nil
 }
 
-func (r *SqlRepository) UpdateLocation(ctx context.Context, l *domain.Location) error {
-	l.UpdatedAt = time.Now()
-	query := `UPDATE locations SET name = $1, location_type = $2, presumed_asset_needs = $3, metadata = $4, updated_at = $5 WHERE id = $6`
-	_, err := r.db.ExecContext(ctx, query, l.Name, l.LocationType, l.PresumedAssetNeeds, l.Metadata, l.UpdatedAt, l.ID)
+func (r *SqlRepository) UpdatePlace(ctx context.Context, p *domain.Place) error {
+	p.UpdatedAt = time.Now()
+	addrJSON, _ := json.Marshal(p.Address)
+	query := `UPDATE places SET name = $1, description = $2, contained_in_place_id = $3, owner_id = $4, category = $5, address = $6, presumed_demands = $7, metadata = $8, updated_at = $9 WHERE id = $10`
+	_, err := r.db.ExecContext(ctx, query, p.Name, p.Description, p.ContainedInPlaceID, p.OwnerID, p.Category, addrJSON, p.PresumedDemands, p.Metadata, p.UpdatedAt, p.ID)
+	return err
+}
+
+func (r *SqlRepository) DeletePlace(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM places WHERE id = $1", id)
 	return err
 }
 
@@ -1490,13 +1534,13 @@ func (r *SqlRepository) CreateEventAssetNeed(ctx context.Context, ean *domain.Ev
 	now := time.Now()
 	ean.CreatedAt = now
 	ean.UpdatedAt = now
-	query := `INSERT INTO event_asset_needs (event_id, item_type_id, quantity, is_assumed, location_id, metadata, created_at, updated_at)
+	query := `INSERT INTO event_asset_needs (event_id, item_type_id, quantity, is_assumed, place_id, metadata, created_at, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, ean.EventID, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.LocationID, ean.Metadata, ean.CreatedAt, ean.UpdatedAt).Scan(&ean.ID)
+	return r.db.QueryRowContext(ctx, query, ean.EventID, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.PlaceID, ean.Metadata, ean.CreatedAt, ean.UpdatedAt).Scan(&ean.ID)
 }
 
 func (r *SqlRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) ([]domain.EventAssetNeed, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, event_id, item_type_id, quantity, is_assumed, location_id, metadata, created_at, updated_at FROM event_asset_needs WHERE event_id = $1`, eventID)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, event_id, item_type_id, quantity, is_assumed, place_id, metadata, created_at, updated_at FROM event_asset_needs WHERE event_id = $1`, eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -1504,7 +1548,7 @@ func (r *SqlRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) 
 	var results []domain.EventAssetNeed
 	for rows.Next() {
 		var ean domain.EventAssetNeed
-		if err := rows.Scan(&ean.ID, &ean.EventID, &ean.ItemTypeID, &ean.Quantity, &ean.IsAssumed, &ean.LocationID, &ean.Metadata, &ean.CreatedAt, &ean.UpdatedAt); err != nil {
+		if err := rows.Scan(&ean.ID, &ean.EventID, &ean.ItemTypeID, &ean.Quantity, &ean.IsAssumed, &ean.PlaceID, &ean.Metadata, &ean.CreatedAt, &ean.UpdatedAt); err != nil {
 			return nil, err
 		}
 		results = append(results, ean)
@@ -1514,8 +1558,8 @@ func (r *SqlRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) 
 
 func (r *SqlRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.EventAssetNeed) error {
 	ean.UpdatedAt = time.Now()
-	query := `UPDATE event_asset_needs SET item_type_id = $1, quantity = $2, is_assumed = $3, location_id = $4, metadata = $5, updated_at = $6 WHERE id = $7`
-	_, err := r.db.ExecContext(ctx, query, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.LocationID, ean.Metadata, ean.UpdatedAt, ean.ID)
+	query := `UPDATE event_asset_needs SET item_type_id = $1, quantity = $2, is_assumed = $3, place_id = $4, metadata = $5, updated_at = $6 WHERE id = $7`
+	_, err := r.db.ExecContext(ctx, query, ean.ItemTypeID, ean.Quantity, ean.IsAssumed, ean.PlaceID, ean.Metadata, ean.UpdatedAt, ean.ID)
 	return err
 }
 
@@ -1523,21 +1567,6 @@ func (r *SqlRepository) UpdateEventAssetNeed(ctx context.Context, ean *domain.Ev
 
 func (r *SqlRepository) DeleteCompany(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, "DELETE FROM companies WHERE id = $1", id)
-	return err
-}
-
-func (r *SqlRepository) DeleteContact(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM contacts WHERE id = $1", id)
-	return err
-}
-
-func (r *SqlRepository) DeleteSite(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM sites WHERE id = $1", id)
-	return err
-}
-
-func (r *SqlRepository) DeleteLocation(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM locations WHERE id = $1", id)
 	return err
 }
 

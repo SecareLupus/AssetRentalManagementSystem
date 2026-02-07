@@ -23,7 +23,7 @@ type Repository interface {
 	ListAssets(ctx context.Context) ([]domain.Asset, error)
 	ListAssetsByItemType(ctx context.Context, itemTypeID int64) ([]domain.Asset, error)
 	UpdateAsset(ctx context.Context, a *domain.Asset) error
-	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error
+	UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, placeID *int64, location *string, metadata json.RawMessage) error
 	RecallAssetsByItemType(ctx context.Context, itemTypeID int64) error
 	BulkRecallAssets(ctx context.Context, ids []int64) error
 	DeleteAsset(ctx context.Context, id int64) error
@@ -61,23 +61,23 @@ type Repository interface {
 	UpdateCompany(ctx context.Context, c *domain.Company) error
 	DeleteCompany(ctx context.Context, id int64) error
 
-	CreateContact(ctx context.Context, c *domain.Contact) error
-	GetContact(ctx context.Context, id int64) (*domain.Contact, error)
-	ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error)
-	UpdateContact(ctx context.Context, c *domain.Contact) error
-	DeleteContact(ctx context.Context, id int64) error
+	// Unified Person & Role Management
+	CreatePerson(ctx context.Context, p *domain.Person) error
+	GetPerson(ctx context.Context, id int64) (*domain.Person, error)
+	ListPeople(ctx context.Context) ([]domain.Person, error)
+	UpdatePerson(ctx context.Context, p *domain.Person) error
+	DeletePerson(ctx context.Context, id int64) error
 
-	CreateSite(ctx context.Context, s *domain.Site) error
-	GetSite(ctx context.Context, id int64) (*domain.Site, error)
-	ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error)
-	UpdateSite(ctx context.Context, s *domain.Site) error
-	DeleteSite(ctx context.Context, id int64) error
+	CreateOrganizationRole(ctx context.Context, or *domain.OrganizationRole) error
+	ListOrganizationRoles(ctx context.Context, orgID *int64, personID *int64) ([]domain.OrganizationRole, error)
+	DeleteOrganizationRole(ctx context.Context, id int64) error
 
-	CreateLocation(ctx context.Context, l *domain.Location) error
-	GetLocation(ctx context.Context, id int64) (*domain.Location, error)
-	ListLocations(ctx context.Context, siteID *int64, parentID *int64) ([]domain.Location, error)
-	UpdateLocation(ctx context.Context, l *domain.Location) error
-	DeleteLocation(ctx context.Context, id int64) error
+	// Unified Place Management
+	CreatePlace(ctx context.Context, p *domain.Place) error
+	GetPlace(ctx context.Context, id int64) (*domain.Place, error)
+	ListPlaces(ctx context.Context, ownerID *int64, parentID *int64) ([]domain.Place, error)
+	UpdatePlace(ctx context.Context, p *domain.Place) error
+	DeletePlace(ctx context.Context, id int64) error
 
 	CreateEvent(ctx context.Context, e *domain.Event) error
 	GetEvent(ctx context.Context, id int64) (*domain.Event, error)

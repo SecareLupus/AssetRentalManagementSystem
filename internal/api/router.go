@@ -353,7 +353,7 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 
-	// Entities (Phase 23)
+	// Entities (Phase 24 Convergence)
 	mux.HandleFunc("/v1/entities/companies", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -376,72 +376,61 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/entities/contacts", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/entities/people", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			h.CreateContact(w, r)
+			h.CreatePerson(w, r)
 		case http.MethodGet:
-			h.ListContacts(w, r)
+			h.ListPeople(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/entities/contacts/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/entities/people/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			h.GetContact(w, r)
+			h.GetPerson(w, r)
 		case http.MethodPut:
-			h.UpdateContact(w, r)
+			h.UpdatePerson(w, r)
 		case http.MethodDelete:
-			h.DeleteContact(w, r)
+			h.DeletePerson(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/entities/sites", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/entities/roles", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			h.CreateSite(w, r)
+			h.CreateOrganizationRole(w, r)
 		case http.MethodGet:
-			h.ListSites(w, r)
+			h.ListOrganizationRoles(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/entities/sites/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			h.GetSite(w, r)
-		case http.MethodPut:
-			h.UpdateSite(w, r)
-		case http.MethodDelete:
-			h.DeleteSite(w, r)
-		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})
-	mux.HandleFunc("/v1/entities/locations", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/entities/places", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			h.CreateLocation(w, r)
+			h.CreatePlace(w, r)
 		case http.MethodGet:
-			h.ListLocations(w, r)
+			h.ListPlaces(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/entities/locations/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/entities/places/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			h.GetLocation(w, r)
+			h.GetPlace(w, r)
 		case http.MethodPut:
-			h.UpdateLocation(w, r)
+			h.UpdatePlace(w, r)
 		case http.MethodDelete:
-			h.DeleteLocation(w, r)
+			h.DeletePlace(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+
 	mux.HandleFunc("/v1/entities/events", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:

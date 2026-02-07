@@ -76,8 +76,8 @@ func (m *MockRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error
 	return args.Error(0)
 }
 
-func (m *MockRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, location *string, metadata json.RawMessage) error {
-	args := m.Called(ctx, id, status, location, metadata)
+func (m *MockRepository) UpdateAssetStatus(ctx context.Context, id int64, status domain.AssetStatus, placeID *int64, location *string, metadata json.RawMessage) error {
+	args := m.Called(ctx, id, status, placeID, location, metadata)
 	return args.Error(0)
 }
 
@@ -384,31 +384,36 @@ func (m *MockRepository) ListCompanies(ctx context.Context) ([]domain.Company, e
 	return nil, nil
 }
 func (m *MockRepository) UpdateCompany(ctx context.Context, c *domain.Company) error { return nil }
-func (m *MockRepository) CreateContact(ctx context.Context, c *domain.Contact) error { return nil }
-func (m *MockRepository) GetContact(ctx context.Context, id int64) (*domain.Contact, error) {
+
+func (m *MockRepository) CreatePerson(ctx context.Context, p *domain.Person) error { return nil }
+func (m *MockRepository) GetPerson(ctx context.Context, id int64) (*domain.Person, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListContacts(ctx context.Context, companyID *int64) ([]domain.Contact, error) {
+func (m *MockRepository) ListPeople(ctx context.Context) ([]domain.Person, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdateContact(ctx context.Context, c *domain.Contact) error { return nil }
-func (m *MockRepository) CreateSite(ctx context.Context, s *domain.Site) error       { return nil }
-func (m *MockRepository) GetSite(ctx context.Context, id int64) (*domain.Site, error) {
+func (m *MockRepository) UpdatePerson(ctx context.Context, p *domain.Person) error { return nil }
+func (m *MockRepository) DeletePerson(ctx context.Context, id int64) error         { return nil }
+
+func (m *MockRepository) CreateOrganizationRole(ctx context.Context, or *domain.OrganizationRole) error {
+	return nil
+}
+func (m *MockRepository) ListOrganizationRoles(ctx context.Context, orgID, personID *int64) ([]domain.OrganizationRole, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListSites(ctx context.Context, companyID *int64) ([]domain.Site, error) {
+func (m *MockRepository) DeleteOrganizationRole(ctx context.Context, id int64) error { return nil }
+
+func (m *MockRepository) CreatePlace(ctx context.Context, p *domain.Place) error { return nil }
+func (m *MockRepository) GetPlace(ctx context.Context, id int64) (*domain.Place, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdateSite(ctx context.Context, s *domain.Site) error         { return nil }
-func (m *MockRepository) CreateLocation(ctx context.Context, l *domain.Location) error { return nil }
-func (m *MockRepository) GetLocation(ctx context.Context, id int64) (*domain.Location, error) {
+func (m *MockRepository) ListPlaces(ctx context.Context, ownerID, parentID *int64) ([]domain.Place, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListLocations(ctx context.Context, siteID, parentID *int64) ([]domain.Location, error) {
-	return nil, nil
-}
-func (m *MockRepository) UpdateLocation(ctx context.Context, l *domain.Location) error { return nil }
-func (m *MockRepository) CreateEvent(ctx context.Context, e *domain.Event) error       { return nil }
+func (m *MockRepository) UpdatePlace(ctx context.Context, p *domain.Place) error { return nil }
+func (m *MockRepository) DeletePlace(ctx context.Context, id int64) error        { return nil }
+
+func (m *MockRepository) CreateEvent(ctx context.Context, e *domain.Event) error { return nil }
 func (m *MockRepository) GetEvent(ctx context.Context, id int64) (*domain.Event, error) {
 	return nil, nil
 }
@@ -432,8 +437,5 @@ func (m *MockRepository) ListInspections(ctx context.Context, assetID *int64) ([
 	return nil, nil
 }
 
-func (m *MockRepository) DeleteCompany(ctx context.Context, id int64) error  { return nil }
-func (m *MockRepository) DeleteSite(ctx context.Context, id int64) error     { return nil }
-func (m *MockRepository) DeleteLocation(ctx context.Context, id int64) error { return nil }
-func (m *MockRepository) DeleteEvent(ctx context.Context, id int64) error    { return nil }
-func (m *MockRepository) DeleteContact(ctx context.Context, id int64) error  { return nil }
+func (m *MockRepository) DeleteCompany(ctx context.Context, id int64) error { return nil }
+func (m *MockRepository) DeleteEvent(ctx context.Context, id int64) error   { return nil }

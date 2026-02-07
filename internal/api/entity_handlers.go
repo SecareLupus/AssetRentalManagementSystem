@@ -73,180 +73,126 @@ func (h *Handler) UpdateCompany(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Contacts
+// People & Roles
 
-func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
-	var c domain.Contact
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+func (h *Handler) CreatePerson(w http.ResponseWriter, r *http.Request) {
+	var p domain.Person
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := h.repo.CreateContact(r.Context(), &c); err != nil {
+	if err := h.repo.CreatePerson(r.Context(), &p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(c)
+	json.NewEncoder(w).Encode(p)
 }
 
-func (h *Handler) ListContacts(w http.ResponseWriter, r *http.Request) {
-	var companyID *int64
-	if cidStr := r.URL.Query().Get("company_id"); cidStr != "" {
+func (h *Handler) ListPeople(w http.ResponseWriter, r *http.Request) {
+	people, err := h.repo.ListPeople(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(people)
+}
+
+func (h *Handler) GetPerson(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/people/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	person, err := h.repo.GetPerson(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if person == nil {
+		http.Error(w, "person not found", http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(person)
+}
+
+func (h *Handler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/people/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	var p domain.Person
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	p.ID = id
+	if err := h.repo.UpdatePerson(r.Context(), &p); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) CreateOrganizationRole(w http.ResponseWriter, r *http.Request) {
+	var or domain.OrganizationRole
+	if err := json.NewDecoder(r.Body).Decode(&or); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := h.repo.CreateOrganizationRole(r.Context(), &or); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(or)
+}
+
+func (h *Handler) ListOrganizationRoles(w http.ResponseWriter, r *http.Request) {
+	var orgID *int64
+	if cidStr := r.URL.Query().Get("organization_id"); cidStr != "" {
 		if val, err := strconv.ParseInt(cidStr, 10, 64); err == nil {
-			companyID = &val
+			orgID = &val
 		}
 	}
-	contacts, err := h.repo.ListContacts(r.Context(), companyID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	json.NewEncoder(w).Encode(contacts)
-}
-
-func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/contacts/")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	contact, err := h.repo.GetContact(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if contact == nil {
-		http.Error(w, "contact not found", http.StatusNotFound)
-		return
-	}
-	json.NewEncoder(w).Encode(contact)
-}
-
-func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/contacts/")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	var c domain.Contact
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	c.ID = id
-	if err := h.repo.UpdateContact(r.Context(), &c); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *Handler) DeleteContact(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/contacts/")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	if err := h.repo.DeleteContact(r.Context(), id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// Sites
-
-func (h *Handler) CreateSite(w http.ResponseWriter, r *http.Request) {
-	var s domain.Site
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := h.repo.CreateSite(r.Context(), &s); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(s)
-}
-
-func (h *Handler) ListSites(w http.ResponseWriter, r *http.Request) {
-	var companyID *int64
-	if cidStr := r.URL.Query().Get("company_id"); cidStr != "" {
-		if val, err := strconv.ParseInt(cidStr, 10, 64); err == nil {
-			companyID = &val
+	var personID *int64
+	if pidStr := r.URL.Query().Get("person_id"); pidStr != "" {
+		if val, err := strconv.ParseInt(pidStr, 10, 64); err == nil {
+			personID = &val
 		}
 	}
-	sites, err := h.repo.ListSites(r.Context(), companyID)
+	roles, err := h.repo.ListOrganizationRoles(r.Context(), orgID, personID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(sites)
-}
-func (h *Handler) GetSite(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/sites/")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	site, err := h.repo.GetSite(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if site == nil {
-		http.Error(w, "site not found", http.StatusNotFound)
-		return
-	}
-	json.NewEncoder(w).Encode(site)
+	json.NewEncoder(w).Encode(roles)
 }
 
-func (h *Handler) UpdateSite(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/sites/")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	var s domain.Site
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+// Places
+
+func (h *Handler) CreatePlace(w http.ResponseWriter, r *http.Request) {
+	var p domain.Place
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.ID = id
-	if err := h.repo.UpdateSite(r.Context(), &s); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// Locations
-
-func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
-	var l domain.Location
-	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := h.repo.CreateLocation(r.Context(), &l); err != nil {
+	if err := h.repo.CreatePlace(r.Context(), &p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(l)
+	json.NewEncoder(w).Encode(p)
 }
 
-func (h *Handler) ListLocations(w http.ResponseWriter, r *http.Request) {
-	var siteID *int64
-	if sidStr := r.URL.Query().Get("site_id"); sidStr != "" {
-		if val, err := strconv.ParseInt(sidStr, 10, 64); err == nil {
-			siteID = &val
+func (h *Handler) ListPlaces(w http.ResponseWriter, r *http.Request) {
+	var ownerID *int64
+	if oidStr := r.URL.Query().Get("owner_id"); oidStr != "" {
+		if val, err := strconv.ParseInt(oidStr, 10, 64); err == nil {
+			ownerID = &val
 		}
 	}
 	var parentID *int64
@@ -255,47 +201,47 @@ func (h *Handler) ListLocations(w http.ResponseWriter, r *http.Request) {
 			parentID = &val
 		}
 	}
-	locations, err := h.repo.ListLocations(r.Context(), siteID, parentID)
+	places, err := h.repo.ListPlaces(r.Context(), ownerID, parentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(locations)
+	json.NewEncoder(w).Encode(places)
 }
 
-func (h *Handler) GetLocation(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/locations/")
+func (h *Handler) GetPlace(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/places/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	location, err := h.repo.GetLocation(r.Context(), id)
+	place, err := h.repo.GetPlace(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if location == nil {
-		http.Error(w, "location not found", http.StatusNotFound)
+	if place == nil {
+		http.Error(w, "place not found", http.StatusNotFound)
 		return
 	}
-	json.NewEncoder(w).Encode(location)
+	json.NewEncoder(w).Encode(place)
 }
 
-func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/locations/")
+func (h *Handler) UpdatePlace(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/places/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	var l domain.Location
-	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+	var p domain.Place
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	l.ID = id
-	if err := h.repo.UpdateLocation(r.Context(), &l); err != nil {
+	p.ID = id
+	if err := h.repo.UpdatePlace(r.Context(), &p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -421,28 +367,28 @@ func (h *Handler) DeleteCompany(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) DeleteSite(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/sites/")
+func (h *Handler) DeletePerson(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/people/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	if err := h.repo.DeleteSite(r.Context(), id); err != nil {
+	if err := h.repo.DeletePerson(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) DeleteLocation(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/locations/")
+func (h *Handler) DeletePlace(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/entities/places/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	if err := h.repo.DeleteLocation(r.Context(), id); err != nil {
+	if err := h.repo.DeletePlace(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

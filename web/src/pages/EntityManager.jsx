@@ -10,15 +10,16 @@ import { GlassCard, PageHeader, StatusBadge, Modal } from '../components/Shared'
 const EntityManager = () => {
     const [activeTab, setActiveTab] = useState('companies');
     const [companies, setCompanies] = useState([]);
-    const [sites, setSites] = useState([]);
+    const [places, setPlaces] = useState([]);
     const [events, setEvents] = useState([]);
-    const [contacts, setContacts] = useState([]);
+    const [people, setPeople] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Detailed View State
-    const [viewingEntity, setViewingEntity] = useState(null); // { type: 'site'|'event', item: Object }
-    const [childEntities, setChildEntities] = useState([]); // Locations for site, Needs for event
+    // Hierarchical Navigation State for Places
+    const [viewingEntity, setViewingEntity] = useState(null); // { type: 'place'|'event', item: Object }
+    const [navigationStack, setNavigationStack] = useState([]);
+    const [childEntities, setChildEntities] = useState([]); // Sub-places or Event Needs
     const [childLoading, setChildLoading] = useState(false);
 
     // Modal states
@@ -37,15 +38,16 @@ const EntityManager = () => {
             if (activeTab === 'companies') {
                 const res = await axios.get('/v1/entities/companies');
                 setCompanies(res.data || []);
-            } else if (activeTab === 'sites') {
-                const res = await axios.get('/v1/entities/sites');
-                setSites(res.data || []);
+            } else if (activeTab === 'places') {
+                const res = await axios.get('/v1/entities/places');
+                // Filter for top-level places in main view if needed, or show all
+                setPlaces(res.data || []);
             } else if (activeTab === 'events') {
                 const res = await axios.get('/v1/entities/events');
                 setEvents(res.data || []);
-            } else if (activeTab === 'contacts') {
-                const res = await axios.get('/v1/entities/contacts');
-                setContacts(res.data || []);
+            } else if (activeTab === 'people') {
+                const res = await axios.get('/v1/entities/people');
+                setPeople(res.data || []);
             }
         } catch (error) {
             console.error(`Failed to fetch ${activeTab}`, error);
@@ -57,8 +59,8 @@ const EntityManager = () => {
     const fetchChildEntities = async (type, parentId) => {
         setChildLoading(true);
         try {
-            if (type === 'site') {
-                const res = await axios.get(`/v1/entities/locations?site_id=${parentId}`);
+            if (type === 'place') {
+                const res = await axios.get(`/v1/entities/places?parent_id=${parentId}`);
                 setChildEntities(res.data || []);
             } else if (type === 'event') {
                 const res = await axios.get(`/v1/entities/events/${parentId}/needs`);
@@ -99,11 +101,27 @@ const EntityManager = () => {
         if (mode === 'edit' && item) {
             setFormData({ ...item });
         } else {
-            const defaults = {};
-            if (type === 'location' && viewingEntity) defaults.site_id = viewingEntity.item.id;
+            const defaults = {
+                metadata: {},
+                address: {},
+                contact_points: [{ email: '', phone: '', type: 'general' }]
+            };
+            if (type === 'place' && viewingEntity?.type === 'place') {
+                defaults.contained_in_place_id = viewingEntity.item.id;
+                defaults.owner_id = viewingEntity.item.owner_id;
+            }
+            if (type === 'person') {
+                if (activeTab === 'companies' && selectedItem) {
+                    defaults.company_id = selectedItem.id;
+                    defaults.role_name = 'Contact';
+                }
+            }
+            if (type === 'event') {
+                defaults.status = 'assumed';
+                if (activeTab === 'companies' && selectedItem) defaults.company_id = selectedItem.id;
+            }
             if (type === 'need' && viewingEntity) defaults.event_id = viewingEntity.item.id;
-            if (type === 'site' && activeTab === 'companies' && selectedItem) defaults.company_id = selectedItem.id;
-            if (type === 'contact' && activeTab === 'companies' && selectedItem) defaults.company_id = selectedItem.id;
+            if (type === 'place' && activeTab === 'companies' && selectedItem) defaults.owner_id = selectedItem.id;
             setFormData(defaults);
         }
         setIsModalOpen(true);
@@ -112,11 +130,11 @@ const EntityManager = () => {
     const getModalTitle = () => {
         const typeMap = {
             company: 'Corporate Entity',
-            site: 'Logistics Site',
+            place: 'Operational Place',
             event: 'Project Timeline',
-            location: 'Site Location',
             need: 'Asset Requirement',
-            contact: 'Directory Contact'
+            person: 'Directory Individual',
+            role: 'Organizational Role'
         };
         const title = typeMap[modalType] || modalType;
         return modalMode === 'create' ? `Assemble ${title}` : `Modify ${title}`;
@@ -126,10 +144,10 @@ const EntityManager = () => {
         try {
             let url = '';
             if (modalType === 'company') url = '/v1/entities/companies';
-            if (modalType === 'site') url = '/v1/entities/sites';
+            if (modalType === 'place') url = '/v1/entities/places';
             if (modalType === 'event') url = '/v1/entities/events';
-            if (modalType === 'location') url = '/v1/entities/locations';
-            if (modalType === 'contact') url = '/v1/entities/contacts';
+            if (modalType === 'person') url = '/v1/entities/people';
+            if (modalType === 'role') url = '/v1/entities/roles';
             if (modalType === 'need') url = `/v1/entities/events/${viewingEntity.item.id}/needs`;
 
             if (modalMode === 'edit') {
@@ -141,6 +159,16 @@ const EntityManager = () => {
             } else {
                 if (modalType === 'need') {
                     await axios.post(url, [formData]);
+                } else if (modalType === 'person') {
+                    // Create person, then create role if specified
+                    const personRes = await axios.post(url, formData);
+                    if (formData.company_id && formData.role_name) {
+                        await axios.post('/v1/entities/roles', {
+                            person_id: personRes.data.id,
+                            organization_id: formData.company_id,
+                            role_name: formData.role_name
+                        });
+                    }
                 } else {
                     await axios.post(url, formData);
                 }
@@ -153,21 +181,31 @@ const EntityManager = () => {
             }
         } catch (error) {
             console.error('Failed to save entity', error);
+            alert(`Error: ${error.response?.data || error.message}`);
         }
     };
 
     const handleBack = () => {
-        setViewingEntity(null);
-        setChildEntities([]);
+        if (navigationStack.length > 0) {
+            const previous = navigationStack[navigationStack.length - 1];
+            const newStack = navigationStack.slice(0, -1);
+            setNavigationStack(newStack);
+            setViewingEntity(previous);
+            fetchChildEntities(previous.type, previous.item.id);
+        } else {
+            setViewingEntity(null);
+            setChildEntities([]);
+        }
     };
 
     const filteredData = () => {
         const data = activeTab === 'companies' ? companies :
-            activeTab === 'sites' ? sites :
-                activeTab === 'events' ? events : contacts;
+            activeTab === 'places' ? places.filter(p => !p.contained_in_place_id) :
+                activeTab === 'events' ? events : people;
         if (!searchTerm) return data;
         return data.filter(item => {
-            const nameMatch = (item.name || `${item.first_name} ${item.last_name}`).toLowerCase().includes(searchTerm.toLowerCase());
+            const name = item.name || `${item.given_name} ${item.family_name}`;
+            const nameMatch = name.toLowerCase().includes(searchTerm.toLowerCase());
             const legalMatch = item.legal_name && item.legal_name.toLowerCase().includes(searchTerm.toLowerCase());
             return nameMatch || legalMatch;
         });
@@ -182,13 +220,21 @@ const EntityManager = () => {
                     !viewingEntity && (
                         <button
                             onClick={() => {
-                                let type = activeTab.slice(0, -1);
-                                if (activeTab === 'companies') type = 'company';
-                                handleOpenModal(type, 'create');
+                                const typeMap = {
+                                    companies: 'company',
+                                    places: 'place',
+                                    events: 'event',
+                                    people: 'person'
+                                };
+                                handleOpenModal(typeMap[activeTab] || activeTab.slice(0, -1), 'create');
                             }}
                             className="btn-primary"
                         >
-                            <Plus size={18} /> Add {activeTab === 'companies' ? 'Company' : activeTab === 'sites' ? 'Site' : activeTab === 'events' ? 'Event' : 'Contact'}
+                            <Plus size={18} /> Add {
+                                activeTab === 'companies' ? 'Company' :
+                                    activeTab === 'places' ? 'Operational Place' :
+                                        activeTab === 'events' ? 'Project/Event' : 'Individual'
+                            }
                         </button>
                     )
                 }
@@ -198,8 +244,8 @@ const EntityManager = () => {
                 <div className="tab-nav">
                     {[
                         { id: 'companies', label: 'Companies', icon: <Building2 size={16} /> },
-                        { id: 'contacts', label: 'Contacts', icon: <Users size={16} /> },
-                        { id: 'sites', label: 'Sites & Locations', icon: <MapPin size={16} /> },
+                        { id: 'people', label: 'Personnel', icon: <Users size={16} /> },
+                        { id: 'places', label: 'Operational Places', icon: <MapPin size={16} /> },
                         { id: 'events', label: 'Events & Projects', icon: <Calendar size={16} /> }
                     ].map(tab => (
                         <button
@@ -266,21 +312,25 @@ const EntityManager = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div className="entity-icon-wrapper" style={{
                         background: activeTab === 'companies' ? 'rgba(99, 102, 241, 0.1)' :
-                            activeTab === 'sites' ? 'rgba(16, 185, 129, 0.1)' :
+                            activeTab === 'places' ? 'rgba(16, 185, 129, 0.1)' :
                                 activeTab === 'events' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(236, 72, 153, 0.1)',
                         color: activeTab === 'companies' ? 'var(--primary)' :
-                            activeTab === 'sites' ? 'var(--success)' :
+                            activeTab === 'places' ? 'var(--success)' :
                                 activeTab === 'events' ? '#a855f7' : '#ec4899'
                     }}>
                         {activeTab === 'companies' ? <Building2 size={28} /> :
-                            activeTab === 'sites' ? <MapPin size={28} /> :
+                            activeTab === 'places' ? <MapPin size={28} /> :
                                 activeTab === 'events' ? <Calendar size={28} /> : <Users size={28} />}
                     </div>
                     <button
                         onClick={() => {
-                            let type = activeTab.slice(0, -1);
-                            if (activeTab === 'companies') type = 'company';
-                            handleOpenModal(type, 'edit', item);
+                            const typeMap = {
+                                companies: 'company',
+                                places: 'place',
+                                events: 'event',
+                                people: 'person'
+                            };
+                            handleOpenModal(typeMap[activeTab] || activeTab.slice(0, -1), 'edit', item);
                         }}
                         className="flex-center"
                         style={{ background: 'rgba(255,255,255,0.05)', width: '32px', height: '32px', borderRadius: '8px', color: 'var(--text-muted)' }}
@@ -289,38 +339,35 @@ const EntityManager = () => {
                     </button>
                 </div>
 
-                <h3 className="entity-title">{activeTab === 'contacts' ? `${item.first_name} ${item.last_name}` : item.name}</h3>
+                <h3 className="entity-title">{activeTab === 'people' ? `${item.given_name} ${item.family_name}` : item.name}</h3>
                 <p className="entity-subtitle">
                     {activeTab === 'companies' ? (item.legal_name || 'Generic Subsidiary') :
-                        activeTab === 'sites' ? `${item.address_city}, ${item.address_country}` :
+                        activeTab === 'places' ? `${item.category.toUpperCase()} // ${item.address?.address_locality || 'On-Site'}` :
                             activeTab === 'events' ? `${new Date(item.start_time).toLocaleDateString()} - ${item.status.toUpperCase()}` :
-                                `${item.role || 'Unspecified Role'} @ ${companies.find(c => c.id === item.company_id)?.name || 'External Organization'}`}
+                                `${item.metadata?.title || 'Team Member'}`}
                 </p>
 
                 <div className="badge-group">
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.3 }}>UID_{String(item.id).padStart(4, '0')}</span>
                     <button
                         onClick={() => {
-                            if (activeTab === 'sites') {
-                                setViewingEntity({ type: 'site', item });
-                                fetchChildEntities('site', item.id);
+                            if (activeTab === 'places') {
+                                setViewingEntity({ type: 'place', item });
+                                fetchChildEntities('place', item.id);
                             } else if (activeTab === 'events') {
                                 setViewingEntity({ type: 'event', item });
                                 fetchChildEntities('event', item.id);
                             } else if (activeTab === 'companies') {
-                                setActiveTab('contacts');
+                                // Maybe show company places?
+                                setActiveTab('places');
                                 setSearchTerm(item.name);
-                            } else {
-                                // For contacts, maybe link to company?
-                                if (item.company_id) {
-                                    setActiveTab('companies');
-                                    setSearchTerm(companies.find(c => c.id === item.company_id)?.name || '');
-                                }
+                            } else if (activeTab === 'people') {
+                                // Link to roles?
                             }
                         }}
                         style={{ background: 'transparent', color: 'var(--primary)', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
-                        {activeTab === 'companies' ? 'Explore Contacts' : activeTab === 'contacts' ? 'View Company' : 'Manage Details'} <ChevronRight size={16} />
+                        {activeTab === 'companies' ? 'Explore Facilities' : activeTab === 'people' ? 'View Profile' : 'Manage Details'} <ChevronRight size={16} />
                     </button>
                 </div>
             </GlassCard>
@@ -338,15 +385,15 @@ const EntityManager = () => {
                     <div style={{ flex: 1 }}>
                         <h2 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em' }}>{item.name}</h2>
                         <p style={{ color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.1em', marginTop: '0.25rem' }}>
-                            {type} Configuration Node <span style={{ opacity: 0.3 }}>//</span> ID: {item.id}
+                            {type === 'place' ? item.category : type} Configuration Node <span style={{ opacity: 0.3 }}>//</span> ID: {item.id}
                         </p>
                     </div>
                     <button
-                        onClick={() => handleOpenModal(type === 'site' ? 'location' : 'need', 'create')}
+                        onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'create')}
                         className="btn-primary"
                         style={{ padding: '0.75rem 2rem', borderRadius: 'var(--radius-lg)' }}
                     >
-                        <Plus size={18} /> Add {type === 'site' ? 'Site Location' : 'Asset Need'}
+                        <Plus size={18} /> Add {type === 'place' ? 'Sub-Place' : 'Asset Need'}
                     </button>
                 </div>
 
@@ -354,11 +401,15 @@ const EntityManager = () => {
                     <div className="glass-card glass-surface" style={{ padding: '2rem' }}>
                         <h4 className="form-label" style={{ marginBottom: '1.5rem' }}>Core Attributes</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            {type === 'site' ? (
+                            {type === 'place' ? (
                                 <div className="flex-column gap-sm">
                                     <span className="form-label" style={{ fontSize: '0.65rem' }}>Registry Address</span>
-                                    <p style={{ fontSize: '1.125rem', fontWeight: 600 }}>{item.address_street || 'No Street Record'}</p>
-                                    <p style={{ color: 'var(--text-muted)' }}>{item.address_city}, {item.address_country}</p>
+                                    <p style={{ fontSize: '1.125rem', fontWeight: 600 }}>{item.address?.street_address || 'Internal Operations'}</p>
+                                    <p style={{ color: 'var(--text-muted)' }}>{item.address?.address_locality}, {item.address?.address_country}</p>
+                                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                        <span className="form-label" style={{ fontSize: '0.65rem' }}>Hierarchy Level</span>
+                                        <p style={{ fontSize: '0.875rem', opacity: 0.6 }}>{navigationStack.map(n => n.item.name).join(' > ') || 'Root Level'}</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <>
@@ -383,24 +434,39 @@ const EntityManager = () => {
                                     <div key={child.id} className="glass-card glass-surface" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 2rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                             <div className="flex-center" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', color: 'var(--text-muted)' }}>
-                                                {type === 'site' ? <Layers size={18} /> : <Box size={18} />}
+                                                {type === 'place' ? <Layers size={18} /> : <Box size={18} />}
                                             </div>
                                             <div>
                                                 <h5 style={{ fontWeight: 800, fontSize: '1.125rem' }}>
-                                                    {type === 'site' ? child.name : (itemTypes.find(it => it.id === child.item_type_id)?.name || child.item_type_id)}
+                                                    {type === 'place' ? child.name : (itemTypes.find(it => it.id === child.item_type_id)?.name || child.item_type_id)}
                                                 </h5>
                                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                    {type === 'site' ? (child.location_type || 'unmapped area') : `${child.quantity} units requested`}
+                                                    {type === 'place' ? (child.category || 'unmapped area') : `${child.quantity} units requested`}
                                                 </p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleOpenModal(type === 'site' ? 'location' : 'need', 'edit', child)}
-                                            className="flex-center"
-                                            style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
-                                        >
-                                            <Edit2 size={14} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {type === 'place' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setNavigationStack([...navigationStack, viewingEntity]);
+                                                        setViewingEntity({ type: 'place', item: child });
+                                                        fetchChildEntities('place', child.id);
+                                                    }}
+                                                    className="flex-center"
+                                                    style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}
+                                                >
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'edit', child)}
+                                                className="flex-center"
+                                                style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                     </div>
@@ -426,62 +492,110 @@ const EntityManager = () => {
                 </div>
             </div>
         );
-        if (modalType === 'contact') return (
+        if (modalType === 'person') return (
             <div className="flex-column">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="form-group">
-                        <label className="form-label">First Name</label>
-                        <input className="form-input" value={formData.first_name || ''} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
+                        <label className="form-label">Given Name</label>
+                        <input className="form-input" value={formData.given_name || ''} onChange={e => setFormData({ ...formData, given_name: e.target.value })} />
                     </div>
                     <div className="form-group">
-                        <label className="form-label">Last Name</label>
-                        <input className="form-input" value={formData.last_name || ''} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
+                        <label className="form-label">Family Name</label>
+                        <input className="form-input" value={formData.family_name || ''} onChange={e => setFormData({ ...formData, family_name: e.target.value })} />
                     </div>
                 </div>
-                <div className="form-group">
-                    <label className="form-label">Affiliated Company</label>
-                    <select className="form-input form-select" value={formData.company_id || ''} onChange={e => setFormData({ ...formData, company_id: parseInt(e.target.value) })}>
-                        <option value="">Select Company...</option>
-                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                        <label className="form-label">Primary Email</label>
+                        <input className="form-input" value={formData.contact_points?.[0]?.email || ''} onChange={e => {
+                            const cp = [...(formData.contact_points || [{ email: '', phone: '', type: 'general' }])];
+                            cp[0].email = e.target.value;
+                            setFormData({ ...formData, contact_points: cp });
+                        }} placeholder="email@example.com" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Phone Line</label>
+                        <input className="form-input" value={formData.contact_points?.[0]?.phone || ''} onChange={e => {
+                            const cp = [...(formData.contact_points || [{ email: '', phone: '', type: 'general' }])];
+                            cp[0].phone = e.target.value;
+                            setFormData({ ...formData, contact_points: cp });
+                        }} placeholder="+1..." />
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label className="form-label">Professional Role</label>
-                    <input className="form-input" value={formData.role || ''} onChange={e => setFormData({ ...formData, role: e.target.value })} placeholder="Technical Lead" />
-                </div>
-                <div className="form-group">
-                    <label className="form-label">Electronic Mail</label>
-                    <input className="form-input" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="user@example.com" />
-                </div>
-                <div className="form-group">
-                    <label className="form-label">Communication Line</label>
-                    <input className="form-input" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                        <label className="form-label">Assigned Organization</label>
+                        <select className="form-input form-select" value={formData.company_id || ''} onChange={e => setFormData({ ...formData, company_id: parseInt(e.target.value) })}>
+                            <option value="">None / External</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Professional Role</label>
+                        <input className="form-input" value={formData.role_name || ''} onChange={e => setFormData({ ...formData, role_name: e.target.value })} placeholder="Technician, Manager..." />
+                    </div>
                 </div>
             </div>
         );
-        if (modalType === 'site') return (
+        if (modalType === 'place') return (
             <div className="flex-column">
                 <div className="form-group">
                     <label className="form-label">Owning Entity</label>
-                    <select className="form-input form-select" value={formData.company_id || ''} onChange={e => setFormData({ ...formData, company_id: parseInt(e.target.value) })}>
+                    <select className="form-input form-select" value={formData.owner_id || ''} onChange={e => setFormData({ ...formData, owner_id: parseInt(e.target.value) })}>
                         <option value="">Select Company...</option>
                         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                 </div>
                 <div className="form-group">
-                    <label className="form-label">Operational Site Name</label>
-                    <input className="form-input" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                    <label className="form-label">Place Designation</label>
+                    <input className="form-input" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. North Wing, Rack 04, Warehouse B" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                        <label className="form-label">City Node</label>
-                        <input className="form-input" value={formData.address_city || ''} onChange={e => setFormData({ ...formData, address_city: e.target.value })} />
-                    </div>
-                    <div className="form-group">
-                        <label className="form-label">Nation State</label>
-                        <input className="form-input" value={formData.address_country || ''} onChange={e => setFormData({ ...formData, address_country: e.target.value })} />
-                    </div>
+                <div className="form-group">
+                    <label className="form-label">Place Category</label>
+                    <select className="form-input form-select" value={formData.category || ''} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                        <option value="">Select Category...</option>
+                        <option value="site">Logistics Site (Facility)</option>
+                        <option value="building">Managed Building</option>
+                        <option value="floor">Strategic Floor</option>
+                        <option value="room">Operations Room</option>
+                        <option value="zone">Security Zone</option>
+                        <option value="cabinet">Hardware Cabinet</option>
+                    </select>
                 </div>
+                <div className="form-group">
+                    <label className="form-label">Contextual Description</label>
+                    <textarea className="form-input" style={{ height: '60px', resize: 'none' }} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                </div>
+                {(formData.category === 'site' || formData.category === 'building') && (
+                    <>
+                        <div className="form-group">
+                            <label className="form-label">Street Address</label>
+                            <input className="form-input" value={formData.address?.street_address || ''} onChange={e => setFormData({ ...formData, address: { ...formData.address, street_address: e.target.value } })} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">City Node</label>
+                                <input className="form-input" value={formData.address?.address_locality || ''} onChange={e => setFormData({ ...formData, address: { ...formData.address, address_locality: e.target.value } })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">State / Region</label>
+                                <input className="form-input" value={formData.address?.address_region || ''} onChange={e => setFormData({ ...formData, address: { ...formData.address, address_region: e.target.value } })} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">Postal Code</label>
+                                <input className="form-input" value={formData.address?.postal_code || ''} onChange={e => setFormData({ ...formData, address: { ...formData.address, postal_code: e.target.value } })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Nation State</label>
+                                <input className="form-input" value={formData.address?.address_country || ''} onChange={e => setFormData({ ...formData, address: { ...formData.address, address_country: e.target.value } })} />
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         );
         if (modalType === 'event') return (
@@ -489,6 +603,14 @@ const EntityManager = () => {
                 <div className="form-group">
                     <label className="form-label">Project Designation</label>
                     <input className="form-input" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Operational Status</label>
+                    <select className="form-input form-select" value={formData.status || 'assumed'} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                        <option value="assumed">Speculative (Assumed)</option>
+                        <option value="confirmed">Operational (Confirmed)</option>
+                        <option value="cancelled">Decommissioned (Cancelled)</option>
+                    </select>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Client / Sponsor</label>
@@ -507,25 +629,13 @@ const EntityManager = () => {
                         <input type="datetime-local" style={{ colorScheme: 'dark' }} className="form-input" value={formData.end_time ? new Date(formData.end_time).toISOString().slice(0, 16) : ''} onChange={e => setFormData({ ...formData, end_time: e.target.value })} />
                     </div>
                 </div>
-            </div>
-        );
-        if (modalType === 'location') return (
-            <div className="flex-column">
                 <div className="form-group">
-                    <label className="form-label">Logistics Node Name</label>
-                    <input className="form-input" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="VIP Suite A" />
-                </div>
-                <div className="form-group">
-                    <label className="form-label">Categorical Type</label>
-                    <select className="form-input form-select" value={formData.location_type || ''} onChange={e => setFormData({ ...formData, location_type: e.target.value })}>
-                        <option value="">Select Type...</option>
-                        <option value="room">Room / Suite</option>
-                        <option value="zone">Operations Zone</option>
-                        <option value="floor">Strategic Floor</option>
-                    </select>
+                    <label className="form-label">Mission Description</label>
+                    <textarea className="form-input" style={{ height: '60px', resize: 'none' }} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                 </div>
             </div>
         );
+
         if (modalType === 'need') return (
             <div className="flex-column">
                 <div className="form-group">
@@ -534,6 +644,14 @@ const EntityManager = () => {
                         <option value="">Select Catalog Item...</option>
                         {itemTypes.map(it => <option key={it.id} value={it.id}>{it.name} [{it.code}]</option>)}
                     </select>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Target Location (Place)</label>
+                    <select className="form-input form-select" value={formData.place_id || ''} onChange={e => setFormData({ ...formData, place_id: parseInt(e.target.value) })}>
+                        <option value="">Unspecified location</option>
+                        {places.map(p => <option key={p.id} value={p.id}>{p.name} ({p.category})</option>)}
+                    </select>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Optional: Specify where this asset is needed within the site hierarchy.</p>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Quantity Projection</label>

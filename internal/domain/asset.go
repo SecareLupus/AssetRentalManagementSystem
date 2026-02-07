@@ -28,16 +28,18 @@ const (
 // Asset represents a specific physical item.
 // It maps to https://schema.org/IndividualProduct
 type Asset struct {
-	ID                int64       `json:"id"`
-	ItemTypeID        int64       `json:"item_type_id"`            // Links to the ProductModel (ItemType)
-	AssetTag          *string     `json:"asset_tag,omitempty"`     // Maps to schema.org/identifier
-	SerialNumber      *string     `json:"serial_number,omitempty"` // Maps to schema.org/serialNumber
-	Status            AssetStatus `json:"status"`
-	Location          *string     `json:"location,omitempty"`
-	AssignedTo        *string     `json:"assigned_to,omitempty"`
-	MeshNodeID        *string     `json:"mesh_node_id,omitempty"`
-	WireguardHostname *string     `json:"wireguard_hostname,omitempty"`
-	ManagementURL     *string     `json:"management_url,omitempty"` // Link to external management tool
+	ID           int64       `json:"id"`
+	ItemTypeID   int64       `json:"item_type_id"`            // Links to the ProductModel (ItemType)
+	AssetTag     *string     `json:"asset_tag,omitempty"`     // Maps to schema.org/identifier
+	SerialNumber *string     `json:"serial_number,omitempty"` // Maps to schema.org/serialNumber
+	Status       AssetStatus `json:"status"`
+	PlaceID      *int64      `json:"place_id,omitempty"` // Links to the recursive Place table
+	Location     *string     `json:"location,omitempty"` // Legacy/Human-readable location
+	AssignedTo   *string     `json:"assigned_to,omitempty"`
+
+	MeshNodeID        *string `json:"mesh_node_id,omitempty"`
+	WireguardHostname *string `json:"wireguard_hostname,omitempty"`
+	ManagementURL     *string `json:"management_url,omitempty"` // Link to external management tool
 
 	// Fleet Management Fields
 	BuildSpecVersion   *string            `json:"build_spec_version,omitempty"`

@@ -401,6 +401,7 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Status   domain.AssetStatus `json:"status"`
+		PlaceID  *int64             `json:"place_id,omitempty"`
 		Location *string            `json:"location,omitempty"`
 		Metadata json.RawMessage    `json:"metadata,omitempty"`
 	}
@@ -410,7 +411,7 @@ func (h *Handler) UpdateAssetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserIDFromContext(r)
-	if err := h.repo.UpdateAssetStatus(r.Context(), id, req.Status, req.Location, req.Metadata); err != nil {
+	if err := h.repo.UpdateAssetStatus(r.Context(), id, req.Status, req.PlaceID, req.Location, req.Metadata); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -995,7 +996,7 @@ func (h *Handler) RepairAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.UpdateAssetStatus(r.Context(), id, domain.AssetStatusMaintenance, nil, nil); err != nil {
+	if err := h.repo.UpdateAssetStatus(r.Context(), id, domain.AssetStatusMaintenance, nil, nil, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

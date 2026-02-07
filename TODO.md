@@ -21,13 +21,14 @@ Goal: Implement first class entities to represent the deployment targets: Compan
 Goal: Converge the physical and organizational data models toward Schema.org standards to support infinite nesting and multi-faceted relationships.
 
 ### Unified Place Model
-- [ ] **Recursive Place Schema**: Consolidate `Site` and `Location` into a single recursive `Place` entity. Add `contained_in_place_id` and optional `PostalAddress` fields.
-- [ ] **Data Migration (Sites to Places)**: Execute SQL migrations to port facility data into the unified model while maintaining referential integrity for existing assets.
-- [ ] **Hierarchical Entity Manager**: Update the `EntityManager` UI to support an arbitrary depth of nested places (Site > Building > Room > Cabinet).
+- [x] **Recursive Place Schema**: Consolidate `Site` and `Location` into a single recursive `Place` entity. Add `contained_in_place_id` and optional `PostalAddress` fields.
+- [x] **Data Migration (Sites to Places)**: Execute SQL migrations to port facility data into the unified model while maintaining referential integrity for existing assets.
+- [x] **Hierarchical Entity Manager**: Update the `EntityManager` UI to support an arbitrary depth of nested places (Site > Building > Room > Cabinet).
 
 ### Personnel & Organizations
-- [ ] **Person/Organization Decoupling**: Refactor `Contact` as a standalone `Person` entity that can have multiple `OrganizationRole` relationships.
-- [ ] **ContactPoint Implementation**: Implement `ContactPoint` to manage communication lines (email/phone) scoped to specific organizations or events.
+- [x] **Person/Organization Decoupling**: Refactor `Contact` as a standalone `Person` entity that can have multiple `OrganizationRole` relationships.
+- [x] **ContactPoint Implementation**: Implement `ContactPoint` to manage communication lines (email/phone) scoped to specific organizations or events.
+
 
 ## Phase 25: Logistics Modernization (Reservations & Demands)
 
