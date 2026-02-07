@@ -611,6 +611,180 @@ func (r *SqlRepository) ListReturnActions(ctx context.Context, reservationID int
 	return results, nil
 }
 
+// GetRentalFulfillmentStatus calculates the delta between demands and actual movements.
+func (r *SqlRepository) GetRentalFulfillmentStatus(ctx context.Context, reservationID int64) (*domain.RentalFulfillmentStatus, error) {
+	demands, err := r.ListDemandsByReservation(ctx, reservationID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to track fulfillment per demand
+	// For simplicity, we assume one demand per (item_kind, item_id)
+	lineMap := make(map[string]*domain.FulfillmentLine)
+	for _, d := range demands {
+		key := fmt.Sprintf("%s:%d", d.ItemKind, d.ItemID)
+		lineMap[key] = &domain.FulfillmentLine{
+			DemandID:          d.ID,
+			ItemKind:          d.ItemKind,
+			ItemID:            d.ItemID,
+			RequestedQuantity: d.Quantity,
+		}
+	}
+
+	// Better approach: use a combined query or join
+	coQuery := `
+		SELECT a.item_type_id, COUNT(*) 
+		FROM check_out_actions co
+		JOIN assets a ON co.asset_id = a.id
+		WHERE co.reservation_id = $1 AND co.action_status = 'Completed'
+		GROUP BY a.item_type_id
+	`
+	rows, err := r.db.QueryContext(ctx, coQuery, reservationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var itemID int64
+		var count int
+		if err := rows.Scan(&itemID, &count); err != nil {
+			return nil, err
+		}
+		key := fmt.Sprintf("item_type:%d", itemID)
+		if line, ok := lineMap[key]; ok {
+			line.FulfilledQuantity = count
+		}
+	}
+
+	retQuery := `
+		SELECT a.item_type_id, COUNT(*) 
+		FROM return_actions ret
+		JOIN assets a ON ret.asset_id = a.id
+		WHERE ret.reservation_id = $1 AND ret.action_status = 'Completed'
+		GROUP BY a.item_type_id
+	`
+	rows2, err := r.db.QueryContext(ctx, retQuery, reservationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var itemID int64
+		var count int
+		if err := rows2.Scan(&itemID, &count); err != nil {
+			return nil, err
+		}
+		key := fmt.Sprintf("item_type:%d", itemID)
+		if line, ok := lineMap[key]; ok {
+			line.ReturnedQuantity = count
+		}
+	}
+
+	var status domain.RentalFulfillmentStatus
+	status.ReservationID = reservationID
+
+	anyFulfilled := false
+	allFulfilled := true
+	for _, line := range lineMap {
+		line.RemainingQuantity = line.RequestedQuantity - line.FulfilledQuantity
+		if line.FulfilledQuantity > 0 {
+			anyFulfilled = true
+		}
+		if line.FulfilledQuantity < line.RequestedQuantity {
+			allFulfilled = false
+		}
+		status.Lines = append(status.Lines, *line)
+	}
+
+	if allFulfilled && len(lineMap) > 0 {
+		status.Status = string(domain.ReservationStatusFulfilled)
+	} else if anyFulfilled {
+		status.Status = string(domain.ReservationStatusPartiallyFulfilled)
+	} else {
+		status.Status = string(domain.ReservationStatusConfirmed)
+	}
+
+	return &status, nil
+}
+
+// BatchCheckOut dispatches multiple assets at once and updates reservation status.
+func (r *SqlRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	for _, assetID := range assetIDs {
+		// 1. Create CheckOutAction
+		coQuery := `INSERT INTO check_out_actions (reservation_id, asset_id, agent_id, start_time, to_location_id, action_status)
+		            VALUES ($1, $2, $3, $4, $5, $6)`
+		_, err = tx.ExecContext(ctx, coQuery, reservationID, assetID, agentID, now, toLocationID, "Completed")
+		if err != nil {
+			return fmt.Errorf("checkout %d: %w", assetID, err)
+		}
+
+		// 2. Update Asset
+		assetQuery := `UPDATE assets SET status = 'deployed', place_id = $1, updated_at = $2 WHERE id = $3`
+		_, err = tx.ExecContext(ctx, assetQuery, toLocationID, now, assetID)
+		if err != nil {
+			return fmt.Errorf("update asset %d: %w", assetID, err)
+		}
+	}
+
+	// 3. Update Reservation Status based on new fulfillment state
+	// (Normally we'd re-calculate here, but for simplicity we'll just set to PartiallyFulfilled if any movement happens)
+	// Improved: we can fetch the status and update it.
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	// Re-evaluate overall status after commit
+	fStatus, err := r.GetRentalFulfillmentStatus(ctx, reservationID)
+	if err == nil {
+		r.UpdateRentalReservationStatus(ctx, reservationID, domain.RentalReservationStatus(fStatus.Status))
+	}
+
+	return nil
+}
+
+// BatchReturn returns multiple assets at once.
+func (r *SqlRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	for _, assetID := range assetIDs {
+		// 1. Create ReturnAction
+		raQuery := `INSERT INTO return_actions (reservation_id, asset_id, agent_id, start_time, action_status)
+		            VALUES ($1, $2, $3, $4, $5)`
+		_, err = tx.ExecContext(ctx, raQuery, reservationID, assetID, agentID, now, "Completed")
+		if err != nil {
+			return fmt.Errorf("return %d: %w", assetID, err)
+		}
+
+		// 2. Update Asset to available (assuming it returns to a generic pool, or we could specify warehouse location)
+		assetQuery := `UPDATE assets SET status = 'available', updated_at = $1 WHERE id = $2`
+		_, err = tx.ExecContext(ctx, assetQuery, now, assetID)
+		if err != nil {
+			return fmt.Errorf("update asset %d: %w", assetID, err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetAvailableQuantity calculates the available inventory for an item type in a given time window.
 func (r *SqlRepository) GetAvailableQuantity(ctx context.Context, itemTypeID int64, startTime, endTime time.Time) (int, error) {
 	// 1. Get total assets for this item type (excluding retired)

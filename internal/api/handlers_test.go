@@ -458,3 +458,21 @@ func (m *MockRepository) ListInspections(ctx context.Context, assetID *int64) ([
 
 func (m *MockRepository) DeleteCompany(ctx context.Context, id int64) error { return nil }
 func (m *MockRepository) DeleteEvent(ctx context.Context, id int64) error   { return nil }
+
+func (m *MockRepository) GetRentalFulfillmentStatus(ctx context.Context, reservationID int64) (*domain.RentalFulfillmentStatus, error) {
+	args := m.Called(ctx, reservationID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.RentalFulfillmentStatus), args.Error(1)
+}
+
+func (m *MockRepository) BatchCheckOut(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64, toLocationID *int64) error {
+	args := m.Called(ctx, reservationID, assetIDs, agentID, toLocationID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) BatchReturn(ctx context.Context, reservationID int64, assetIDs []int64, agentID int64) error {
+	args := m.Called(ctx, reservationID, assetIDs, agentID)
+	return args.Error(0)
+}

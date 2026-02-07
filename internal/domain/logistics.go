@@ -9,10 +9,11 @@ import (
 type RentalReservationStatus string
 
 const (
-	ReservationStatusPending   RentalReservationStatus = "ReservationPending"
-	ReservationStatusConfirmed RentalReservationStatus = "ReservationConfirmed"
-	ReservationStatusCancelled RentalReservationStatus = "ReservationCancelled"
-	ReservationStatusFulfilled RentalReservationStatus = "ReservationFulfilled"
+	ReservationStatusPending            RentalReservationStatus = "ReservationPending"
+	ReservationStatusConfirmed          RentalReservationStatus = "ReservationConfirmed"
+	ReservationStatusCancelled          RentalReservationStatus = "ReservationCancelled"
+	ReservationStatusPartiallyFulfilled RentalReservationStatus = "ReservationPartiallyFulfilled"
+	ReservationStatusFulfilled          RentalReservationStatus = "ReservationFulfilled"
 )
 
 // RentalReservation represents an "intent to rent", aligning with schema.org/RentalReservation.
@@ -73,4 +74,22 @@ type ReturnAction struct {
 	ToLocation    *int64          `json:"toLocationId"` // PlaceID (Warehouse)
 	Status        string          `json:"actionStatus"`
 	Metadata      json.RawMessage `json:"metadata,omitempty"`
+}
+
+// FulfillmentLine represents the status of a single demand fulfillment.
+type FulfillmentLine struct {
+	DemandID          int64  `json:"demandId"`
+	ItemKind          string `json:"itemKind"`
+	ItemID            int64  `json:"itemId"`
+	RequestedQuantity int    `json:"requestedQuantity"`
+	FulfilledQuantity int    `json:"fulfilledQuantity"`
+	ReturnedQuantity  int    `json:"returnedQuantity"`
+	RemainingQuantity int    `json:"remainingQuantity"`
+}
+
+// RentalFulfillmentStatus summarizes the fulfillment state of a reservation.
+type RentalFulfillmentStatus struct {
+	ReservationID int64             `json:"reservationId"`
+	Status        string            `json:"status"` // Overall status based on lines
+	Lines         []FulfillmentLine `json:"lines"`
 }

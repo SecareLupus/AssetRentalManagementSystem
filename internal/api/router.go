@@ -317,6 +317,26 @@ func NewRouter(h *Handler) http.Handler {
 			h.CancelRentalReservation(w, r)
 			return
 		}
+		if strings.HasSuffix(r.URL.Path, "/fulfillment") {
+			h.GetRentalFulfillment(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/dispatch") {
+			if r.Method == http.MethodPost {
+				h.BatchDispatchAssets(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/return") {
+			if r.Method == http.MethodPost {
+				h.BatchReturnAssets(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 
 		switch r.Method {
 		case http.MethodGet:

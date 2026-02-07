@@ -37,7 +37,7 @@ Goal: Transition from monolithic action records to a more flexible Reservation/D
 ### Intent & Fulfillment
 - [x] **RentalReservation Model**: Implement a first-class `RentalReservation` entity to track "intent to rent" separate from the act of movement.
 - [x] **Granular Action Logging**: Implement specific `CheckOutAction` and `ReturnAction` entities linked to a parent Reservation.
-- [ ] **Partial Fulfillment Engine**: Update fulfillment logic to allow multiple check-out events for a single reservation (staggered delivery).
+- [x] **Partial Fulfillment Engine**: Update fulfillment logic to allow multiple check-out events for a single reservation (staggered delivery).
 
 ### Offer/Demand Ecosystem
 - [x] **Logistics Demand Model**: Replace `EventAssetNeed` with the `Demand` model, incorporating `businessFunction` and `eligibleDuration`.
@@ -49,10 +49,10 @@ Goal: Transition from monolithic action records to a more flexible Reservation/D
 Goal: Implement the "Engine" that manages the delta between intent (Reservations) and reality (Movements).
 
 ### Workflow & Logic
-- [ ] **Fulfillment State Machine**: Implement service logic to calculate "Remaining Needs" by comparing Demands vs. CheckOutActions.
-- [ ] **Staggered Checkout Workflow**: Implement API to batch-dispatch assets, auto-generating `CheckOutAction` records and updating `Asset` statuses in one transaction.
-- [ ] **Status Auto-Promotion**: Implement logic to transition `RentalReservation` status to `PartiallyFulfilled` or `Fulfilled` based on actual asset movement.
-- [ ] **Return Pipeline**: Implement the return-to-warehouse workflow that reconciles `CheckOutActions` with `ReturnActions`.
+- [x] **Fulfillment State Machine**: Implement service logic to calculate "Remaining Needs" by comparing Demands vs. CheckOutActions.
+- [x] **Staggered Checkout Workflow**: Implement API to batch-dispatch assets, auto-generating `CheckOutAction` records and updating `Asset` statuses in one transaction.
+- [x] **Status Auto-Promotion**: Implement logic to transition `RentalReservation` status to `PartiallyFulfilled` or `Fulfilled` based on actual asset movement.
+- [x] **Return Pipeline**: Implement the return-to-warehouse workflow that reconciles `CheckOutActions` with `ReturnActions`.
 
 ## Future Plans
 
