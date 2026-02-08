@@ -1679,6 +1679,7 @@ func (r *SqlRepository) GetPerson(ctx context.Context, id int64) (*domain.Person
 	if err != nil {
 		return nil, err
 	}
+	// Fetch matching contact points
 	rows, err := r.db.QueryContext(ctx, `SELECT email, phone, contact_type FROM contact_points WHERE person_id = $1`, id)
 	if err == nil {
 		defer rows.Close()
@@ -1689,6 +1690,9 @@ func (r *SqlRepository) GetPerson(ctx context.Context, id int64) (*domain.Person
 			}
 		}
 	}
+	// Fetch primary role (latest one)
+	_ = r.db.QueryRowContext(ctx, `SELECT organization_id, role_name FROM organization_roles WHERE person_id = $1 ORDER BY id DESC LIMIT 1`, id).Scan(&p.CompanyID, &p.RoleName)
+
 	return &p, nil
 }
 
@@ -1698,14 +1702,56 @@ func (r *SqlRepository) ListPeople(ctx context.Context) ([]domain.Person, error)
 		return nil, err
 	}
 	defer rows.Close()
+
 	var results []domain.Person
+	personMap := make(map[int64]*domain.Person)
+
 	for rows.Next() {
 		var p domain.Person
 		if err := rows.Scan(&p.ID, &p.GivenName, &p.FamilyName, &p.Metadata, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
+		p.ContactPoints = []domain.ContactPoint{} // Initialize empty slice
 		results = append(results, p)
 	}
+
+	for i := range results {
+		personMap[results[i].ID] = &results[i]
+	}
+
+	// Fetch all contact points and map them
+	cpRows, err := r.db.QueryContext(ctx, `SELECT person_id, email, phone, contact_type FROM contact_points`)
+	if err == nil {
+		defer cpRows.Close()
+		for cpRows.Next() {
+			var personID int64
+			var cp domain.ContactPoint
+			if err := cpRows.Scan(&personID, &cp.Email, &cp.Phone, &cp.Type); err == nil {
+				if p, ok := personMap[personID]; ok {
+					p.ContactPoints = append(p.ContactPoints, cp)
+				}
+			}
+		}
+	}
+
+	// Fetch all roles and map them (latest one per person)
+	roleRows, err := r.db.QueryContext(ctx, `SELECT person_id, organization_id, role_name FROM organization_roles`)
+	if err == nil {
+		defer roleRows.Close()
+		for roleRows.Next() {
+			var personID int64
+			var orgID int64
+			var roleName string
+			if err := roleRows.Scan(&personID, &orgID, &roleName); err == nil {
+				if p, ok := personMap[personID]; ok {
+					// For now, just take one role as primary
+					p.CompanyID = &orgID
+					p.RoleName = roleName
+				}
+			}
+		}
+	}
+
 	return results, nil
 }
 
@@ -1715,10 +1761,16 @@ func (r *SqlRepository) UpdatePerson(ctx context.Context, p *domain.Person) erro
 	if err != nil {
 		return err
 	}
-	// Sync contact points (delete and re-insert for simplicity)
+	// Sync contact points
 	_, _ = r.db.ExecContext(ctx, `DELETE FROM contact_points WHERE person_id = $1`, p.ID)
 	for _, cp := range p.ContactPoints {
 		_, _ = r.db.ExecContext(ctx, `INSERT INTO contact_points (person_id, email, phone, contact_type) VALUES ($1, $2, $3, $4)`, p.ID, cp.Email, cp.Phone, cp.Type)
+	}
+	// Sync role if provided
+	if p.CompanyID != nil && p.RoleName != "" {
+		// Delete old roles and insert primary one (simplification)
+		_, _ = r.db.ExecContext(ctx, `DELETE FROM organization_roles WHERE person_id = $1`, p.ID)
+		_, _ = r.db.ExecContext(ctx, `INSERT INTO organization_roles (person_id, organization_id, role_name) VALUES ($1, $2, $3)`, p.ID, *p.CompanyID, p.RoleName)
 	}
 	return nil
 }

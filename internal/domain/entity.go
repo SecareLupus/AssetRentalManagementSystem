@@ -90,6 +90,8 @@ type Person struct {
 	FamilyName    string          `json:"family_name"`
 	ContactPoints []ContactPoint  `json:"contact_points,omitempty"`
 	Metadata      json.RawMessage `json:"metadata,omitempty"`
+	CompanyID     *int64          `json:"company_id,omitempty"` // For easy role syncing
+	RoleName      string          `json:"role_name,omitempty"`  // For easy role syncing
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }

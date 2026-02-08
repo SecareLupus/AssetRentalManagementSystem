@@ -11,6 +11,8 @@ const ItemTypeDetails = () => {
     const [assets, setAssets] = useState([]);
     const [places, setPlaces] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [allTemplates, setAllTemplates] = useState([]);
+    const [assignedTemplates, setAssignedTemplates] = useState([]);
 
     // Modals
     const [showEditModal, setShowEditModal] = useState(false);
@@ -36,6 +38,12 @@ const ItemTypeDetails = () => {
 
             const placesRes = await axios.get('/v1/entities/places');
             setPlaces(placesRes.data || []);
+
+            const allTempsRes = await axios.get('/v1/catalog/inspection-templates');
+            setAllTemplates(allTempsRes.data || []);
+
+            const assignedRes = await axios.get(`/v1/catalog/item-types/${id}/inspections`);
+            setAssignedTemplates(assignedRes.data || []);
         } catch (error) {
             console.error("Error fetching item details", error);
         } finally {
@@ -72,6 +80,20 @@ const ItemTypeDetails = () => {
             fetchData();
         } catch (error) {
             alert("Asset creation failed: " + (error.response?.data || error.message));
+        }
+    };
+
+    const handleSyncInspections = async (templateId, checked) => {
+        const newAssigned = checked
+            ? [...assignedTemplates, allTemplates.find(t => t.id === templateId)]
+            : assignedTemplates.filter(t => t.id !== templateId);
+
+        setAssignedTemplates(newAssigned);
+        try {
+            await axios.post(`/v1/catalog/item-types/${id}/inspections`, newAssigned.map(t => t.id));
+        } catch (err) {
+            alert("Failed to sync inspections");
+            fetchData();
         }
     };
 
@@ -198,7 +220,26 @@ const ItemTypeDetails = () => {
                 </div>
 
                 {/* Sidebar / Quick Actions */}
-                <aside>
+                <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <GlassCard>
+                        <h3 style={{ fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <ClipboardCheck size={20} color="var(--primary)" /> Inspections
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {allTemplates.map(temp => (
+                                <label key={temp.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.5rem', background: 'var(--surface)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={assignedTemplates.some(t => t.id === temp.id)}
+                                        onChange={e => handleSyncInspections(temp.id, e.target.checked)}
+                                    />
+                                    <span style={{ fontSize: '0.875rem' }}>{temp.name}</span>
+                                </label>
+                            ))}
+                            {allTemplates.length === 0 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No templates created.</p>}
+                        </div>
+                    </GlassCard>
+
                     <GlassCard style={{ position: 'sticky', top: '2rem' }}>
                         <h3 style={{ fontWeight: 700, marginBottom: '1.5rem' }}>Quick Reserve</h3>
                         <div style={{ marginBottom: '1.5rem' }}>

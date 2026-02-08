@@ -87,7 +87,11 @@ const EntityManager = () => {
         setViewingEntity(null);
         setChildEntities([]);
         fetchData();
-        if (activeTab === 'events') fetchItemTypes();
+        if (activeTab === 'events') {
+            fetchItemTypes();
+            // Fetch places for location dropdowns in asset needs
+            axios.get('/v1/entities/places').then(res => setPlaces(res.data || []));
+        }
         // Always fetch companies if not on companies tab for dropdowns
         if (activeTab !== 'companies' && companies.length === 0) {
             axios.get('/v1/entities/companies').then(res => setCompanies(res.data || []));
@@ -362,7 +366,7 @@ const EntityManager = () => {
                                 setActiveTab('places');
                                 setSearchTerm(item.name);
                             } else if (activeTab === 'people') {
-                                // Link to roles?
+                                setViewingEntity({ type: 'person', item });
                             }
                         }}
                         style={{ background: 'transparent', color: 'var(--primary)', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
@@ -383,18 +387,29 @@ const EntityManager = () => {
                         <ArrowLeft size={24} />
                     </button>
                     <div style={{ flex: 1 }}>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em' }}>{item.name}</h2>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em' }}>{type === 'person' ? `${item.given_name} ${item.family_name}` : item.name}</h2>
                         <p style={{ color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.1em', marginTop: '0.25rem' }}>
-                            {type === 'place' ? item.category : type} Configuration Node <span style={{ opacity: 0.3 }}>//</span> ID: {item.id}
+                            {type === 'place' ? item.category : type === 'person' ? 'Active Personnel' : type} Configuration Node <span style={{ opacity: 0.3 }}>//</span> ID: {item.id}
                         </p>
                     </div>
-                    <button
-                        onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'create')}
-                        className="btn-primary"
-                        style={{ padding: '0.75rem 2rem', borderRadius: 'var(--radius-lg)' }}
-                    >
-                        <Plus size={18} /> Add {type === 'place' ? 'Sub-Place' : 'Asset Need'}
-                    </button>
+                    {type !== 'person' && (
+                        <button
+                            onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'create')}
+                            className="btn-primary"
+                            style={{ padding: '0.75rem 2rem', borderRadius: 'var(--radius-lg)' }}
+                        >
+                            <Plus size={18} /> Add {type === 'place' ? 'Sub-Place' : 'Asset Need'}
+                        </button>
+                    )}
+                    {type === 'person' && (
+                        <button
+                            onClick={() => handleOpenModal('person', 'edit', item)}
+                            className="btn-primary"
+                            style={{ padding: '0.75rem 2rem', borderRadius: 'var(--radius-lg)' }}
+                        >
+                            <Edit2 size={18} /> Edit Profile
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '3rem' }}>
@@ -409,6 +424,25 @@ const EntityManager = () => {
                                     <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
                                         <span className="form-label" style={{ fontSize: '0.65rem' }}>Hierarchy Level</span>
                                         <p style={{ fontSize: '0.875rem', opacity: 0.6 }}>{navigationStack.map(n => n.item.name).join(' > ') || 'Root Level'}</p>
+                                    </div>
+                                </div>
+                            ) : type === 'person' ? (
+                                <div className="flex-column gap-sm">
+                                    <span className="form-label" style={{ fontSize: '0.65rem' }}>Contact Methods</span>
+                                    {item.contact_points?.map((cp, idx) => (
+                                        <div key={idx} style={{ marginBottom: '0.5rem' }}>
+                                            <p style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Mail size={14} color="var(--primary)" /> {cp.email || 'No email'}
+                                            </p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Phone size={14} /> {cp.phone || 'No phone'}
+                                            </p>
+                                        </div>
+                                    ))}
+                                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                        <span className="form-label" style={{ fontSize: '0.65rem' }}>Primary Assignment</span>
+                                        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>{item.role_name || 'Individual Contributor'}</p>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{companies.find(c => c.id === item.company_id)?.name || 'External Entity'}</p>
                                     </div>
                                 </div>
                             ) : (
@@ -428,47 +462,56 @@ const EntityManager = () => {
                     </div>
 
                     <div className="flex-column gap-md">
-                        {childLoading ? <div className="flex-center" style={{ padding: '5rem' }}><div className="w-8 h-8 border-2 border-slate-800 border-t-primary rounded-full animate-spin"></div></div> :
-                            childEntities.length === 0 ? <div className="flex-center glass-surface" style={{ padding: '5rem', borderRadius: 'var(--radius-xl)', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>Empty Manifest</div> :
-                                childEntities.map(child => (
-                                    <div key={child.id} className="glass-card glass-surface" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 2rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                            <div className="flex-center" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', color: 'var(--text-muted)' }}>
-                                                {type === 'place' ? <Layers size={18} /> : <Box size={18} />}
+                        {type === 'person' ? (
+                            <div className="glass-card glass-surface" style={{ padding: '2rem' }}>
+                                <h4 className="form-label" style={{ marginBottom: '1.5rem' }}>Activity History</h4>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', border: '1px dashed var(--border)', padding: '2rem', borderRadius: '1rem', textAlign: 'center' }}>
+                                    Historical operational logs for this individual are currently being indexed.
+                                </div>
+                            </div>
+                        ) : (
+                            childLoading ? <div className="flex-center" style={{ padding: '5rem' }}><div className="w-8 h-8 border-2 border-slate-800 border-t-primary rounded-full animate-spin"></div></div> :
+                                childEntities.length === 0 ? <div className="flex-center glass-surface" style={{ padding: '5rem', borderRadius: 'var(--radius-xl)', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>Empty Manifest</div> :
+                                    childEntities.map(child => (
+                                        <div key={child.id} className="glass-card glass-surface" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 2rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                                <div className="flex-center" style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', color: 'var(--text-muted)' }}>
+                                                    {type === 'place' ? <Layers size={18} /> : <Box size={18} />}
+                                                </div>
+                                                <div>
+                                                    <h5 style={{ fontWeight: 800, fontSize: '1.125rem' }}>
+                                                        {type === 'place' ? child.name : (itemTypes.find(it => it.id === child.item_type_id)?.name || child.item_type_id)}
+                                                    </h5>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        {type === 'place' ? (child.category || 'unmapped area') : `${child.quantity} units requested`}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h5 style={{ fontWeight: 800, fontSize: '1.125rem' }}>
-                                                    {type === 'place' ? child.name : (itemTypes.find(it => it.id === child.item_type_id)?.name || child.item_type_id)}
-                                                </h5>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                    {type === 'place' ? (child.category || 'unmapped area') : `${child.quantity} units requested`}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {type === 'place' && (
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                {type === 'place' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setNavigationStack([...navigationStack, viewingEntity]);
+                                                            setViewingEntity({ type: 'place', item: child });
+                                                            fetchChildEntities('place', child.id);
+                                                        }}
+                                                        className="flex-center"
+                                                        style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}
+                                                    >
+                                                        <ChevronRight size={14} />
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={() => {
-                                                        setNavigationStack([...navigationStack, viewingEntity]);
-                                                        setViewingEntity({ type: 'place', item: child });
-                                                        fetchChildEntities('place', child.id);
-                                                    }}
+                                                    onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'edit', child)}
                                                     className="flex-center"
-                                                    style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}
+                                                    style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
                                                 >
-                                                    <ChevronRight size={14} />
+                                                    <Edit2 size={14} />
                                                 </button>
-                                            )}
-                                            <button
-                                                onClick={() => handleOpenModal(type === 'place' ? 'place' : 'need', 'edit', child)}
-                                                className="flex-center"
-                                                style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
-                                            >
-                                                <Edit2 size={14} />
-                                            </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                        )}
                     </div>
                 </div>
             </div>

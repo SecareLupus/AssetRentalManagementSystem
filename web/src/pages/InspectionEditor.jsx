@@ -23,22 +23,8 @@ const InspectionEditor = () => {
                 setItemTypes(typesRes.data || []);
 
                 if (id) {
-                    const [tempRes, allTempsRes] = await Promise.all([
-                        // We don't have a GetInspectionTemplateByID endpoint yet, but List includes basic info.
-                        // Actually, let's just find it if we can, or we might need to add that endpoint.
-                        // For now, let's assume we fetch all and filter, or I should have added the endpoint.
-                        // I'll add the GetTemplate endpoint to handlers.go too if needed, but for now let's use List.
-                        axios.get('/v1/catalog/inspection-templates'),
-                    ]);
-                    
-                    const found = allTempsRes.data?.find(t => t.id === parseInt(id));
-                    if (found) {
-                        // The List endpoint doesn't return fields. 
-                        // I need a GetTemplateByID handler or modify List to return everything.
-                        // I'll quickly add GetInspectionTemplateByID to backend.
-                        const detailRes = await axios.get(`/v1/catalog/inspection-templates/${id}`);
-                        setTemplate(detailRes.data);
-                    }
+                    const detailRes = await axios.get(`/v1/catalog/inspection-templates/${id}`);
+                    setTemplate(detailRes.data);
                 }
             } catch (err) {
                 console.error("Fetch failed", err);
@@ -83,8 +69,8 @@ const InspectionEditor = () => {
                 <ArrowLeft size={16} /> Back to Admin
             </Link>
 
-            <PageHeader 
-                title={id ? "Edit Template" : "New Inspection Template"} 
+            <PageHeader
+                title={id ? "Edit Template" : "New Inspection Template"}
                 actions={<button onClick={handleSave} className="btn-primary"><Save size={18} /> Save Template</button>}
             />
 
@@ -93,8 +79,8 @@ const InspectionEditor = () => {
                     <GlassCard style={{ marginBottom: '2rem' }}>
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Template Name</label>
-                            <input 
-                                className="glass" 
+                            <input
+                                className="glass"
                                 style={{ width: '100%', padding: '1rem', borderRadius: '0.75rem', color: 'white' }}
                                 value={template.name}
                                 onChange={e => setTemplate({ ...template, name: e.target.value })}
@@ -102,8 +88,8 @@ const InspectionEditor = () => {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Description</label>
-                            <textarea 
-                                className="glass" 
+                            <textarea
+                                className="glass"
                                 rows="3"
                                 style={{ width: '100%', padding: '1rem', borderRadius: '0.75rem', color: 'white', resize: 'none' }}
                                 value={template.description}
@@ -126,9 +112,9 @@ const InspectionEditor = () => {
                             <GlassCard key={i} style={{ padding: '1rem', display: 'grid', gridTemplateColumns: '2fr 1fr 100px 40px', gap: '1rem', alignItems: 'end' }}>
                                 <div>
                                     <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Label</label>
-                                    <input 
-                                        className="glass" 
-                                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.875rem', color: 'white' }} 
+                                    <input
+                                        className="glass"
+                                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.875rem', color: 'white' }}
                                         value={field.label}
                                         onChange={e => {
                                             const fields = [...template.fields];
@@ -139,8 +125,8 @@ const InspectionEditor = () => {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Type</label>
-                                    <select 
-                                        className="glass" 
+                                    <select
+                                        className="glass"
                                         style={{ width: '100%', padding: '0.5rem', fontSize: '0.875rem', color: 'white', background: 'var(--surface)' }}
                                         value={field.field_type}
                                         onChange={e => {
@@ -155,8 +141,8 @@ const InspectionEditor = () => {
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '40px' }}>
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={field.required}
                                         onChange={e => {
                                             const fields = [...template.fields];
