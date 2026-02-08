@@ -28,7 +28,7 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
         if (source) {
             setFormData({
                 ...source,
-                auth_credentials: source.auth_credentials ? JSON.stringify(JSON.parse(source.auth_credentials), null, 2) : '',
+                auth_credentials: source.auth_credentials ? (typeof source.auth_credentials === 'string' ? JSON.stringify(JSON.parse(source.auth_credentials), null, 2) : JSON.stringify(source.auth_credentials, null, 2)) : '',
                 endpoints: source.endpoints || []
             });
             setStep(1);

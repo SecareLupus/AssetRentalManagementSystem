@@ -76,7 +76,7 @@ func (r *SqlRepository) ListItemTypes(ctx context.Context, includeInactive bool)
 	}
 	defer rows.Close()
 
-	var results []domain.ItemType
+	results := []domain.ItemType{}
 	for rows.Next() {
 		var it domain.ItemType
 		var featuresJSON, schemaOrgJSON, metadataJSON []byte
@@ -225,7 +225,7 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 	}
 	defer rows.Close()
 
-	var results []domain.Asset
+	results := []domain.Asset{}
 	for rows.Next() {
 		var a domain.Asset
 		var schemaOrgJSON, metadataJSON []byte
@@ -498,7 +498,7 @@ func (r *SqlRepository) ListRentalReservations(ctx context.Context) ([]domain.Re
 	}
 	defer rows.Close()
 
-	var results []domain.RentalReservation
+	results := []domain.RentalReservation{}
 	for rows.Next() {
 		var rr domain.RentalReservation
 		var metadataJSON []byte
@@ -568,7 +568,7 @@ func (r *SqlRepository) ListDemandsByReservation(ctx context.Context, reservatio
 	}
 	defer rows.Close()
 
-	var results []domain.Demand
+	results := []domain.Demand{}
 	for rows.Next() {
 		var d domain.Demand
 		var metadataJSON []byte
@@ -591,7 +591,7 @@ func (r *SqlRepository) ListDemandsByEvent(ctx context.Context, eventID int64) (
 	}
 	defer rows.Close()
 
-	var results []domain.Demand
+	results := []domain.Demand{}
 	for rows.Next() {
 		var d domain.Demand
 		var metadataJSON []byte
@@ -647,7 +647,7 @@ func (r *SqlRepository) ListCheckOutActions(ctx context.Context, reservationID i
 	}
 	defer rows.Close()
 
-	var results []domain.CheckOutAction
+	results := []domain.CheckOutAction{}
 	for rows.Next() {
 		var co domain.CheckOutAction
 		var metadataJSON []byte
@@ -670,7 +670,7 @@ func (r *SqlRepository) ListReturnActions(ctx context.Context, reservationID int
 	}
 	defer rows.Close()
 
-	var results []domain.ReturnAction
+	results := []domain.ReturnAction{}
 	for rows.Next() {
 		var ra domain.ReturnAction
 		var metadataJSON []byte
@@ -926,7 +926,7 @@ func (r *SqlRepository) ListMaintenanceLogs(ctx context.Context, assetID int64) 
 	}
 	defer rows.Close()
 
-	var results []domain.MaintenanceLog
+	results := []domain.MaintenanceLog{}
 	for rows.Next() {
 		var ml domain.MaintenanceLog
 		if err := rows.Scan(&ml.ID, &ml.AssetID, &ml.ActionType, &ml.Notes, &ml.PerformedBy, &ml.TestBits, &ml.CreatedAt); err != nil {
@@ -979,7 +979,7 @@ func (r *SqlRepository) ListInspectionTemplates(ctx context.Context) ([]domain.I
 	}
 	defer rows.Close()
 
-	var results []domain.InspectionTemplate
+	results := []domain.InspectionTemplate{}
 	for rows.Next() {
 		var it domain.InspectionTemplate
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.CreatedAt, &it.UpdatedAt); err != nil {
@@ -1207,7 +1207,7 @@ func (r *SqlRepository) ListBuildSpecs(ctx context.Context) ([]domain.BuildSpec,
 	}
 	defer rows.Close()
 
-	var results []domain.BuildSpec
+	results := []domain.BuildSpec{}
 	for rows.Next() {
 		var bs domain.BuildSpec
 		var metadataJSON []byte
@@ -1353,7 +1353,7 @@ func (r *SqlRepository) ListUsers(ctx context.Context) ([]domain.User, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.User
+	results := []domain.User{}
 	for rows.Next() {
 		var u domain.User
 		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.IsEnabled, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
@@ -1429,7 +1429,7 @@ func (r *SqlRepository) GetPendingEvents(ctx context.Context, limit int) ([]doma
 	}
 	defer rows.Close()
 
-	var events []domain.OutboxEvent
+	var events []domain.OutboxEvent = []domain.OutboxEvent{}
 	for rows.Next() {
 		var e domain.OutboxEvent
 		if err := rows.Scan(&e.ID, &e.Type, &e.Payload, &e.Status, &e.ErrorMessage, &e.RetryCount, &e.CreatedAt, &e.ProcessedAt); err != nil {
@@ -1460,7 +1460,7 @@ func (r *SqlRepository) ListWebhooks(ctx context.Context) ([]domain.WebhookConfi
 	}
 	defer rows.Close()
 
-	var results []domain.WebhookConfig
+	results := []domain.WebhookConfig{}
 	for rows.Next() {
 		var w domain.WebhookConfig
 		var eventsJSON []byte
@@ -1677,7 +1677,7 @@ func (r *SqlRepository) ListCompanies(ctx context.Context) ([]domain.Company, er
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.Company
+	results := []domain.Company{}
 	for rows.Next() {
 		var c domain.Company
 		if err := rows.Scan(&c.ID, &c.Name, &c.LegalName, &c.Description, &c.Metadata, &c.CreatedAt, &c.UpdatedAt); err != nil {
@@ -1855,7 +1855,7 @@ func (r *SqlRepository) ListOrganizationRoles(ctx context.Context, orgID *int64,
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.OrganizationRole
+	results := []domain.OrganizationRole{}
 	for rows.Next() {
 		var or domain.OrganizationRole
 		if err := rows.Scan(&or.ID, &or.PersonID, &or.OrganizationID, &or.RoleName, &or.StartDate, &or.EndDate, &or.Metadata); err != nil {
@@ -1925,7 +1925,7 @@ func (r *SqlRepository) ListPlaces(ctx context.Context, ownerID *int64, parentID
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.Place
+	results := []domain.Place{}
 	for rows.Next() {
 		var p domain.Place
 		var addrJSON, demandsJSON, metadataJSON []byte
@@ -1992,7 +1992,7 @@ func (r *SqlRepository) ListEvents(ctx context.Context, companyID *int64) ([]dom
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.Event
+	results := []domain.Event{}
 	for rows.Next() {
 		var e domain.Event
 		if err := rows.Scan(&e.ID, &e.CompanyID, &e.Name, &e.Description, &e.StartTime, &e.EndTime, &e.Status, &e.ParentEventID, &e.RecurrenceRule, &e.LastConfirmedAt, &e.Metadata, &e.CreatedAt, &e.UpdatedAt); err != nil {
@@ -2027,7 +2027,7 @@ func (r *SqlRepository) ListEventAssetNeeds(ctx context.Context, eventID int64) 
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.EventAssetNeed
+	results := []domain.EventAssetNeed{}
 	for rows.Next() {
 		var ean domain.EventAssetNeed
 		if err := rows.Scan(&ean.ID, &ean.EventID, &ean.ItemTypeID, &ean.Quantity, &ean.IsAssumed, &ean.PlaceID, &ean.Metadata, &ean.CreatedAt, &ean.UpdatedAt); err != nil {
@@ -2117,12 +2117,15 @@ func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestS
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.IngestSource
+	results := []domain.IngestSource{}
 	for rows.Next() {
 		var s domain.IngestSource
 		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
+		// Fetch endpoints for this source
+		eps, _ := r.ListIngestEndpoints(ctx, s.ID)
+		s.Endpoints = eps
 		results = append(results, s)
 	}
 	return results, nil
@@ -2207,7 +2210,7 @@ func (r *SqlRepository) ListIngestEndpoints(ctx context.Context, sourceID int64)
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.IngestEndpoint
+	results := []domain.IngestEndpoint{}
 	for rows.Next() {
 		var ep domain.IngestEndpoint
 		if err := rows.Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
@@ -2260,7 +2263,7 @@ func (r *SqlRepository) GetPendingIngestSources(ctx context.Context) ([]domain.I
 		return nil, err
 	}
 	defer rows.Close()
-	var results []domain.IngestSource
+	results := []domain.IngestSource{}
 	for rows.Next() {
 		var s domain.IngestSource
 		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {

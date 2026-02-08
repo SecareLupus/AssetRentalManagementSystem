@@ -5,7 +5,13 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('rms_token'));
+    const [token, setToken] = useState(() => {
+        const storedToken = localStorage.getItem('rms_token');
+        if (storedToken) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        }
+        return storedToken;
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -36,10 +42,10 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await axios.post('/v1/auth/login', { username, password });
             const { token: newToken, user: userData } = response.data;
-            
+
             // Set header IMMEDIATELY to prevent race condition with subsequent requests
             axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-            
+
             setToken(newToken);
             setUser(userData);
             localStorage.setItem('rms_token', newToken); // Also set manually here for safety
