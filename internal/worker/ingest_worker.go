@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,7 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/desmond/rental-management-system/internal/db"
@@ -56,145 +57,307 @@ func (w *IngestWorker) ProcessPendingSources(ctx context.Context) {
 	}
 
 	for _, src := range sources {
-		if err := w.SyncSource(ctx, src); err != nil {
+		if err := w.SyncSource(ctx, &src); err != nil {
 			log.Printf("[IngestWorker] Failed to sync source %s (%d): %v", src.Name, src.ID, err)
 		}
 	}
 }
 
-func (w *IngestWorker) SyncSource(ctx context.Context, src domain.IngestSource) error {
+func (w *IngestWorker) SyncSource(ctx context.Context, src *domain.IngestSource) error {
 	log.Printf("[IngestWorker] Syncing source: %s", src.Name)
 
-	now := time.Now()
-	src.LastSyncAt = &now
-
-	// Prepare request
-	req, err := http.NewRequestWithContext(ctx, "GET", src.APIURL, nil)
-	if err != nil {
-		return w.failSource(&src, "invalid request: "+err.Error())
-	}
-
+	// 1. Check/Refresh Authentication
 	if src.AuthType == domain.IngestAuthBearer {
-		var credentials string
-		json.Unmarshal(src.AuthCredentials, &credentials)
-		if credentials != "" {
-			req.Header.Set("Authorization", "Bearer "+credentials)
+		if src.LastToken == "" || (src.TokenExpiry != nil && time.Now().After(src.TokenExpiry.Add(-5*time.Minute))) {
+			if err := w.refreshAuth(ctx, src); err != nil {
+				return fmt.Errorf("auth refresh failed: %w", err)
+			}
 		}
 	}
 
-	if src.LastETag != "" {
-		req.Header.Set("If-None-Match", src.LastETag)
+	// 2. Iterate Endpoints
+	for i := range src.Endpoints {
+		ep := &src.Endpoints[i]
+		if !ep.IsActive {
+			continue
+		}
+
+		if err := w.SyncEndpoint(ctx, src, ep); err != nil {
+			log.Printf("[IngestWorker] Failed to sync endpoint %s for source %s: %v", ep.Path, src.Name, err)
+			continue
+		}
 	}
 
-	// Perform request
-	resp, err := w.httpClient.Do(req)
+	src.UpdatedAt = time.Now()
+	return w.repo.UpdateIngestSource(ctx, src)
+}
+
+func (w *IngestWorker) refreshAuth(ctx context.Context, src *domain.IngestSource) error {
+	// Priority 1: Use Refresh Token if RefreshEndpoint is configured and we have a token
+	if src.RefreshEndpoint != "" && src.RefreshToken != "" {
+		log.Printf("[IngestWorker] Attempting token refresh for source: %s", src.Name)
+
+		refreshURL := src.RefreshEndpoint
+		// If it doesn't look like a full URL, prefix with BaseURL
+		if !bytes.HasPrefix([]byte(refreshURL), []byte("http")) {
+			refreshURL = src.BaseURL + refreshURL
+		}
+
+		refreshPayload := map[string]string{
+			"refresh_token": src.RefreshToken,
+		}
+		payloadBytes, _ := json.Marshal(refreshPayload)
+
+		req, err := http.NewRequestWithContext(ctx, "POST", refreshURL, bytes.NewReader(payloadBytes))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := w.httpClient.Do(req)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				var data map[string]interface{}
+				if err := json.NewDecoder(resp.Body).Decode(&data); err == nil {
+					accessToken, refreshToken, expiresIn := domain.DiscoverTokens(data)
+					if accessToken != "" {
+						src.LastToken = accessToken
+						if refreshToken != "" {
+							src.RefreshToken = refreshToken
+						}
+						if expiresIn > 0 {
+							expiry := time.Now().Add(time.Duration(expiresIn) * time.Second)
+							src.TokenExpiry = &expiry
+						}
+						log.Printf("[IngestWorker] Token refreshed via Refresh Token for %s", src.Name)
+						return nil
+					}
+				}
+			}
+			log.Printf("[IngestWorker] Refresh token attempt failed for %s (Status: %d), falling back to full login", src.Name, resp.StatusCode)
+		} else {
+			log.Printf("[IngestWorker] Refresh token request failed for %s: %v, falling back to full login", src.Name, err)
+		}
+	}
+
+	// Priority 2: Standard Login (Existing Logic)
+	log.Printf("[IngestWorker] Performing full login for source: %s", src.Name)
+
+	authURL := src.AuthEndpoint
+	if !strings.HasPrefix(authURL, "http") {
+		authURL = src.BaseURL + authURL
+	}
+
+	creds := domain.UnwrapJSON(src.AuthCredentials)
+	resp, err := w.httpClient.Post(authURL, "application/json", bytes.NewReader(creds))
 	if err != nil {
-		return w.failSource(&src, "request failed: "+err.Error())
+		return err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("auth endpoint returned %s: %s", resp.Status, string(body))
+	}
+
+	var data map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return err
+	}
+
+	// Step 1.5: Verify (Optional Triple-Auth)
+	if src.VerifyEndpoint != "" {
+		verifyURL := src.VerifyEndpoint
+		if !strings.HasPrefix(verifyURL, "http") {
+			verifyURL = src.BaseURL + verifyURL
+		}
+		log.Printf("[IngestWorker] Performing verification step for %s: %s", src.Name, verifyURL)
+
+		// Attempt to find a token to use for verification if needed
+		loginToken, _, _ := domain.DiscoverTokens(data)
+
+		// Re-encode login response to send to verify
+		verifyBody, _ := json.Marshal(data)
+		req, err := http.NewRequest("POST", verifyURL, bytes.NewReader(verifyBody))
+		if err != nil {
+			return fmt.Errorf("failed to create verify request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if loginToken != "" {
+			req.Header.Set("Authorization", "Bearer "+loginToken)
+		}
+
+		vResp, err := w.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("verify request failed: %w", err)
+		}
+		defer vResp.Body.Close()
+
+		if vResp.StatusCode < 200 || vResp.StatusCode >= 300 {
+			vBody, _ := io.ReadAll(vResp.Body)
+			return fmt.Errorf("verify endpoint returned %s: %s", vResp.Status, string(vBody))
+		}
+
+		// Update data with verify response
+		if err := json.NewDecoder(vResp.Body).Decode(&data); err != nil {
+			return fmt.Errorf("failed to decode verify response: %w", err)
+		}
+	}
+
+	accessToken, refreshToken, expiresIn := domain.DiscoverTokens(data)
+	if accessToken == "" {
+		return fmt.Errorf("no access token found in auth response")
+	}
+
+	src.LastToken = accessToken
+	if refreshToken != "" {
+		src.RefreshToken = refreshToken
+	}
+	if expiresIn > 0 {
+		expiry := time.Now().Add(time.Duration(expiresIn) * time.Second)
+		src.TokenExpiry = &expiry
+	}
+	return nil
+}
+
+func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSource, ep *domain.IngestEndpoint) error {
+	log.Printf("[IngestWorker] Syncing endpoint: %s%s", src.BaseURL, ep.Path)
+
+	fullURL := src.BaseURL + ep.Path
+	body := domain.UnwrapJSON(ep.RequestBody)
+	req, err := http.NewRequestWithContext(ctx, ep.Method, fullURL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	if src.AuthType == domain.IngestAuthBearer && src.LastToken != "" {
+		req.Header.Set("Authorization", "Bearer "+src.LastToken)
+	}
+
+	if ep.LastETag != "" {
+		req.Header.Set("If-None-Match", ep.LastETag)
+	}
+
+	resp, err := w.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	now := time.Now()
+	ep.LastSyncAt = &now
+
 	if resp.StatusCode == http.StatusNotModified {
-		log.Printf("[IngestWorker] Source %s unchanged (304)", src.Name)
-		return w.finishSource(&src, "Not Modified", "")
+		log.Printf("[IngestWorker] Endpoint %s unchanged (304)", ep.Path)
+		return w.repo.UpdateIngestEndpoint(ctx, ep)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return w.failSource(&src, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)))
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Process body
-	body, err := io.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return w.failSource(&src, "failed to read body: "+err.Error())
+		return err
 	}
 
-	// Delta detection
+	// Deduplication
 	h := sha256.New()
 	h.Write(body)
 	hash := hex.EncodeToString(h.Sum(nil))
-	if hash == src.LastPayloadHash {
-		log.Printf("[IngestWorker] Source %s unchanged (Hash match)", src.Name)
-		return w.finishSource(&src, "Success (No changes)", resp.Header.Get("ETag"))
+	if hash == ep.LastPayloadHash {
+		log.Printf("[IngestWorker] Endpoint %s unchanged (Hash match)", ep.Path)
+		ep.LastETag = resp.Header.Get("ETag")
+		return w.repo.UpdateIngestEndpoint(ctx, ep)
 	}
 
-	// Parse JSON
 	var jsonData interface{}
 	if err := json.Unmarshal(body, &jsonData); err != nil {
-		return w.failSource(&src, "failed to parse JSON: "+err.Error())
+		return err
 	}
 
-	// Apply mappings and ingest
-	count, err := w.ingestData(ctx, src, jsonData)
-	if err != nil {
-		return w.failSource(&src, "ingestion failed: "+err.Error())
-	}
-
-	log.Printf("[IngestWorker] Source %s finished. Ingested %d items.", src.Name, count)
-	src.LastPayloadHash = hash
-	return w.finishSource(&src, fmt.Sprintf("Success (%d items)", count), resp.Header.Get("ETag"))
-}
-
-func (w *IngestWorker) ingestData(ctx context.Context, src domain.IngestSource, data interface{}) (int, error) {
-	// Root JSONPath mapping - if the API returns an array, we might want to iterate.
-	// For simplicity, we assume if it's an array, we iterate over items.
-	// In the future, we could add a "Root Path" to the IngestSource.
-
-	items, ok := data.([]interface{})
-	if !ok {
-		// Single object
-		items = []interface{}{data}
-	}
+	// Strategy-based extraction
+	items := w.extractItems(jsonData, ep.RespStrategy)
 
 	count := 0
 	for _, item := range items {
-		if err := w.ingestItem(ctx, src, item); err != nil {
-			log.Printf("[IngestWorker] Skipping item in %s: %v", src.Name, err)
-			continue
+		if err := w.ingestItem(ctx, ep.Mappings, item); err == nil {
+			count++
 		}
-		count++
 	}
 
-	return count, nil
+	log.Printf("[IngestWorker] Endpoint %s finished. Ingested %d items.", ep.Path, count)
+	ep.LastPayloadHash = hash
+	ep.LastETag = resp.Header.Get("ETag")
+	ep.LastSuccessAt = &now
+	return w.repo.UpdateIngestEndpoint(ctx, ep)
 }
 
-func (w *IngestWorker) ingestItem(ctx context.Context, src domain.IngestSource, item interface{}) error {
-	mapped := make(map[string]interface{})
-	var identityValue interface{}
+func (w *IngestWorker) extractItems(data interface{}, strategy string) []interface{} {
+	switch strategy {
+	case "list":
+		if list, ok := data.([]interface{}); ok {
+			return list
+		}
+	case "single":
+		return []interface{}{data}
+	case "auto":
+		if list, ok := data.([]interface{}); ok {
+			return list
+		}
+		return []interface{}{data}
+	}
+	return nil
+}
 
-	for _, m := range src.Mappings {
+func (w *IngestWorker) ingestItem(ctx context.Context, mappings []domain.IngestMapping, item interface{}) error {
+	// Group mappings by target model
+	models := make(map[domain.IngestTargetModel]map[string]interface{})
+	identities := make(map[domain.IngestTargetModel]interface{})
+
+	for _, m := range mappings {
 		res, err := jsonpath.JsonPathLookup(item, m.JSONPath)
 		if err != nil {
-			if m.IsIdentity {
-				return fmt.Errorf("identity field %s not found: %w", m.JSONPath, err)
-			}
 			continue
 		}
-		mapped[m.TargetField] = res
+
+		if _, ok := models[m.TargetModel]; !ok {
+			models[m.TargetModel] = make(map[string]interface{})
+		}
+		models[m.TargetModel][m.TargetField] = res
 		if m.IsIdentity {
-			identityValue = res
+			identities[m.TargetModel] = res
 		}
 	}
 
-	if identityValue == nil {
-		return fmt.Errorf("no identity value found for item")
+	// Upsert each model
+	for model, data := range models {
+		identity := identities[model]
+		if identity == nil {
+			continue // Identity is required
+		}
+
+		var err error
+		switch model {
+		case domain.IngestTargetItemType:
+			err = w.upsertItemType(ctx, data, identity)
+		case domain.IngestTargetAsset:
+			err = w.upsertAsset(ctx, data, identity)
+		case domain.IngestTargetCompany:
+			err = w.upsertCompany(ctx, data, identity)
+		case domain.IngestTargetPerson:
+			err = w.upsertPerson(ctx, data, identity)
+		case domain.IngestTargetPlace:
+			err = w.upsertPlace(ctx, data, identity)
+		}
+		if err != nil {
+			log.Printf("[IngestWorker] Upsert failed for %s: %v", model, err)
+		}
 	}
 
-	// Ingest into target model
-	switch src.TargetModel {
-	case domain.IngestTargetItemType:
-		return w.upsertItemType(ctx, mapped, identityValue)
-	case domain.IngestTargetAsset:
-		return w.upsertAsset(ctx, mapped, identityValue)
-	case domain.IngestTargetCompany:
-		return w.upsertCompany(ctx, mapped, identityValue)
-	case domain.IngestTargetPerson:
-		return w.upsertPerson(ctx, mapped, identityValue)
-	case domain.IngestTargetPlace:
-		return w.upsertPlace(ctx, mapped, identityValue)
-	}
-
-	return fmt.Errorf("unsupported target model: %s", src.TargetModel)
+	return nil
 }
 
 func (w *IngestWorker) upsertItemType(ctx context.Context, data map[string]interface{}, identity interface{}) error {
@@ -209,12 +372,9 @@ func (w *IngestWorker) upsertItemType(ctx context.Context, data map[string]inter
 	}
 	if isActive, ok := data["is_active"].(bool); ok {
 		it.IsActive = isActive
-	}
-	// For item types, default Active if not specified
-	if _, ok := data["is_active"]; !ok {
+	} else {
 		it.IsActive = true
 	}
-
 	return w.repo.UpsertItemType(ctx, it)
 }
 
@@ -222,35 +382,28 @@ func (w *IngestWorker) upsertAsset(ctx context.Context, data map[string]interfac
 	a := &domain.Asset{}
 	idenStr := fmt.Sprintf("%v", identity)
 
-	// Determine if identity is tag or serial
-	// For now, we'll try to match target fields
 	if tag, ok := data["asset_tag"].(string); ok {
 		a.AssetTag = &tag
-	} else if _, ok := data["asset_tag"]; !ok {
-		// If identity was mapped to asset_tag implicitly
+	} else {
 		a.AssetTag = &idenStr
 	}
 
 	if sn, ok := data["serial_number"].(string); ok {
 		a.SerialNumber = &sn
 	}
-
 	if status, ok := data["status"].(string); ok {
 		a.Status = domain.AssetStatus(status)
 	} else {
-		a.Status = domain.AssetStatusAvailable // Default
+		a.Status = domain.AssetStatusAvailable
 	}
 
-	// item_type_id is required. If not provided, we might need to look it up by code
+	// Support ItemType lookup or code
 	if itID, ok := data["item_type_id"].(float64); ok {
 		a.ItemTypeID = int64(itID)
-	} else if itIDStr, ok := data["item_type_id"].(string); ok {
-		id, _ := strconv.ParseInt(itIDStr, 10, 64)
-		a.ItemTypeID = id
 	}
 
 	if a.ItemTypeID == 0 {
-		return fmt.Errorf("item_type_id is missing for asset %s", idenStr)
+		return fmt.Errorf("item_type_id missing")
 	}
 
 	return w.repo.UpsertAsset(ctx, a)
@@ -271,6 +424,8 @@ func (w *IngestWorker) upsertCompany(ctx context.Context, data map[string]interf
 
 func (w *IngestWorker) upsertPerson(ctx context.Context, data map[string]interface{}, identity interface{}) error {
 	p := &domain.Person{}
+	// Identity for Person is tricky, usually email or employee ID
+	// For now assume given_name as identity if no employee_id
 	if gn, ok := data["given_name"].(string); ok {
 		p.GivenName = gn
 	}
@@ -278,11 +433,12 @@ func (w *IngestWorker) upsertPerson(ctx context.Context, data map[string]interfa
 		p.FamilyName = fn
 	}
 	if cid, ok := data["company_id"].(float64); ok {
-		p.CompanyID = ptrInt64(int64(cid))
+		id := int64(cid)
+		p.CompanyID = &id
 	}
 
 	if p.GivenName == "" || p.FamilyName == "" {
-		return fmt.Errorf("given_name and family_name are required for person")
+		return fmt.Errorf("incomplete person data")
 	}
 
 	return w.repo.UpsertPerson(ctx, p)
@@ -302,33 +458,4 @@ func (w *IngestWorker) upsertPlace(ctx context.Context, data map[string]interfac
 		p.IsInternal = isInt
 	}
 	return w.repo.UpsertPlace(ctx, p)
-}
-
-func ptrInt64(v int64) *int64 {
-	return &v
-}
-
-func ptrString(v string) *string {
-	return &v
-}
-
-func (w *IngestWorker) failSource(src *domain.IngestSource, msg string) error {
-	src.LastStatus = "Error"
-	src.LastError = msg
-	next := time.Now().Add(time.Duration(src.SyncIntervalSeconds) * time.Second)
-	src.NextSyncAt = &next
-	return w.repo.UpdateIngestSource(context.Background(), src)
-}
-
-func (w *IngestWorker) finishSource(src *domain.IngestSource, status, etag string) error {
-	src.LastStatus = status
-	src.LastError = ""
-	now := time.Now()
-	src.LastSuccessAt = &now
-	if etag != "" {
-		src.LastETag = etag
-	}
-	next := now.Add(time.Duration(src.SyncIntervalSeconds) * time.Second)
-	src.NextSyncAt = &next
-	return w.repo.UpdateIngestSource(context.Background(), src)
 }

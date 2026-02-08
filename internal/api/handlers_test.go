@@ -542,8 +542,36 @@ func (m *MockRepository) DeleteIngestSource(ctx context.Context, id int64) error
 	return args.Error(0)
 }
 
-func (m *MockRepository) SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error {
-	args := m.Called(ctx, sourceID, mappings)
+func (m *MockRepository) CreateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
+	args := m.Called(ctx, ep)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetIngestEndpoint(ctx context.Context, id int64) (*domain.IngestEndpoint, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.IngestEndpoint), args.Error(1)
+}
+
+func (m *MockRepository) UpdateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
+	args := m.Called(ctx, ep)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteIngestEndpoint(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListIngestEndpoints(ctx context.Context, sourceID int64) ([]domain.IngestEndpoint, error) {
+	args := m.Called(ctx, sourceID)
+	return args.Get(0).([]domain.IngestEndpoint), args.Error(1)
+}
+
+func (m *MockRepository) SetEndpointMappings(ctx context.Context, endpointID int64, mappings []domain.IngestMapping) error {
+	args := m.Called(ctx, endpointID, mappings)
 	return args.Error(0)
 }
 

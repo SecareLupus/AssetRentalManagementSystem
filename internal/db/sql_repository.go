@@ -2094,28 +2094,24 @@ func (r *SqlRepository) GetDefaultInternalPlace(ctx context.Context) (*domain.Pl
 // Ingest Engine
 
 func (r *SqlRepository) CreateIngestSource(ctx context.Context, src *domain.IngestSource) error {
-	now := time.Now()
-	src.CreatedAt = now
-	src.UpdatedAt = now
-	query := `INSERT INTO ingest_sources (name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, src.Name, src.TargetModel, src.APIURL, src.AuthType, src.AuthCredentials, src.SyncIntervalSeconds, src.IsActive, src.CreatedAt, src.UpdatedAt).Scan(&src.ID)
+	src.CreatedAt = time.Now()
+	src.UpdatedAt = time.Now()
+	query := `INSERT INTO ingest_sources (name, base_url, auth_endpoint, verify_endpoint, refresh_endpoint, auth_type, auth_credentials, sync_interval_seconds, is_active, created_at, updated_at) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, src.Name, src.BaseURL, src.AuthEndpoint, src.VerifyEndpoint, src.RefreshEndpoint, src.AuthType, src.AuthCredentials, src.SyncIntervalSeconds, src.IsActive, src.CreatedAt, src.UpdatedAt).Scan(&src.ID)
 }
 
 func (r *SqlRepository) UpdateIngestSource(ctx context.Context, src *domain.IngestSource) error {
 	src.UpdatedAt = time.Now()
-	query := `UPDATE ingest_sources SET name = $1, target_model = $2, api_url = $3, auth_type = $4, auth_credentials = $5, 
-	          sync_interval_seconds = $6, is_active = $7, last_sync_at = $8, last_success_at = $9, last_status = $10, 
-	          last_error = $11, next_sync_at = $12, last_etag = $13, last_payload_hash = $14, updated_at = $15 WHERE id = $16`
-	_, err := r.db.ExecContext(ctx, query, src.Name, src.TargetModel, src.APIURL, src.AuthType, src.AuthCredentials,
-		src.SyncIntervalSeconds, src.IsActive, src.LastSyncAt, src.LastSuccessAt, src.LastStatus,
-		src.LastError, src.NextSyncAt, src.LastETag, src.LastPayloadHash, src.UpdatedAt, src.ID)
+	query := `UPDATE ingest_sources SET name = $1, base_url = $2, auth_endpoint = $3, verify_endpoint = $4, refresh_endpoint = $5, auth_type = $6, auth_credentials = $7, 
+	          last_token = $8, refresh_token = $9, token_expiry = $10, sync_interval_seconds = $11, is_active = $12, updated_at = $13 WHERE id = $14`
+	_, err := r.db.ExecContext(ctx, query, src.Name, src.BaseURL, src.AuthEndpoint, src.VerifyEndpoint, src.RefreshEndpoint, src.AuthType, src.AuthCredentials,
+		src.LastToken, src.RefreshToken, src.TokenExpiry, src.SyncIntervalSeconds, src.IsActive, src.UpdatedAt, src.ID)
 	return err
 }
 
 func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
-	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
-	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at FROM ingest_sources ORDER BY name`
+	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, created_at, updated_at FROM ingest_sources ORDER BY name`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -2124,8 +2120,7 @@ func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestS
 	var results []domain.IngestSource
 	for rows.Next() {
 		var s domain.IngestSource
-		if err := rows.Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
-			&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		results = append(results, s)
@@ -2134,27 +2129,18 @@ func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestS
 }
 
 func (r *SqlRepository) GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error) {
-	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
-	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at FROM ingest_sources WHERE id = $1`
+	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, created_at, updated_at FROM ingest_sources WHERE id = $1`
 	var s domain.IngestSource
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
-		&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	// Fetch mappings
-	mRows, err := r.db.QueryContext(ctx, `SELECT id, source_id, json_path, target_field, is_identity, created_at FROM ingest_mappings WHERE source_id = $1`, id)
+	eps, err := r.ListIngestEndpoints(ctx, id)
 	if err == nil {
-		defer mRows.Close()
-		for mRows.Next() {
-			var m domain.IngestMapping
-			if err := mRows.Scan(&m.ID, &m.SourceID, &m.JSONPath, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
-				s.Mappings = append(s.Mappings, m)
-			}
-		}
+		s.Endpoints = eps
 	}
 	return &s, nil
 }
@@ -2164,20 +2150,101 @@ func (r *SqlRepository) DeleteIngestSource(ctx context.Context, id int64) error 
 	return err
 }
 
-func (r *SqlRepository) SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error {
+func (r *SqlRepository) CreateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
+	ep.CreatedAt = time.Now()
+	ep.UpdatedAt = time.Now()
+	query := `INSERT INTO ingest_endpoints (source_id, path, method, request_body, resp_strategy, is_active, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, ep.SourceID, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.IsActive, ep.CreatedAt, ep.UpdatedAt).Scan(&ep.ID)
+}
+
+func (r *SqlRepository) GetIngestEndpoint(ctx context.Context, id int64) (*domain.IngestEndpoint, error) {
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, last_etag, last_payload_hash, created_at, updated_at 
+	          FROM ingest_endpoints WHERE id = $1`
+	var ep domain.IngestEndpoint
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
+		&ep.LastSyncAt, &ep.LastSuccessAt, &ep.LastETag, &ep.LastPayloadHash, &ep.CreatedAt, &ep.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	// Fetch mappings
+	mQuery := `SELECT id, endpoint_id, json_path, target_model, target_field, is_identity, created_at FROM ingest_mappings WHERE endpoint_id = $1`
+	mRows, err := r.db.QueryContext(ctx, mQuery, ep.ID)
+	if err == nil {
+		defer mRows.Close()
+		for mRows.Next() {
+			var m domain.IngestMapping
+			if err := mRows.Scan(&m.ID, &m.EndpointID, &m.JSONPath, &m.TargetModel, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
+				ep.Mappings = append(ep.Mappings, m)
+			}
+		}
+	}
+	return &ep, nil
+}
+
+func (r *SqlRepository) UpdateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
+	ep.UpdatedAt = time.Now()
+	query := `UPDATE ingest_endpoints SET path = $1, method = $2, request_body = $3, resp_strategy = $4, is_active = $5, 
+	          last_sync_at = $6, last_success_at = $7, last_etag = $8, last_payload_hash = $9, updated_at = $10 WHERE id = $11`
+	_, err := r.db.ExecContext(ctx, query, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.IsActive,
+		ep.LastSyncAt, ep.LastSuccessAt, ep.LastETag, ep.LastPayloadHash, ep.UpdatedAt, ep.ID)
+	return err
+}
+
+func (r *SqlRepository) DeleteIngestEndpoint(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM ingest_endpoints WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) ListIngestEndpoints(ctx context.Context, sourceID int64) ([]domain.IngestEndpoint, error) {
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, last_etag, last_payload_hash, created_at, updated_at 
+	          FROM ingest_endpoints WHERE source_id = $1 ORDER BY path`
+	rows, err := r.db.QueryContext(ctx, query, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.IngestEndpoint
+	for rows.Next() {
+		var ep domain.IngestEndpoint
+		if err := rows.Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
+			&ep.LastSyncAt, &ep.LastSuccessAt, &ep.LastETag, &ep.LastPayloadHash, &ep.CreatedAt, &ep.UpdatedAt); err != nil {
+			return nil, err
+		}
+		mQuery := `SELECT id, endpoint_id, json_path, target_model, target_field, is_identity, created_at FROM ingest_mappings WHERE endpoint_id = $1`
+		mRows, err := r.db.QueryContext(ctx, mQuery, ep.ID)
+		if err == nil {
+			for mRows.Next() {
+				var m domain.IngestMapping
+				if err := mRows.Scan(&m.ID, &m.EndpointID, &m.JSONPath, &m.TargetModel, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
+					ep.Mappings = append(ep.Mappings, m)
+				}
+			}
+			mRows.Close()
+		}
+		results = append(results, ep)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) SetEndpointMappings(ctx context.Context, endpointID int64, mappings []domain.IngestMapping) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	_, err = tx.ExecContext(ctx, "DELETE FROM ingest_mappings WHERE source_id = $1", sourceID)
+	_, err = tx.ExecContext(ctx, "DELETE FROM ingest_mappings WHERE endpoint_id = $1", endpointID)
 	if err != nil {
 		return err
 	}
 
 	for _, m := range mappings {
-		_, err = tx.ExecContext(ctx, "INSERT INTO ingest_mappings (source_id, json_path, target_field, is_identity) VALUES ($1, $2, $3, $4)", sourceID, m.JSONPath, m.TargetField, m.IsIdentity)
+		_, err = tx.ExecContext(ctx, "INSERT INTO ingest_mappings (endpoint_id, json_path, target_model, target_field, is_identity) VALUES ($1, $2, $3, $4, $5)",
+			endpointID, m.JSONPath, m.TargetModel, m.TargetField, m.IsIdentity)
 		if err != nil {
 			return err
 		}
@@ -2186,10 +2253,9 @@ func (r *SqlRepository) SetIngestMappings(ctx context.Context, sourceID int64, m
 }
 
 func (r *SqlRepository) GetPendingIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
-	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
-	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at 
-	          FROM ingest_sources WHERE is_active = TRUE AND (next_sync_at IS NULL OR next_sync_at <= $1)`
-	rows, err := r.db.QueryContext(ctx, query, time.Now())
+	query := `SELECT id, name, base_url, auth_endpoint, auth_type, auth_credentials, last_token, token_expiry, sync_interval_seconds, is_active, created_at, updated_at 
+	          FROM ingest_sources WHERE is_active = TRUE`
+	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -2197,20 +2263,12 @@ func (r *SqlRepository) GetPendingIngestSources(ctx context.Context) ([]domain.I
 	var results []domain.IngestSource
 	for rows.Next() {
 		var s domain.IngestSource
-		if err := rows.Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
-			&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
-		// Fetch mappings for each
-		mRows, err := r.db.QueryContext(ctx, `SELECT id, source_id, json_path, target_field, is_identity, created_at FROM ingest_mappings WHERE source_id = $1`, s.ID)
+		eps, err := r.ListIngestEndpoints(ctx, s.ID)
 		if err == nil {
-			defer mRows.Close()
-			for mRows.Next() {
-				var m domain.IngestMapping
-				if err := mRows.Scan(&m.ID, &m.SourceID, &m.JSONPath, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
-					s.Mappings = append(s.Mappings, m)
-				}
-			}
+			s.Endpoints = eps
 		}
 		results = append(results, s)
 	}

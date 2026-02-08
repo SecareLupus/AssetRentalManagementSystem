@@ -142,7 +142,7 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/v1/admin/ingest/preview", h.PreviewSource)
+	mux.HandleFunc("/v1/admin/ingest/test-auth", h.TestAuth)
 	mux.HandleFunc("/v1/admin/ingest/sources", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -154,14 +154,6 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 	mux.HandleFunc("/v1/admin/ingest/sources/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/mappings") {
-			if r.Method == http.MethodPost {
-				h.SetIngestMappings(w, r)
-				return
-			}
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
 		if strings.HasSuffix(r.URL.Path, "/sync") {
 			if r.Method == http.MethodPost {
 				h.SyncSourceNow(w, r)
@@ -178,6 +170,40 @@ func NewRouter(h *Handler) http.Handler {
 			h.UpdateIngestSource(w, r)
 		case http.MethodDelete:
 			h.DeleteIngestSource(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/admin/ingest/endpoints", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			h.CreateIngestEndpoint(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/admin/ingest/endpoints/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/mappings") {
+			if r.Method == http.MethodPost {
+				h.SetEndpointMappings(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/discovery") {
+			if r.Method == http.MethodGet {
+				h.Discovery(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodPut:
+			h.UpdateIngestEndpoint(w, r)
+		case http.MethodDelete:
+			h.DeleteIngestEndpoint(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}

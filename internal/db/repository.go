@@ -134,8 +134,15 @@ type Repository interface {
 	ListIngestSources(ctx context.Context) ([]domain.IngestSource, error)
 	GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error)
 	DeleteIngestSource(ctx context.Context, id int64) error
-	SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error
 	GetPendingIngestSources(ctx context.Context) ([]domain.IngestSource, error)
+
+	// Endpoints
+	CreateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error
+	GetIngestEndpoint(ctx context.Context, id int64) (*domain.IngestEndpoint, error)
+	UpdateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error
+	DeleteIngestEndpoint(ctx context.Context, id int64) error
+	ListIngestEndpoints(ctx context.Context, sourceID int64) ([]domain.IngestEndpoint, error)
+	SetEndpointMappings(ctx context.Context, endpointID int64, mappings []domain.IngestMapping) error
 
 	UpsertItemType(ctx context.Context, it *domain.ItemType) error
 	UpsertAsset(ctx context.Context, a *domain.Asset) error
