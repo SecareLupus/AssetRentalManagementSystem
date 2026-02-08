@@ -128,6 +128,21 @@ type Repository interface {
 	GetShortageAlerts(ctx context.Context) ([]domain.ShortageAlert, error)
 	GetMaintenanceForecast(ctx context.Context) ([]domain.MaintenanceForecast, error)
 
+	// Ingest Engine
+	CreateIngestSource(ctx context.Context, src *domain.IngestSource) error
+	UpdateIngestSource(ctx context.Context, src *domain.IngestSource) error
+	ListIngestSources(ctx context.Context) ([]domain.IngestSource, error)
+	GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error)
+	DeleteIngestSource(ctx context.Context, id int64) error
+	SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error
+	GetPendingIngestSources(ctx context.Context) ([]domain.IngestSource, error)
+
+	UpsertItemType(ctx context.Context, it *domain.ItemType) error
+	UpsertAsset(ctx context.Context, a *domain.Asset) error
+	UpsertCompany(ctx context.Context, c *domain.Company) error
+	UpsertPerson(ctx context.Context, p *domain.Person) error
+	UpsertPlace(ctx context.Context, p *domain.Place) error
+
 	// Outbox / Webhooks
 	AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)

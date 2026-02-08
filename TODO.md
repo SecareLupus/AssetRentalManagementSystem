@@ -1,42 +1,28 @@
-# Rental Management System - Milestone VII Roadmap
+# Rental Management System - Milestone VIII Roadmap
 
-This milestone focuses on cleaning up temporary assumptions, fleshing out our interaction models, and cleaning up the UI for presentation.
+This milestone focuses on integration with outside sources of truth, enabling the system to sync with enterprise tools, identity providers, and logistics partners.
 
-## Phase 27: System Stability & Stats Alignment
-Goal: Resolve critical 500 errors and align dashboard statistics with modernized logistics models.
+## Phase 31: External Identity & User Preferences
+Goal: Modernize user management with self-service preferences and support for corporate SSO.
 
-- [x] **Fix Places API**: Handle NULL `presumed_demands` in `sql_repository.go` to resolve 500 errors.
-- [x] **Modernize Dashboard Stats**: Update `GetDashboardStats` to use `rental_reservations` and `check_out_actions` instead of legacy `rent_actions`.
-- [x] **Scorecard Grid**: Refactor Dashboard UI to a consistent 2x3 grid layout.
-- [x] **Fleet Reports Routing**: Fix routing to prevent blank pages when accessing reports.
+- [ ] **Individual User Preferences**: Implement a dedicated page for personal user settings (Timezone, Notifications, Profile).
+- [ ] **OIDC/SAML Provider Integration**: Research and implement support for external identity providers (e.g., Okta, Google Workspace).
 
-## Phase 28: Asset Identity & Lifecycle
-Goal: Refine how assets are identified, tracked, and initialized.
+## Phase 32: Enterprise ERP & Inventory Sync
+Goal: Connect internal inventory with external enterprise resource planning systems.
 
-- [x] **Identifying Codes Review**: Audit SKUs, serial numbers, and product codes to prevent conflation.
-- [x] **Component Tracking**: Implement logic for tracking internal component serial numbers during refurbishment.
-- [x] **Default Internal Location**: Establish a "Default Internal Location" and assign it to any asset created without a location.
-- [x] **Conditional UI Fields**: Hide/show fields (like serial numbers) in the UI based on Item Type `supported_features`.
+- [ ] **ERP Integration Layer**: Create a generic connector for syncing assets and item types with outside ERP systems.
+- [ ] **Multi-Facility Synchronization**: Global inventory visibility across geographically distributed sites.
 
-## Phase 29: Entity Management & Optimization
-Goal: Fix broken UI links and improve data entry workflows for personnel and templates.
+## Phase 33: Logistics & 3PL Integration
+Goal: Automate shipping and dispatch with third-party logistics partners.
 
-- [x] **Location Dropdown Fix**: Ensure the Asset creation dropdown correctly populates from the Places API.
-- [x] **Personnel Edit Fix**: Resolve issues with the Personnel edit page failing to load/save email, phone, and role.
-- [x] **View Profile Implementation**: Flesh out the "View Profile" link for Personnel.
-- [x] **Inspection Template Polish**: Fix the template edit page and implement a way to assign templates to Item Types.
-
-### Phase 30: System Admin & IAM [DONE]
-- [x] User Management (Update Role, Enable/Disable, Delete)
-- [x] Global System Settings (Identity, Logistics, Feature Flags)
-- [x] Resolved: Catalog "View Details" navigation and inspection sync bugs
-- [ ] Individual User Preferences (Timezone, Notifications) [TODO]
+- [ ] **3PL Dispatch automation**: Connect with shipping partners (UPS/FedEx/DHL) for automated label generation and dispatch.
+- [ ] **Real-time Transit Tracking**: Sync shipment statuses into the Reservation / Dispatch UI.
 
 ## Future Plans
 
-- [ ] **Multi-Facility Synchronization**: Global inventory visibility across geographically distributed sites.
 - [ ] **AI-Driven Logistics**: Predictive maintenance and automated reordering based on utilization trends.
-- [ ] **Third-Party Logistics (3PL) Integration**: Connect with shipping partners for automated dispatch.
 - [ ] **MQTT Command Ingest**: Allow MQTT-connected clients to submit `RentAction` requests or control devices directly.
 - [ ] **Mobile Technical Persona**: Native-like mobile experience for technicians performing inspections on-site.
 - [ ] **Offline Mode**: Support for `RentAction` creation and `Kiosk` scanning in low-connectivity environments.

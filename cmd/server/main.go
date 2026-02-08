@@ -139,6 +139,9 @@ func main() {
 	healthWorker := worker.NewHealthWorker(repo, mqttClient, registry)
 	go healthWorker.Start(context.Background(), 1*time.Minute)
 
+	ingestWorker := worker.NewIngestWorker(repo)
+	go ingestWorker.Start(context.Background(), 1*time.Minute)
+
 	handler := api.NewHandler(repo, registry)
 	router := api.NewRouter(handler)
 

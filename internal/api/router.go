@@ -142,6 +142,46 @@ func NewRouter(h *Handler) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+	mux.HandleFunc("/v1/admin/ingest/preview", h.PreviewSource)
+	mux.HandleFunc("/v1/admin/ingest/sources", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.ListIngestSources(w, r)
+		case http.MethodPost:
+			h.CreateIngestSource(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/admin/ingest/sources/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/mappings") {
+			if r.Method == http.MethodPost {
+				h.SetIngestMappings(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/sync") {
+			if r.Method == http.MethodPost {
+				h.SyncSourceNow(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			h.GetIngestSource(w, r)
+		case http.MethodPut:
+			h.UpdateIngestSource(w, r)
+		case http.MethodDelete:
+			h.DeleteIngestSource(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 	mux.HandleFunc("/v1/admin/settings", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

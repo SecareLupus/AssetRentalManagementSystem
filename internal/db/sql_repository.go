@@ -2090,3 +2090,209 @@ func (r *SqlRepository) GetDefaultInternalPlace(ctx context.Context) (*domain.Pl
 	err = r.CreatePlace(ctx, &p)
 	return &p, err
 }
+
+// Ingest Engine
+
+func (r *SqlRepository) CreateIngestSource(ctx context.Context, src *domain.IngestSource) error {
+	now := time.Now()
+	src.CreatedAt = now
+	src.UpdatedAt = now
+	query := `INSERT INTO ingest_sources (name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, src.Name, src.TargetModel, src.APIURL, src.AuthType, src.AuthCredentials, src.SyncIntervalSeconds, src.IsActive, src.CreatedAt, src.UpdatedAt).Scan(&src.ID)
+}
+
+func (r *SqlRepository) UpdateIngestSource(ctx context.Context, src *domain.IngestSource) error {
+	src.UpdatedAt = time.Now()
+	query := `UPDATE ingest_sources SET name = $1, target_model = $2, api_url = $3, auth_type = $4, auth_credentials = $5, 
+	          sync_interval_seconds = $6, is_active = $7, last_sync_at = $8, last_success_at = $9, last_status = $10, 
+	          last_error = $11, next_sync_at = $12, last_etag = $13, last_payload_hash = $14, updated_at = $15 WHERE id = $16`
+	_, err := r.db.ExecContext(ctx, query, src.Name, src.TargetModel, src.APIURL, src.AuthType, src.AuthCredentials,
+		src.SyncIntervalSeconds, src.IsActive, src.LastSyncAt, src.LastSuccessAt, src.LastStatus,
+		src.LastError, src.NextSyncAt, src.LastETag, src.LastPayloadHash, src.UpdatedAt, src.ID)
+	return err
+}
+
+func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
+	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
+	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at FROM ingest_sources ORDER BY name`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.IngestSource
+	for rows.Next() {
+		var s domain.IngestSource
+		if err := rows.Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
+			&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, s)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error) {
+	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
+	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at FROM ingest_sources WHERE id = $1`
+	var s domain.IngestSource
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
+		&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	// Fetch mappings
+	mRows, err := r.db.QueryContext(ctx, `SELECT id, source_id, json_path, target_field, is_identity, created_at FROM ingest_mappings WHERE source_id = $1`, id)
+	if err == nil {
+		defer mRows.Close()
+		for mRows.Next() {
+			var m domain.IngestMapping
+			if err := mRows.Scan(&m.ID, &m.SourceID, &m.JSONPath, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
+				s.Mappings = append(s.Mappings, m)
+			}
+		}
+	}
+	return &s, nil
+}
+
+func (r *SqlRepository) DeleteIngestSource(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM ingest_sources WHERE id = $1", id)
+	return err
+}
+
+func (r *SqlRepository) SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM ingest_mappings WHERE source_id = $1", sourceID)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mappings {
+		_, err = tx.ExecContext(ctx, "INSERT INTO ingest_mappings (source_id, json_path, target_field, is_identity) VALUES ($1, $2, $3, $4)", sourceID, m.JSONPath, m.TargetField, m.IsIdentity)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *SqlRepository) GetPendingIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
+	query := `SELECT id, name, target_model, api_url, auth_type, auth_credentials, sync_interval_seconds, is_active, 
+	          last_sync_at, last_success_at, last_status, last_error, next_sync_at, last_etag, last_payload_hash, created_at, updated_at 
+	          FROM ingest_sources WHERE is_active = TRUE AND (next_sync_at IS NULL OR next_sync_at <= $1)`
+	rows, err := r.db.QueryContext(ctx, query, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.IngestSource
+	for rows.Next() {
+		var s domain.IngestSource
+		if err := rows.Scan(&s.ID, &s.Name, &s.TargetModel, &s.APIURL, &s.AuthType, &s.AuthCredentials, &s.SyncIntervalSeconds, &s.IsActive,
+			&s.LastSyncAt, &s.LastSuccessAt, &s.LastStatus, &s.LastError, &s.NextSyncAt, &s.LastETag, &s.LastPayloadHash, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		// Fetch mappings for each
+		mRows, err := r.db.QueryContext(ctx, `SELECT id, source_id, json_path, target_field, is_identity, created_at FROM ingest_mappings WHERE source_id = $1`, s.ID)
+		if err == nil {
+			defer mRows.Close()
+			for mRows.Next() {
+				var m domain.IngestMapping
+				if err := mRows.Scan(&m.ID, &m.SourceID, &m.JSONPath, &m.TargetField, &m.IsIdentity, &m.CreatedAt); err == nil {
+					s.Mappings = append(s.Mappings, m)
+				}
+			}
+		}
+		results = append(results, s)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpsertItemType(ctx context.Context, it *domain.ItemType) error {
+	query := `INSERT INTO item_types (code, name, kind, is_active, supported_features, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	          ON CONFLICT (code) DO UPDATE SET
+	            name = EXCLUDED.name,
+	            kind = EXCLUDED.kind,
+	            is_active = EXCLUDED.is_active,
+	            supported_features = EXCLUDED.supported_features,
+	            updated_at = NOW()
+	          RETURNING id`
+	features, _ := json.Marshal(it.SupportedFeatures)
+	return r.db.QueryRowContext(ctx, query, it.Code, it.Name, it.Kind, it.IsActive, features).Scan(&it.ID)
+}
+
+func (r *SqlRepository) UpsertAsset(ctx context.Context, a *domain.Asset) error {
+	// Identity based on AssetTag (if present) or SerialNumber
+	var query string
+	var args []interface{}
+	if a.AssetTag != nil && *a.AssetTag != "" {
+		query = `INSERT INTO assets (item_type_id, asset_tag, serial_number, status, place_id, updated_at)
+		          VALUES ($1, $2, $3, $4, $5, NOW())
+		          ON CONFLICT (asset_tag) DO UPDATE SET
+		            item_type_id = EXCLUDED.item_type_id,
+		            serial_number = EXCLUDED.serial_number,
+		            status = EXCLUDED.status,
+		            place_id = EXCLUDED.place_id,
+		            updated_at = NOW()
+		          RETURNING id`
+		args = []interface{}{a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID}
+	} else if a.SerialNumber != nil && *a.SerialNumber != "" {
+		query = `INSERT INTO assets (item_type_id, asset_tag, serial_number, status, place_id, updated_at)
+		          VALUES ($1, $2, $3, $4, $5, NOW())
+		          ON CONFLICT (serial_number) DO UPDATE SET
+		            item_type_id = EXCLUDED.item_type_id,
+		            asset_tag = EXCLUDED.asset_tag,
+		            status = EXCLUDED.status,
+		            place_id = EXCLUDED.place_id,
+		            updated_at = NOW()
+		          RETURNING id`
+		args = []interface{}{a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID}
+	} else {
+		return fmt.Errorf("asset must have asset_tag or serial_number for upsert")
+	}
+	return r.db.QueryRowContext(ctx, query, args...).Scan(&a.ID)
+}
+
+func (r *SqlRepository) UpsertCompany(ctx context.Context, c *domain.Company) error {
+	query := `INSERT INTO companies (name, legal_name, description, updated_at)
+	          VALUES ($1, $2, $3, NOW())
+	          ON CONFLICT (name) DO UPDATE SET
+	            legal_name = EXCLUDED.legal_name,
+	            description = EXCLUDED.description,
+	            updated_at = NOW()
+	          RETURNING id`
+	return r.db.QueryRowContext(ctx, query, c.Name, c.LegalName, c.Description).Scan(&c.ID)
+}
+
+func (r *SqlRepository) UpsertPerson(ctx context.Context, p *domain.Person) error {
+	// Identity is tricky for Person. We'll assume GivenName + FamilyName + CompanyID for now.
+	// In 000009_entity_management.sql we should check for unique constraints.
+	query := `INSERT INTO people (given_name, family_name, company_id, updated_at)
+	          VALUES ($1, $2, $3, NOW())
+	          ON CONFLICT (given_name, family_name, company_id) DO UPDATE SET
+	            updated_at = NOW()
+	          RETURNING id`
+	return r.db.QueryRowContext(ctx, query, p.GivenName, p.FamilyName, p.CompanyID).Scan(&p.ID)
+}
+
+func (r *SqlRepository) UpsertPlace(ctx context.Context, p *domain.Place) error {
+	query := `INSERT INTO places (name, description, category, is_internal, updated_at)
+	          VALUES ($1, $2, $3, $4, NOW())
+	          ON CONFLICT (name) DO UPDATE SET
+	            description = EXCLUDED.description,
+	            category = EXCLUDED.category,
+	            is_internal = EXCLUDED.is_internal,
+	            updated_at = NOW()
+	          RETURNING id`
+	return r.db.QueryRowContext(ctx, query, p.Name, p.Description, p.Category, p.IsInternal).Scan(&p.ID)
+}

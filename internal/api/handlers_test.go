@@ -502,3 +502,80 @@ func (m *MockRepository) UpdateSetting(ctx context.Context, key string, value js
 	args := m.Called(ctx, key, value)
 	return args.Error(0)
 }
+
+func (m *MockRepository) GetDefaultInternalPlace(ctx context.Context) (*domain.Place, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Place), args.Error(1)
+}
+
+func (m *MockRepository) CreateIngestSource(ctx context.Context, src *domain.IngestSource) error {
+	args := m.Called(ctx, src)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateIngestSource(ctx context.Context, src *domain.IngestSource) error {
+	args := m.Called(ctx, src)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.IngestSource), args.Error(1)
+}
+
+func (m *MockRepository) GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.IngestSource), args.Error(1)
+}
+
+func (m *MockRepository) DeleteIngestSource(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) SetIngestMappings(ctx context.Context, sourceID int64, mappings []domain.IngestMapping) error {
+	args := m.Called(ctx, sourceID, mappings)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetPendingIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.IngestSource), args.Error(1)
+}
+
+func (m *MockRepository) UpsertItemType(ctx context.Context, it *domain.ItemType) error {
+	args := m.Called(ctx, it)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpsertAsset(ctx context.Context, a *domain.Asset) error {
+	args := m.Called(ctx, a)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpsertCompany(ctx context.Context, c *domain.Company) error {
+	args := m.Called(ctx, c)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpsertPerson(ctx context.Context, p *domain.Person) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpsertPlace(ctx context.Context, p *domain.Place) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter, Trash2, Users, Settings, Mail, Globe, Save, Lock, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter, Trash2, Users, Settings, Mail, Globe, Save, Lock, ToggleLeft, ToggleRight, Database } from 'lucide-react';
 import { GlassCard } from '../components/Shared';
+import IngestManager from '../components/Admin/IngestManager';
 
 const AdminCenter = () => {
-    const [activeTab, setActiveTab] = useState('recall'); // 'recall' | 'recon'
+    const [activeTab, setActiveTab] = useState('recall'); // 'recall' | 'recon' | 'inspections' | 'users' | 'settings' | 'ingest'
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
 
@@ -180,8 +181,15 @@ const AdminCenter = () => {
                 <TabButton active={activeTab === 'recon'} onClick={() => setActiveTab('recon')} icon={ClipboardCheck} label="Inventory Recon" />
                 <TabButton active={activeTab === 'inspections'} onClick={() => setActiveTab('inspections')} icon={ClipboardCheck} label="Inspection Templates" />
                 <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={Users} label="Users" />
+                <TabButton active={activeTab === 'ingest'} onClick={() => setActiveTab('ingest')} icon={Database} label="Data Ingestion" />
                 <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={Settings} label="Global Settings" />
             </div>
+
+            {activeTab === 'ingest' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4">
+                    <IngestManager />
+                </div>
+            )}
 
             {message && (
                 <div className="glass" style={{ padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', gap: '0.5rem', alignItems: 'center', color: message.type === 'error' ? 'var(--error)' : 'var(--success)', background: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}>
