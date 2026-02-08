@@ -5,18 +5,18 @@ This milestone focuses on cleaning up temporary assumptions, fleshing out our in
 ## Phase 27: System Stability & Stats Alignment
 Goal: Resolve critical 500 errors and align dashboard statistics with modernized logistics models.
 
-- [ ] **Fix Places API**: Handle NULL `presumed_demands` in `sql_repository.go` to resolve 500 errors.
-- [ ] **Modernize Dashboard Stats**: Update `GetDashboardStats` to use `rental_reservations` and `check_out_actions` instead of legacy `rent_actions`.
-- [ ] **Scorecard Grid**: Refactor Dashboard UI to a consistent 2x3 grid layout.
-- [ ] **Fleet Reports Routing**: Fix routing to prevent blank pages when accessing reports.
+- [x] **Fix Places API**: Handle NULL `presumed_demands` in `sql_repository.go` to resolve 500 errors.
+- [x] **Modernize Dashboard Stats**: Update `GetDashboardStats` to use `rental_reservations` and `check_out_actions` instead of legacy `rent_actions`.
+- [x] **Scorecard Grid**: Refactor Dashboard UI to a consistent 2x3 grid layout.
+- [x] **Fleet Reports Routing**: Fix routing to prevent blank pages when accessing reports.
 
 ## Phase 28: Asset Identity & Lifecycle
 Goal: Refine how assets are identified, tracked, and initialized.
 
-- [ ] **Identifying Codes Review**: Audit SKUs, serial numbers, and product codes to prevent conflation.
-- [ ] **Component Tracking**: Implement logic for tracking internal component serial numbers during refurbishment.
-- [ ] **Default Internal Location**: Establish a "Default Internal Location" and assign it to any asset created without a location.
-- [ ] **Conditional UI Fields**: Hide/show fields (like serial numbers) in the UI based on Item Type `supported_features`.
+- [x] **Identifying Codes Review**: Audit SKUs, serial numbers, and product codes to prevent conflation.
+- [x] **Component Tracking**: Implement logic for tracking internal component serial numbers during refurbishment.
+- [x] **Default Internal Location**: Establish a "Default Internal Location" and assign it to any asset created without a location.
+- [x] **Conditional UI Fields**: Hide/show fields (like serial numbers) in the UI based on Item Type `supported_features`.
 
 ## Phase 29: Entity Management & Optimization
 Goal: Fix broken UI links and improve data entry workflows for personnel and templates.
