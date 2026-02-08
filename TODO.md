@@ -21,10 +21,10 @@ Goal: Refine how assets are identified, tracked, and initialized.
 ## Phase 29: Entity Management & Optimization
 Goal: Fix broken UI links and improve data entry workflows for personnel and templates.
 
-- [ ] **Location Dropdown Fix**: Ensure the Asset creation dropdown correctly populates from the Places API.
-- [ ] **Personnel Edit Fix**: Resolve issues with the Personnel edit page failing to load/save email, phone, and role.
-- [ ] **View Profile Implementation**: Flesh out the "View Profile" link for Personnel.
-- [ ] **Inspection Template Polish**: Fix the template edit page and implement a way to assign templates to Item Types.
+- [x] **Location Dropdown Fix**: Ensure the Asset creation dropdown correctly populates from the Places API.
+- [x] **Personnel Edit Fix**: Resolve issues with the Personnel edit page failing to load/save email, phone, and role.
+- [x] **View Profile Implementation**: Flesh out the "View Profile" link for Personnel.
+- [x] **Inspection Template Polish**: Fix the template edit page and implement a way to assign templates to Item Types.
 
 ## Phase 30: System Admin & IAM
 Goal: Provide UI-driven management for users, roles, and global settings.
