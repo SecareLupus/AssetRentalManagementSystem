@@ -6,6 +6,7 @@ import { ArrowLeft, Cpu, Wifi, Activity, History, Wrench, ShieldCheck, MapPin, G
 const AssetDetails = () => {
     const { id } = useParams();
     const [asset, setAsset] = useState(null);
+    const [itemType, setItemType] = useState(null);
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -14,6 +15,12 @@ const AssetDetails = () => {
             try {
                 const assetRes = await axios.get(`/v1/inventory/assets/${id}`);
                 setAsset(assetRes.data);
+
+                // Phase 28: Fetch item type for kind/features
+                if (assetRes.data.item_type_id) {
+                    const itemRes = await axios.get(`/v1/catalog/item-types/${assetRes.data.item_type_id}`);
+                    setItemType(itemRes.data);
+                }
 
                 // Use the maintenance logs endpoint
                 const logsRes = await axios.get(`/v1/inventory/assets/${id}/maintenance-logs`);
@@ -45,6 +52,9 @@ const AssetDetails = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MapPin size={14} /> {asset.location || 'Warehouse A'}</span>
+                            {itemType?.kind !== 'fungible' && asset.serial_number && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>SN: {asset.serial_number}</span>
+                            )}
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><ShieldCheck size={14} /> ID: {asset.id}</span>
                         </div>
                     </header>
@@ -58,6 +68,22 @@ const AssetDetails = () => {
                             <SpecBox icon={Activity} label="Health" value="Optimal" />
                         </div>
                     </section>
+
+                    {asset.components && asset.components.length > 0 && (
+                        <section style={{ marginBottom: '3rem' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem' }}>Internal Components</h3>
+                            <div className="glass" style={{ borderRadius: '1rem', padding: '1rem' }}>
+                                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                    {asset.components.map((comp, idx) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', borderBottom: idx < asset.components.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                                            <span style={{ fontWeight: 600 }}>{comp.name}</span>
+                                            <code style={{ color: 'var(--primary)' }}>{comp.serial_number}</code>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     <section>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -101,26 +127,26 @@ const AssetDetails = () => {
                             <button onClick={() => alert("Inspection Templates not yet configured in backend.")} className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <ShieldCheck size={16} /> Manual Inspection
                             </button>
-                            
+
                             {asset.status !== 'maintenance' ? (
                                 <button onClick={async () => {
-                                    if(!window.confirm("Mark this asset for repair? It will be unavailable.")) return;
+                                    if (!window.confirm("Mark this asset for repair? It will be unavailable.")) return;
                                     try {
                                         await axios.post(`/v1/inventory/assets/${id}/repair`);
-                                        setAsset({...asset, status: 'maintenance'});
+                                        setAsset({ ...asset, status: 'maintenance' });
                                         alert("Asset marked for repair.");
-                                    } catch(e) { alert("Action failed: " + e.message); }
+                                    } catch (e) { alert("Action failed: " + e.message); }
                                 }} className="glass" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--warning)' }}>
                                     <Wrench size={16} /> Mark for Repair
                                 </button>
                             ) : (
                                 <button onClick={async () => {
-                                    if(!window.confirm("Mark this asset as Available?")) return;
+                                    if (!window.confirm("Mark this asset as Available?")) return;
                                     try {
                                         await axios.patch(`/v1/inventory/assets/${id}/status`, { status: "available" });
-                                        setAsset({...asset, status: 'available'});
+                                        setAsset({ ...asset, status: 'available' });
                                         alert("Asset marked as Available.");
-                                    } catch(e) { alert("Action failed: " + e.message); }
+                                    } catch (e) { alert("Action failed: " + e.message); }
                                 }} className="btn-primary" style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
                                     <Activity size={16} /> Return to Service
                                 </button>

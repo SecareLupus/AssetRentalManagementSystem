@@ -25,6 +25,13 @@ const (
 	ProvisioningReady         ProvisioningStatus = "ready"
 )
 
+// Component represents an internal component of an asset.
+type Component struct {
+	Name         string `json:"name"`
+	SerialNumber string `json:"serial_number"`
+	AssetTag     string `json:"asset_tag,omitempty"`
+}
+
 // Asset represents a specific physical item.
 // It maps to https://schema.org/IndividualProduct
 type Asset struct {
@@ -36,6 +43,8 @@ type Asset struct {
 	PlaceID      *int64      `json:"place_id,omitempty"` // Links to the recursive Place table
 	Location     *string     `json:"location,omitempty"` // Legacy/Human-readable location
 	AssignedTo   *string     `json:"assigned_to,omitempty"`
+
+	Components []Component `json:"components,omitempty"` // Phase 28: Refurbishment tracking
 
 	MeshNodeID        *string `json:"mesh_node_id,omitempty"`
 	WireguardHostname *string `json:"wireguard_hostname,omitempty"`

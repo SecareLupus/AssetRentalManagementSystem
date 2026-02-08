@@ -332,12 +332,14 @@ const ItemTypeDetails = () => {
                         <form onSubmit={handleAddAsset}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Asset Tag</label>
-                                <input value={assetForm.asset_tag} onChange={e => setAssetForm({ ...assetForm, asset_tag: e.target.value })} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                                <input value={assetForm.asset_tag} onChange={e => setAssetForm({ ...assetForm, asset_tag: e.target.value })} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} placeholder="System-wide unique identifier" />
                             </div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Serial Number</label>
-                                <input value={assetForm.serial_number} onChange={e => setAssetForm({ ...assetForm, serial_number: e.target.value })} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
-                            </div>
+                            {item.kind !== 'fungible' && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>Serial Number</label>
+                                    <input value={assetForm.serial_number} onChange={e => setAssetForm({ ...assetForm, serial_number: e.target.value })} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} placeholder="Manufacturer serial number" />
+                                </div>
+                            )}
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Initial Deployment Location</label>
                                 <select

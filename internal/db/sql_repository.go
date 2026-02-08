@@ -119,7 +119,7 @@ func (r *SqlRepository) DeleteItemType(ctx context.Context, id int64) error {
 
 // GetAssetByID retrieves a specific asset by its ID.
 func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Asset, error) {
-	query := `SELECT id, item_type_id, asset_tag, serial_number, status, location, assigned_to, mesh_node_id, wireguard_hostname, management_url,
+	query := `SELECT id, item_type_id, asset_tag, serial_number, status, place_id, location, assigned_to, mesh_node_id, wireguard_hostname, management_url,
 	                 build_spec_version, provisioning_status, firmware_version, hostname, remote_management_id, current_build_spec_id, last_inspection_at,
 	                 usage_hours, next_service_hours, created_by_user_id, updated_by_user_id, schema_org, metadata, created_at, updated_at 
 	          FROM assets WHERE id = $1`
@@ -127,17 +127,10 @@ func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Ass
 	var a domain.Asset
 	var schemaOrgJSON, metadataJSON []byte
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
+		&a.ID, &a.ItemTypeID, &a.AssetTag, &a.SerialNumber, &a.Status, &a.PlaceID, &a.Location, &a.AssignedTo, &a.MeshNodeID, &a.WireguardHostname, &a.ManagementURL,
 		&a.BuildSpecVersion, &a.ProvisioningStatus, &a.FirmwareVersion, &a.Hostname, &a.RemoteManagementID, &a.CurrentBuildSpecID, &a.LastInspectionAt,
 		&a.UsageHours, &a.NextServiceHours, &a.CreatedByUserID, &a.UpdatedByUserID, &schemaOrgJSON, &metadataJSON, &a.CreatedAt, &a.UpdatedAt,
 	)
-	if err == nil {
-		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
-		a.Metadata = json.RawMessage(metadataJSON)
-	}
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -146,6 +139,17 @@ func (r *SqlRepository) GetAssetByID(ctx context.Context, id int64) (*domain.Ass
 	}
 	a.SchemaOrg = json.RawMessage(schemaOrgJSON)
 	a.Metadata = json.RawMessage(metadataJSON)
+
+	// Phase 28: Extract components from Metadata
+	if len(a.Metadata) > 0 {
+		var meta struct {
+			Components []domain.Component `json:"components"`
+		}
+		if err := json.Unmarshal(a.Metadata, &meta); err == nil {
+			a.Components = meta.Components
+		}
+	}
+
 	return &a, nil
 }
 
@@ -155,6 +159,40 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 	a.CreatedAt = now
 	a.UpdatedAt = now
 
+	// Phase 28: Default Location Assignment
+	if a.PlaceID == nil {
+		place, err := r.GetDefaultInternalPlace(ctx)
+		if err != nil {
+			return fmt.Errorf("get default internal place: %w", err)
+		}
+		a.PlaceID = &place.ID
+	}
+
+	// Phase 28: Status inferred from location
+	place, err := r.GetPlace(ctx, *a.PlaceID)
+	if err != nil {
+		return fmt.Errorf("get place for status inference: %w", err)
+	}
+	if a.Status == "" {
+		if place.IsInternal {
+			a.Status = domain.AssetStatusAvailable
+		} else {
+			a.Status = domain.AssetStatusDeployed
+		}
+	}
+
+	// Phase 28: Components tracking stored in Metadata
+	if len(a.Components) > 0 {
+		var meta map[string]interface{}
+		if len(a.Metadata) > 0 {
+			json.Unmarshal(a.Metadata, &meta)
+		} else {
+			meta = make(map[string]interface{})
+		}
+		meta["components"] = a.Components
+		a.Metadata, _ = json.Marshal(meta)
+	}
+
 	query := `INSERT INTO assets (
 		item_type_id, asset_tag, serial_number, status, place_id, location, assigned_to, 
 		mesh_node_id, wireguard_hostname, management_url, build_spec_version, provisioning_status, 
@@ -162,7 +200,7 @@ func (r *SqlRepository) CreateAsset(ctx context.Context, a *domain.Asset) error 
 		usage_hours, next_service_hours, schema_org, metadata, created_by_user_id, created_at, updated_at
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`
 
-	err := r.db.QueryRowContext(ctx, query,
+	err = r.db.QueryRowContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID, a.Location, a.AssignedTo,
 		a.MeshNodeID, a.WireguardHostname, a.ManagementURL, a.BuildSpecVersion, a.ProvisioningStatus,
 		a.FirmwareVersion, a.Hostname, a.RemoteManagementID, a.CurrentBuildSpecID, a.LastInspectionAt,
@@ -200,6 +238,17 @@ func (r *SqlRepository) ListAssets(ctx context.Context) ([]domain.Asset, error) 
 		}
 		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
 		a.Metadata = json.RawMessage(metadataJSON)
+
+		// Phase 28: Extract components
+		if len(a.Metadata) > 0 {
+			var meta struct {
+				Components []domain.Component `json:"components"`
+			}
+			if err := json.Unmarshal(a.Metadata, &meta); err == nil {
+				a.Components = meta.Components
+			}
+		}
+
 		results = append(results, a)
 	}
 	return results, nil
@@ -231,6 +280,17 @@ func (r *SqlRepository) ListAssetsByItemType(ctx context.Context, itemTypeID int
 		}
 		a.SchemaOrg = json.RawMessage(schemaOrgJSON)
 		a.Metadata = json.RawMessage(metadataJSON)
+
+		// Phase 28: Extract components
+		if len(a.Metadata) > 0 {
+			var meta struct {
+				Components []domain.Component `json:"components"`
+			}
+			if err := json.Unmarshal(a.Metadata, &meta); err == nil {
+				a.Components = meta.Components
+			}
+		}
+
 		results = append(results, a)
 	}
 	return results, nil
@@ -247,6 +307,18 @@ func (r *SqlRepository) UpdateAsset(ctx context.Context, a *domain.Asset) error 
 		usage_hours = $18, next_service_hours = $19, updated_by_user_id = $20, schema_org = $21, 
 		metadata = $22, updated_at = $23
 		WHERE id = $24`
+
+	// Phase 28: Components tracking stored in Metadata
+	if len(a.Components) > 0 {
+		var meta map[string]interface{}
+		if len(a.Metadata) > 0 {
+			json.Unmarshal(a.Metadata, &meta)
+		} else {
+			meta = make(map[string]interface{})
+		}
+		meta["components"] = a.Components
+		a.Metadata, _ = json.Marshal(meta)
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		a.ItemTypeID, a.AssetTag, a.SerialNumber, a.Status, a.PlaceID, a.Location, a.AssignedTo,
@@ -1882,4 +1954,38 @@ func (r *SqlRepository) DeleteCompany(ctx context.Context, id int64) error {
 func (r *SqlRepository) DeleteEvent(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, "DELETE FROM events WHERE id = $1", id)
 	return err
+}
+
+// GetDefaultInternalPlace returns the system default internal warehouse or creates one if it doesn't exist.
+func (r *SqlRepository) GetDefaultInternalPlace(ctx context.Context) (*domain.Place, error) {
+	// 1. Try to find an existing internal place named 'Main Warehouse'
+	var p domain.Place
+	var addrJSON, demandsJSON, metadataJSON []byte
+	query := `SELECT id, name, description, contained_in_place_id, owner_id, category, address, is_internal, presumed_demands, metadata, created_at, updated_at 
+	          FROM places WHERE is_internal = TRUE LIMIT 1`
+	err := r.db.QueryRowContext(ctx, query).Scan(
+		&p.ID, &p.Name, &p.Description, &p.ContainedInPlaceID, &p.OwnerID, &p.Category, &addrJSON, &p.IsInternal, &demandsJSON, &metadataJSON, &p.CreatedAt, &p.UpdatedAt,
+	)
+
+	if err == nil {
+		if len(addrJSON) > 0 {
+			json.Unmarshal(addrJSON, &p.Address)
+		}
+		p.PresumedDemands = json.RawMessage(demandsJSON)
+		p.Metadata = json.RawMessage(metadataJSON)
+		return &p, nil
+	}
+
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// 2. Not found, create a new default place
+	p = domain.Place{
+		Name:       "Main Warehouse",
+		IsInternal: true,
+		Category:   func(s string) *string { return &s }("site"),
+	}
+	err = r.CreatePlace(ctx, &p)
+	return &p, err
 }
