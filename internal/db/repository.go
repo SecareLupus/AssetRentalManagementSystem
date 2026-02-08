@@ -116,6 +116,12 @@ type Repository interface {
 	GetUserByID(ctx context.Context, id int64) (*domain.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
 	UpdateUser(ctx context.Context, u *domain.User) error
+	ListUsers(ctx context.Context) ([]domain.User, error)
+	DeleteUser(ctx context.Context, id int64) error
+
+	// System Settings
+	GetSettings(ctx context.Context) (map[string]json.RawMessage, error)
+	UpdateSetting(ctx context.Context, key string, value json.RawMessage) error
 
 	// Intelligence
 	GetAvailabilityTimeline(ctx context.Context, itemTypeID int64, start, end time.Time) ([]domain.AvailabilityPoint, error)

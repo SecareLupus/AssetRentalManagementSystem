@@ -476,3 +476,29 @@ func (m *MockRepository) BatchReturn(ctx context.Context, reservationID int64, a
 	args := m.Called(ctx, reservationID, assetIDs, agentID, toLocationID)
 	return args.Error(0)
 }
+
+func (m *MockRepository) ListUsers(ctx context.Context) ([]domain.User, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.User), args.Error(1)
+}
+
+func (m *MockRepository) DeleteUser(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetSettings(ctx context.Context) (map[string]json.RawMessage, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]json.RawMessage), args.Error(1)
+}
+
+func (m *MockRepository) UpdateSetting(ctx context.Context, key string, value json.RawMessage) error {
+	args := m.Called(ctx, key, value)
+	return args.Error(0)
+}

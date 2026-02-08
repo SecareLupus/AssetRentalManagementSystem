@@ -1347,6 +1347,55 @@ func (r *SqlRepository) UpdateUser(ctx context.Context, u *domain.User) error {
 	return nil
 }
 
+func (r *SqlRepository) ListUsers(ctx context.Context) ([]domain.User, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, username, email, role, is_enabled, last_login_at, created_at, updated_at FROM users ORDER BY username`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.User
+	for rows.Next() {
+		var u domain.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.IsEnabled, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, u)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) DeleteUser(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	return err
+}
+
+// System Settings
+
+func (r *SqlRepository) GetSettings(ctx context.Context) (map[string]json.RawMessage, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT key, value FROM system_settings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	results := make(map[string]json.RawMessage)
+	for rows.Next() {
+		var key string
+		var val json.RawMessage
+		if err := rows.Scan(&key, &val); err != nil {
+			return nil, err
+		}
+		results[key] = val
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateSetting(ctx context.Context, key string, value json.RawMessage) error {
+	query := `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, $3)
+	          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`
+	_, err := r.db.ExecContext(ctx, query, key, value, time.Now())
+	return err
+}
+
 // Outbox Implementation
 
 func (r *SqlRepository) AppendEvent(ctx context.Context, tx *sql.Tx, event *domain.OutboxEvent) error {

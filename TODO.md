@@ -29,9 +29,9 @@ Goal: Fix broken UI links and improve data entry workflows for personnel and tem
 ## Phase 30: System Admin & IAM
 Goal: Provide UI-driven management for users, roles, and global settings.
 
-- [ ] **User Settings Page**: Implement a dedicated page for individual user preferences.
-- [ ] **Server Admin Page**: Create an administrative interface for IAM (User/Directory management).
-- [ ] **Configurable Place Types**: Allow system-level configuration of place types and their data subsets.
+- [x] **User Management Interface**: Implement an administrative interface for IAM (User roles, status, and account management) in the Admin Center.
+- [x] **Global System Settings**: Create a centralized configuration system for company identity, logistics policies, and feature flags.
+- [ ] **Individual User Preferences**: Implement a dedicated page for personal user settings (Self-service/Profile).
 
 ## Future Plans
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter, Trash2 } from 'lucide-react';
+import { ShieldAlert, RefreshCw, ClipboardCheck, AlertTriangle, CheckCircle2, Package, Search, ListFilter, Trash2, Users, Settings, Mail, Globe, Save, Lock, ToggleLeft, ToggleRight } from 'lucide-react';
 import { GlassCard } from '../components/Shared';
 
 const AdminCenter = () => {
@@ -21,11 +21,25 @@ const AdminCenter = () => {
     // Inspection Templates State
     const [templates, setTemplates] = useState([]);
 
+    // User Management State
+    const [users, setUsers] = useState([]);
+
+    // Settings State
+    const [settings, setSettings] = useState({
+        company_identity: { name: '', logo_url: '', support_email: '' },
+        logistics_policies: { default_return_window_days: 14, late_fee_per_day: 0, currency: 'USD' },
+        feature_flags: { enable_auto_alerts: true, enable_ai_forecasting: false }
+    });
+
     useEffect(() => {
         if (activeTab === 'recall') {
             fetchRecallableItems();
         } else if (activeTab === 'inspections') {
             fetchTemplates();
+        } else if (activeTab === 'users') {
+            fetchUsers();
+        } else if (activeTab === 'settings') {
+            fetchSettings();
         }
     }, [activeTab]);
 
@@ -38,6 +52,64 @@ const AdminCenter = () => {
             setMessage({ type: 'error', text: 'Failed to fetch inspection templates.' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/v1/admin/users');
+            setUsers(res.data || []);
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to fetch users.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/v1/admin/settings');
+            // Merge into defaults
+            setSettings(prev => ({
+                ...prev,
+                ...res.data
+            }));
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to fetch system settings.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateUser = async (user) => {
+        try {
+            await axios.put(`/v1/admin/users/${user.id}`, user);
+            setMessage({ type: 'success', text: `User ${user.username} updated.` });
+            fetchUsers();
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to update user.' });
+        }
+    };
+
+    const handleDeleteUser = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this user?")) return;
+        try {
+            await axios.delete(`/v1/admin/users/${id}`);
+            setMessage({ type: 'success', text: 'User deleted.' });
+            fetchUsers();
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to delete user.' });
+        }
+    };
+
+    const handleSaveSetting = async (key, value) => {
+        try {
+            await axios.put('/v1/admin/settings', { key, value });
+            setMessage({ type: 'success', text: `${key.replace('_', ' ')} saved.` });
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to save setting.' });
         }
     };
 
@@ -103,11 +175,12 @@ const AdminCenter = () => {
                 <p style={{ color: 'var(--text-muted)' }}>Management of high-level fleet operations and data integrity.</p>
             </header>
 
-            {/* Tabs */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
                 <TabButton active={activeTab === 'recall'} onClick={() => setActiveTab('recall')} icon={RefreshCw} label="Bulk Recall" />
                 <TabButton active={activeTab === 'recon'} onClick={() => setActiveTab('recon')} icon={ClipboardCheck} label="Inventory Recon" />
                 <TabButton active={activeTab === 'inspections'} onClick={() => setActiveTab('inspections')} icon={ClipboardCheck} label="Inspection Templates" />
+                <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={Users} label="Users" />
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={Settings} label="Global Settings" />
             </div>
 
             {message && (
@@ -179,7 +252,7 @@ const AdminCenter = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Active Templates</h2>
                         <a href="/admin/inspections/new" className="btn-primary" style={{ textDecoration: 'none' }}>
-                             Create Template
+                            Create Template
                         </a>
                     </div>
 
@@ -188,7 +261,7 @@ const AdminCenter = () => {
                             <GlassCard key={t.id} style={{ padding: '1.5rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                     <h4 style={{ fontWeight: 800 }}>{t.name}</h4>
-                                    <button 
+                                    <button
                                         onClick={async () => {
                                             if (window.confirm("Delete this template?")) {
                                                 await axios.delete(`/v1/catalog/inspection-templates/${t.id}`);
@@ -213,6 +286,161 @@ const AdminCenter = () => {
                             No templates found. Click "Create Template" to get started.
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'users' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>User Accounts</h2>
+                        <button className="btn-primary" onClick={() => alert("Invite system not implemented. Use /register for now.")}>
+                            Manage Invites
+                        </button>
+                    </div>
+
+                    <div className="glass" style={{ borderRadius: '1rem', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                            <thead>
+                                <tr style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
+                                    <th style={{ padding: '1rem' }}>Username</th>
+                                    <th style={{ padding: '1rem' }}>Role</th>
+                                    <th style={{ padding: '1rem' }}>Status</th>
+                                    <th style={{ padding: '1rem' }}>Last Login</th>
+                                    <th style={{ padding: '1rem' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map(u => (
+                                    <tr key={u.id} style={{ borderTop: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontWeight: 600 }}>{u.username}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <select
+                                                className="glass"
+                                                style={{ padding: '0.25rem 0.5rem', borderRadius: '0.4rem', color: 'white', background: 'var(--surface)' }}
+                                                value={u.role}
+                                                onChange={(e) => handleUpdateUser({ ...u, role: e.target.value })}
+                                            >
+                                                <option value="admin">Admin</option>
+                                                <option value="fleet_manager">Fleet Manager</option>
+                                                <option value="technician">Technician</option>
+                                                <option value="viewer">Viewer</option>
+                                            </select>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <button
+                                                onClick={() => handleUpdateUser({ ...u, is_enabled: !u.is_enabled })}
+                                                style={{ background: 'transparent', display: 'flex', alignItems: 'center', gap: '0.5rem', color: u.is_enabled ? 'var(--success)' : 'var(--error)' }}
+                                            >
+                                                {u.is_enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                                                {u.is_enabled ? 'Enabled' : 'Disabled'}
+                                            </button>
+                                        </td>
+                                        <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                                            {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Never'}
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <button onClick={() => handleDeleteUser(u.id)} className="glass" style={{ padding: '0.4rem', borderRadius: '0.4rem', color: 'var(--error)' }}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'settings' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                    <GlassCard>
+                        <h3 style={{ fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Globe size={18} color="var(--primary)" /> Company Identity
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label className="form-label">Legal Name</label>
+                                <input
+                                    className="glass" style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                    value={settings.company_identity?.name || ''}
+                                    onChange={e => setSettings({ ...settings, company_identity: { ...settings.company_identity, name: e.target.value } })}
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Support Email</label>
+                                <input
+                                    className="glass" style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                    value={settings.company_identity?.support_email || ''}
+                                    onChange={e => setSettings({ ...settings, company_identity: { ...settings.company_identity, support_email: e.target.value } })}
+                                />
+                            </div>
+                            <button className="btn-primary" onClick={() => handleSaveSetting('company_identity', settings.company_identity)}>
+                                Save Identity
+                            </button>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard>
+                        <h3 style={{ fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Lock size={18} color="var(--primary)" /> Logistics Policies
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label className="form-label">Default Return Window (Days)</label>
+                                <input
+                                    type="number" className="glass" style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                    value={settings.logistics_policies?.default_return_window_days || 0}
+                                    onChange={e => setSettings({ ...settings, logistics_policies: { ...settings.logistics_policies, default_return_window_days: parseInt(e.target.value) } })}
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Currency Code</label>
+                                <input
+                                    className="glass" style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                    value={settings.logistics_policies?.currency || 'USD'}
+                                    onChange={e => setSettings({ ...settings, logistics_policies: { ...settings.logistics_policies, currency: e.target.value } })}
+                                />
+                            </div>
+                            <button className="btn-primary" onClick={() => handleSaveSetting('logistics_policies', settings.logistics_policies)}>
+                                Save Policies
+                            </button>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard>
+                        <h3 style={{ fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <ShieldAlert size={18} color="var(--primary)" /> Feature Flags
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '1.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.feature_flags?.enable_auto_alerts}
+                                    onChange={e => {
+                                        const newVal = { ...settings.feature_flags, enable_auto_alerts: e.target.checked };
+                                        setSettings({ ...settings, feature_flags: newVal });
+                                        handleSaveSetting('feature_flags', newVal);
+                                    }}
+                                />
+                                Auto Alerts
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.feature_flags?.enable_ai_forecasting}
+                                    onChange={e => {
+                                        const newVal = { ...settings.feature_flags, enable_ai_forecasting: e.target.checked };
+                                        setSettings({ ...settings, feature_flags: newVal });
+                                        handleSaveSetting('feature_flags', newVal);
+                                    }}
+                                />
+                                AI Forecasting
+                            </label>
+                        </div>
+                    </GlassCard>
                 </div>
             )}
 

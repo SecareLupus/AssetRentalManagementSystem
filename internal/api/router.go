@@ -124,6 +124,35 @@ func NewRouter(h *Handler) http.Handler {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	})
 
+	// Admin Handlers
+	mux.HandleFunc("/v1/admin/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			h.ListUsers(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/v1/admin/users/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			h.UpdateUser(w, r)
+		case http.MethodDelete:
+			h.DeleteUser(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/admin/settings", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetSettings(w, r)
+		case http.MethodPut:
+			h.UpdateSetting(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/inspections") {
 			if r.Method == http.MethodPost {
