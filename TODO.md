@@ -26,12 +26,11 @@ Goal: Fix broken UI links and improve data entry workflows for personnel and tem
 - [x] **View Profile Implementation**: Flesh out the "View Profile" link for Personnel.
 - [x] **Inspection Template Polish**: Fix the template edit page and implement a way to assign templates to Item Types.
 
-## Phase 30: System Admin & IAM
-Goal: Provide UI-driven management for users, roles, and global settings.
-
-- [x] **User Management Interface**: Implement an administrative interface for IAM (User roles, status, and account management) in the Admin Center.
-- [x] **Global System Settings**: Create a centralized configuration system for company identity, logistics policies, and feature flags.
-- [ ] **Individual User Preferences**: Implement a dedicated page for personal user settings (Self-service/Profile).
+### Phase 30: System Admin & IAM [DONE]
+- [x] User Management (Update Role, Enable/Disable, Delete)
+- [x] Global System Settings (Identity, Logistics, Feature Flags)
+- [x] Resolved: Catalog "View Details" navigation and inspection sync bugs
+- [ ] Individual User Preferences (Timezone, Notifications) [TODO]
 
 ## Future Plans
 

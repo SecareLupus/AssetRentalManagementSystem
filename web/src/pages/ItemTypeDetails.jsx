@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info, Plus, Package } from 'lucide-react';
+import { ArrowLeft, Shield, Cpu, Wifi, Settings, Activity, History, Info, Plus, Package, ClipboardCheck } from 'lucide-react';
 import { GlassCard, PageHeader, StatusBadge } from '../components/Shared';
 
 const ItemTypeDetails = () => {
@@ -90,7 +90,7 @@ const ItemTypeDetails = () => {
 
         setAssignedTemplates(newAssigned);
         try {
-            await axios.post(`/v1/catalog/item-types/${id}/inspections`, newAssigned.map(t => t.id));
+            await axios.post(`/v1/catalog/item-types/${id}/inspections`, { template_ids: newAssigned.map(t => t.id) });
         } catch (err) {
             alert("Failed to sync inspections");
             fetchData();

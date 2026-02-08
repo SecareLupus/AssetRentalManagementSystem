@@ -155,11 +155,14 @@ func NewRouter(h *Handler) http.Handler {
 
 	mux.HandleFunc("/v1/catalog/item-types/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/inspections") {
-			if r.Method == http.MethodPost {
+			switch r.Method {
+			case http.MethodGet:
+				h.GetItemTypeInspections(w, r)
+			case http.MethodPost:
 				h.SetItemTypeInspections(w, r)
-				return
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
 			}
-			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 

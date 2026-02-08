@@ -796,6 +796,25 @@ func (h *Handler) SetItemTypeInspections(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) GetItemTypeInspections(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/catalog/item-types/")
+	idStr = strings.TrimSuffix(idStr, "/inspections")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	templates, err := h.repo.GetInspectionTemplatesForItemType(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templates)
+}
+
 func (h *Handler) GetRequiredInspections(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/v1/inventory/assets/")
 	idStr = strings.TrimSuffix(idStr, "/required-inspections")
