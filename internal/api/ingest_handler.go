@@ -353,7 +353,11 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	apiReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+	apiReq, err := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+	if err != nil {
+		http.Error(w, "failed to create request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	apiReq.Header.Set("Accept", "application/json")
 	if sendBody {
 		apiReq.Header.Set("Content-Type", "application/json")
@@ -393,7 +397,14 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Re-create request with new token
-		retryReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+		if sendBody {
+			bodyReader = bytes.NewReader(body)
+		}
+		retryReq, err := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+		if err != nil {
+			http.Error(w, "failed to create retry request: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 		retryReq.Header.Set("Accept", "application/json")
 		if sendBody {
 			retryReq.Header.Set("Content-Type", "application/json")
@@ -412,6 +423,15 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, "failed to read response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// PROPAGATION FIX: If the response is not 2xx, don't attempt discovery.
+	// Just return the raw body and the status code.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+		w.WriteHeader(resp.StatusCode)
+		w.Write(respBody)
 		return
 	}
 
