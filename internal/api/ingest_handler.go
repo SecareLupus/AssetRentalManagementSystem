@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -219,6 +220,19 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.authenticateSource(r.Context(), src); err != nil {
+		http.Error(w, "auth failed: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+		"token":  src.LastToken,
+	})
+}
+
+func (h *Handler) authenticateSource(ctx context.Context, src *domain.IngestSource) error {
 	src.AuthCredentials = domain.UnwrapJSON(src.AuthCredentials)
 
 	// Perform auth request
@@ -230,21 +244,18 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Post(authURL, "application/json", bytes.NewReader(src.AuthCredentials))
 	if err != nil {
-		http.Error(w, "auth request failed: "+err.Error(), http.StatusBadGateway)
-		return
+		return fmt.Errorf("auth request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
-		http.Error(w, fmt.Sprintf("auth failed with %s: %s", resp.Status, body), http.StatusBadRequest)
-		return
+		return fmt.Errorf("auth failed with %s: %s", resp.Status, body)
 	}
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		http.Error(w, "failed to decode auth response", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("failed to decode auth response")
 	}
 
 	// Step 1.5: Verify (Optional Triple-Auth)
@@ -260,8 +271,7 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 		verifyBody, _ := json.Marshal(data)
 		req, err := http.NewRequest("POST", verifyURL, bytes.NewReader(verifyBody))
 		if err != nil {
-			http.Error(w, "failed to create verify request", http.StatusInternalServerError)
-			return
+			return fmt.Errorf("failed to create verify request")
 		}
 		req.Header.Set("Content-Type", "application/json")
 		if loginToken != "" {
@@ -270,28 +280,24 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 
 		vResp, err := client.Do(req)
 		if err != nil {
-			http.Error(w, "verify request failed: "+err.Error(), http.StatusBadGateway)
-			return
+			return fmt.Errorf("verify request failed: %w", err)
 		}
 		defer vResp.Body.Close()
 
 		if vResp.StatusCode < 200 || vResp.StatusCode >= 300 {
 			vBody, _ := io.ReadAll(vResp.Body)
-			http.Error(w, fmt.Sprintf("verify failed with %s: %s", vResp.Status, vBody), http.StatusBadRequest)
-			return
+			return fmt.Errorf("verify failed with %s: %s", vResp.Status, vBody)
 		}
 
 		if err := json.NewDecoder(vResp.Body).Decode(&data); err != nil {
-			http.Error(w, "failed to decode verify response", http.StatusInternalServerError)
-			return
+			return fmt.Errorf("failed to decode verify response")
 		}
 	}
 
 	accessToken, refreshToken, expiresIn := domain.DiscoverTokens(data)
 
 	if accessToken == "" {
-		http.Error(w, "no access token found in response", http.StatusBadGateway)
-		return
+		return fmt.Errorf("no access token found in response")
 	}
 
 	src.LastToken = accessToken
@@ -302,13 +308,7 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 		expiry := time.Now().Add(time.Duration(expiresIn) * time.Second)
 		src.TokenExpiry = &expiry
 	}
-	h.repo.UpdateIngestSource(r.Context(), src)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
-		"token":  src.LastToken,
-	})
+	return h.repo.UpdateIngestSource(ctx, src)
 }
 
 func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +342,17 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 	body := domain.UnwrapJSON(targetEP.RequestBody)
 	apiReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bytes.NewReader(body))
 
-	if targetSrc.AuthType == domain.IngestAuthBearer && targetSrc.LastToken != "" {
+	if targetSrc.AuthType == domain.IngestAuthBearer {
+		// Check if token needs refresh
+		if targetSrc.LastToken == "" || (targetSrc.TokenExpiry != nil && time.Now().Add(5*time.Minute).After(*targetSrc.TokenExpiry)) {
+			// Refresh token
+			if err := h.authenticateSource(r.Context(), targetSrc); err != nil {
+				// Log error but try anyway? Or fail?
+				// Better to fail because we know it's expired
+				http.Error(w, "failed to refresh token: "+err.Error(), http.StatusUnauthorized)
+				return
+			}
+		}
 		apiReq.Header.Set("Authorization", "Bearer "+targetSrc.LastToken)
 	}
 
@@ -351,6 +361,33 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+
+	// Retry on 401 if using Bearer auth
+	if resp.StatusCode == http.StatusUnauthorized && targetSrc.AuthType == domain.IngestAuthBearer {
+		// Consuming the body is good practice before closing, though we are about to close it
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+
+		// Attempt refresh
+		if err := h.authenticateSource(r.Context(), targetSrc); err != nil {
+			// If refresh fails, return the original error or the refresh error
+			http.Error(w, "upstream 401 and refresh failed: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Re-create request with new token (body was read? wait, body is a strings.Reader/bytes.Reader from GetIngestEndpoint usually?
+		// Ah, `body` variable is `domain.UnwrapJSON(targetEP.RequestBody)`. It is a byte slice. safe to reuse.
+
+		retryReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bytes.NewReader(body))
+		retryReq.Header.Set("Authorization", "Bearer "+targetSrc.LastToken)
+
+		resp, err = client.Do(retryReq)
+		if err != nil {
+			http.Error(w, "retry failed: "+err.Error(), http.StatusBadGateway)
+			return
+		}
+	}
+
 	defer resp.Body.Close()
 
 	w.Header().Set("Content-Type", "application/json")

@@ -2111,7 +2111,7 @@ func (r *SqlRepository) UpdateIngestSource(ctx context.Context, src *domain.Inge
 }
 
 func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestSource, error) {
-	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, created_at, updated_at FROM ingest_sources ORDER BY name`
+	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, COALESCE(last_status, ''), COALESCE(last_error, ''), created_at, updated_at FROM ingest_sources ORDER BY name`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -2120,21 +2120,25 @@ func (r *SqlRepository) ListIngestSources(ctx context.Context) ([]domain.IngestS
 	results := []domain.IngestSource{}
 	for rows.Next() {
 		var s domain.IngestSource
-		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.LastStatus, &s.LastError, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		// Fetch endpoints for this source
-		eps, _ := r.ListIngestEndpoints(ctx, s.ID)
-		s.Endpoints = eps
+		eps, err := r.ListIngestEndpoints(ctx, s.ID)
+		if err != nil {
+			s.LastError = fmt.Sprintf("Failed to list endpoints: %v", err)
+		} else {
+			s.Endpoints = eps
+		}
 		results = append(results, s)
 	}
 	return results, nil
 }
 
 func (r *SqlRepository) GetIngestSource(ctx context.Context, id int64) (*domain.IngestSource, error) {
-	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, created_at, updated_at FROM ingest_sources WHERE id = $1`
+	query := `SELECT id, name, base_url, COALESCE(auth_endpoint, ''), COALESCE(verify_endpoint, ''), COALESCE(refresh_endpoint, ''), auth_type, auth_credentials, COALESCE(last_token, ''), COALESCE(refresh_token, ''), token_expiry, sync_interval_seconds, is_active, COALESCE(last_status, ''), COALESCE(last_error, ''), created_at, updated_at FROM ingest_sources WHERE id = $1`
 	var s domain.IngestSource
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.Name, &s.BaseURL, &s.AuthEndpoint, &s.VerifyEndpoint, &s.RefreshEndpoint, &s.AuthType, &s.AuthCredentials, &s.LastToken, &s.RefreshToken, &s.TokenExpiry, &s.SyncIntervalSeconds, &s.IsActive, &s.LastStatus, &s.LastError, &s.CreatedAt, &s.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -2142,7 +2146,9 @@ func (r *SqlRepository) GetIngestSource(ctx context.Context, id int64) (*domain.
 		return nil, err
 	}
 	eps, err := r.ListIngestEndpoints(ctx, id)
-	if err == nil {
+	if err != nil {
+		s.LastError = fmt.Sprintf("Failed to list endpoints: %v", err)
+	} else {
 		s.Endpoints = eps
 	}
 	return &s, nil
@@ -2162,7 +2168,7 @@ func (r *SqlRepository) CreateIngestEndpoint(ctx context.Context, ep *domain.Ing
 }
 
 func (r *SqlRepository) GetIngestEndpoint(ctx context.Context, id int64) (*domain.IngestEndpoint, error) {
-	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, last_etag, last_payload_hash, created_at, updated_at 
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
 	          FROM ingest_endpoints WHERE id = $1`
 	var ep domain.IngestEndpoint
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
@@ -2203,7 +2209,7 @@ func (r *SqlRepository) DeleteIngestEndpoint(ctx context.Context, id int64) erro
 }
 
 func (r *SqlRepository) ListIngestEndpoints(ctx context.Context, sourceID int64) ([]domain.IngestEndpoint, error) {
-	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, last_etag, last_payload_hash, created_at, updated_at 
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
 	          FROM ingest_endpoints WHERE source_id = $1 ORDER BY path`
 	rows, err := r.db.QueryContext(ctx, query, sourceID)
 	if err != nil {

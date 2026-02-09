@@ -90,7 +90,17 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
         }));
     };
 
-    const handleRemoveEndpoint = (index) => {
+    const handleRemoveEndpoint = async (index) => {
+        const ep = formData.endpoints[index];
+        if (ep.id) {
+            if (!window.confirm("Are you sure you want to delete this endpoint? This cannot be undone.")) return;
+            try {
+                await axios.delete(`/v1/admin/ingest/endpoints/${ep.id}`);
+            } catch (err) {
+                alert("Failed to delete endpoint: " + (err.response?.data || err.message));
+                return;
+            }
+        }
         setFormData(prev => ({
             ...prev,
             endpoints: prev.endpoints.filter((_, i) => i !== index)

@@ -37,6 +37,9 @@ type IngestSource struct {
 	SyncIntervalSeconds int             `json:"sync_interval_seconds"`
 	IsActive            bool            `json:"is_active"`
 
+	LastStatus string `json:"last_status"`
+	LastError  string `json:"last_error"`
+
 	Endpoints []IngestEndpoint `json:"endpoints,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
