@@ -85,7 +85,7 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
             ...prev,
             endpoints: [
                 ...prev.endpoints,
-                { path: '', method: 'GET', resp_strategy: 'auto', is_active: true }
+                { path: '', method: 'GET', resp_strategy: 'auto', items_path: '$', is_active: true }
             ]
         }));
     };
@@ -416,6 +416,15 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
                                                 <option value="list">List</option>
                                                 <option value="single">Single</option>
                                             </select>
+                                        </div>
+                                        <div className="col-span-12 mt-2">
+                                            <label className="text-[10px] uppercase font-bold text-text-muted mb-1 block">Items List Path (JSONPath)</label>
+                                            <input
+                                                className="glass w-full p-2 text-xs font-mono"
+                                                placeholder="$.data or $"
+                                                value={ep.items_path || '$'}
+                                                onChange={e => handleEndpointChange(idx, 'items_path', e.target.value)}
+                                            />
                                         </div>
                                         {ep.method === 'POST' && (
                                             <div className="col-span-12 mt-2">

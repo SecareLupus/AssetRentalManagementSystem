@@ -57,15 +57,23 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
             const res = await axios.get(`/v1/admin/ingest/endpoints/${selectedEndpointId}/discovery`);
             setPreviewData(res.data);
 
+            // If discovery suggested an items_path and the endpoint doesn't have a specific one (or is default),
+            // we should update it. Note: In a real app, we'd probably want to save this back to the endpoint.
+            if (res.data.items_path && mappings.length === 0) {
+                // Just for UI feedback
+                console.log("Discovery suggested Items Path:", res.data.items_path);
+            }
+
             // Auto-detect mappings if none exist
             if (mappings.length === 0 && res.data.inferred_fields) {
                 const inferred = res.data.inferred_fields.map(f => ({
                     json_path: f.path,
-                    target_model: f.suggested_model || 'asset', // Default to asset
-                    target_field: f.suggested_mapping,
+                    target_model: f.suggested_model || 'asset',
+                    target_field: f.suggest_mapping || '', // backend uses suggest_mapping
                     is_identity: f.is_identity
                 }));
-                setMappings(inferred.filter(m => m.target_field));
+                // Set all inferred fields
+                setMappings(inferred);
             }
         } catch (err) {
             setError("Discovery failed: " + (err.response?.data || err.message));

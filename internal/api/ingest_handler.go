@@ -340,7 +340,24 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
 	body := domain.UnwrapJSON(targetEP.RequestBody)
-	apiReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bytes.NewReader(body))
+
+	// Refined body handling: Don't send "null" or empty body for GET/DELETE,
+	// or if the body is explicitly the JSON literal "null".
+	var bodyReader io.Reader
+	sendBody := false
+	if len(body) > 0 && string(body) != "null" {
+		method := strings.ToUpper(targetEP.Method)
+		if method == "POST" || method == "PUT" || method == "PATCH" {
+			sendBody = true
+			bodyReader = bytes.NewReader(body)
+		}
+	}
+
+	apiReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+	apiReq.Header.Set("Accept", "application/json")
+	if sendBody {
+		apiReq.Header.Set("Content-Type", "application/json")
+	}
 
 	if targetSrc.AuthType == domain.IngestAuthBearer {
 		// Check if token needs refresh
@@ -362,8 +379,8 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retry on 401 if using Bearer auth
-	if resp.StatusCode == http.StatusUnauthorized && targetSrc.AuthType == domain.IngestAuthBearer {
+	// Retry on 401 or 403 if using Bearer auth
+	if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && targetSrc.AuthType == domain.IngestAuthBearer {
 		// Consuming the body is good practice before closing, though we are about to close it
 		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
@@ -375,10 +392,12 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Re-create request with new token (body was read? wait, body is a strings.Reader/bytes.Reader from GetIngestEndpoint usually?
-		// Ah, `body` variable is `domain.UnwrapJSON(targetEP.RequestBody)`. It is a byte slice. safe to reuse.
-
-		retryReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bytes.NewReader(body))
+		// Re-create request with new token
+		retryReq, _ := http.NewRequestWithContext(r.Context(), targetEP.Method, fullURL, bodyReader)
+		retryReq.Header.Set("Accept", "application/json")
+		if sendBody {
+			retryReq.Header.Set("Content-Type", "application/json")
+		}
 		retryReq.Header.Set("Authorization", "Bearer "+targetSrc.LastToken)
 
 		resp, err = client.Do(retryReq)
@@ -390,8 +409,24 @@ func (h *Handler) Discovery(w http.ResponseWriter, r *http.Request) {
 
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "failed to read response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	disco, err := domain.DiscoverSchema(respBody)
+	if err != nil {
+		// Fallback to raw response if discovery fails
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(resp.StatusCode)
+		w.Write(respBody)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	io.Copy(w, resp.Body)
+	w.WriteHeader(resp.StatusCode)
+	json.NewEncoder(w).Encode(disco)
 }
 
 func (h *Handler) SyncSourceNow(w http.ResponseWriter, r *http.Request) {

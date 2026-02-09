@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -60,13 +61,11 @@ func (m *RESTRemoteManager) ApplyPowerAction(ctx context.Context, remoteID strin
 	payload := map[string]string{"action": string(action)}
 	body, _ := json.Marshal(payload)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	// Set body
-	// ... (implementation detail omitted for brevity in mock/draft)
-	_ = body
+	req.Header.Set("Content-Type", "application/json")
 
 	if m.apiKey != "" {
 		req.Header.Set("X-API-Key", m.apiKey)

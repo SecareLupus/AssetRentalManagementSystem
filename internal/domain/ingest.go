@@ -2,6 +2,8 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -53,6 +55,7 @@ type IngestEndpoint struct {
 	Method       string          `json:"method"`
 	RequestBody  json.RawMessage `json:"request_body,omitempty"`
 	RespStrategy string          `json:"resp_strategy"` // 'single', 'list', 'auto'
+	ItemsPath    string          `json:"items_path"`    // JSONPath to the list of items
 	IsActive     bool            `json:"is_active"`
 
 	LastSyncAt      *time.Time `json:"last_sync_at"`
@@ -64,6 +67,22 @@ type IngestEndpoint struct {
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type InferredField struct {
+	Path             string `json:"path"`
+	Label            string `json:"label"`
+	Type             string `json:"type"`
+	SuggestedMapping string `json:"suggest_mapping,omitempty"`
+	SuggestedModel   string `json:"suggested_model,omitempty"`
+	IsIdentity       bool   `json:"is_identity"`
+}
+
+type DiscoveryResponse struct {
+	RawResponse    json.RawMessage `json:"raw_response"`
+	SampleItems    []interface{}   `json:"sample_items,omitempty"`
+	ItemsPath      string          `json:"items_path,omitempty"`
+	InferredFields []InferredField `json:"inferred_fields,omitempty"`
 }
 
 type IngestMapping struct {
@@ -126,4 +145,87 @@ func DiscoverTokens(data map[string]interface{}) (accessToken, refreshToken stri
 	}
 
 	return
+}
+
+// DiscoverSchema attempts to find a list of items and infer their fields.
+func DiscoverSchema(body []byte) (*DiscoveryResponse, error) {
+	var raw interface{}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	resp := &DiscoveryResponse{
+		RawResponse: json.RawMessage(body),
+	}
+
+	var items []interface{}
+	itemsPath := "$"
+
+	// Heuristic 1: Is it already a list?
+	if list, ok := raw.([]interface{}); ok {
+		items = list
+	} else if m, ok := raw.(map[string]interface{}); ok {
+		// Heuristic 2: Look for common list keys
+		listKeys := []string{"data", "items", "results", "records", "devices"}
+		for _, k := range listKeys {
+			if v, ok := m[k].([]interface{}); ok {
+				items = v
+				itemsPath = "$." + k
+				break
+			}
+		}
+	}
+
+	if len(items) == 0 {
+		return resp, nil // No items found to infer from
+	}
+
+	resp.ItemsPath = itemsPath
+	resp.SampleItems = items
+	if len(items) > 5 {
+		resp.SampleItems = items[:5]
+	}
+
+	// Infer fields from the first item
+	if first, ok := items[0].(map[string]interface{}); ok {
+		for k, v := range first {
+			field := InferredField{
+				Path:  "$." + k,
+				Label: strings.Title(strings.ReplaceAll(k, "_", " ")),
+			}
+
+			switch v.(type) {
+			case string:
+				field.Type = "string"
+				// Basic mapping heuristics
+				lowK := strings.ToLower(k)
+				if strings.Contains(lowK, "id") || strings.Contains(lowK, "tag") || strings.Contains(lowK, "token") || strings.Contains(lowK, "serial") {
+					field.IsIdentity = true
+				}
+				if strings.Contains(lowK, "name") {
+					field.SuggestedMapping = "name"
+					field.SuggestedModel = "asset"
+				} else if strings.Contains(lowK, "tag") {
+					field.SuggestedMapping = "asset_tag"
+					field.SuggestedModel = "asset"
+				} else if strings.Contains(lowK, "serial") {
+					field.SuggestedMapping = "serial_number"
+					field.SuggestedModel = "asset"
+				}
+			case float64:
+				field.Type = "number"
+			case bool:
+				field.Type = "boolean"
+			case map[string]interface{}:
+				field.Type = "object"
+			case []interface{}:
+				field.Type = "array"
+			default:
+				field.Type = "unknown"
+			}
+			resp.InferredFields = append(resp.InferredFields, field)
+		}
+	}
+
+	return resp, nil
 }

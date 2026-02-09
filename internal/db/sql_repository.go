@@ -2162,16 +2162,16 @@ func (r *SqlRepository) DeleteIngestSource(ctx context.Context, id int64) error 
 func (r *SqlRepository) CreateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
 	ep.CreatedAt = time.Now()
 	ep.UpdatedAt = time.Now()
-	query := `INSERT INTO ingest_endpoints (source_id, path, method, request_body, resp_strategy, is_active, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, ep.SourceID, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.IsActive, ep.CreatedAt, ep.UpdatedAt).Scan(&ep.ID)
+	query := `INSERT INTO ingest_endpoints (source_id, path, method, request_body, resp_strategy, items_path, is_active, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, ep.SourceID, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.ItemsPath, ep.IsActive, ep.CreatedAt, ep.UpdatedAt).Scan(&ep.ID)
 }
 
 func (r *SqlRepository) GetIngestEndpoint(ctx context.Context, id int64) (*domain.IngestEndpoint, error) {
-	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, items_path, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
 	          FROM ingest_endpoints WHERE id = $1`
 	var ep domain.IngestEndpoint
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.ItemsPath, &ep.IsActive,
 		&ep.LastSyncAt, &ep.LastSuccessAt, &ep.LastETag, &ep.LastPayloadHash, &ep.CreatedAt, &ep.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -2196,9 +2196,9 @@ func (r *SqlRepository) GetIngestEndpoint(ctx context.Context, id int64) (*domai
 
 func (r *SqlRepository) UpdateIngestEndpoint(ctx context.Context, ep *domain.IngestEndpoint) error {
 	ep.UpdatedAt = time.Now()
-	query := `UPDATE ingest_endpoints SET path = $1, method = $2, request_body = $3, resp_strategy = $4, is_active = $5, 
-	          last_sync_at = $6, last_success_at = $7, last_etag = $8, last_payload_hash = $9, updated_at = $10 WHERE id = $11`
-	_, err := r.db.ExecContext(ctx, query, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.IsActive,
+	query := `UPDATE ingest_endpoints SET path = $1, method = $2, request_body = $3, resp_strategy = $4, items_path = $5, is_active = $6, 
+	          last_sync_at = $7, last_success_at = $8, last_etag = $9, last_payload_hash = $10, updated_at = $11 WHERE id = $12`
+	_, err := r.db.ExecContext(ctx, query, ep.Path, ep.Method, ep.RequestBody, ep.RespStrategy, ep.ItemsPath, ep.IsActive,
 		ep.LastSyncAt, ep.LastSuccessAt, ep.LastETag, ep.LastPayloadHash, ep.UpdatedAt, ep.ID)
 	return err
 }
@@ -2209,7 +2209,7 @@ func (r *SqlRepository) DeleteIngestEndpoint(ctx context.Context, id int64) erro
 }
 
 func (r *SqlRepository) ListIngestEndpoints(ctx context.Context, sourceID int64) ([]domain.IngestEndpoint, error) {
-	query := `SELECT id, source_id, path, method, request_body, resp_strategy, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
+	query := `SELECT id, source_id, path, method, request_body, resp_strategy, items_path, is_active, last_sync_at, last_success_at, COALESCE(last_etag, ''), COALESCE(last_payload_hash, ''), created_at, updated_at 
 	          FROM ingest_endpoints WHERE source_id = $1 ORDER BY path`
 	rows, err := r.db.QueryContext(ctx, query, sourceID)
 	if err != nil {
@@ -2219,7 +2219,7 @@ func (r *SqlRepository) ListIngestEndpoints(ctx context.Context, sourceID int64)
 	results := []domain.IngestEndpoint{}
 	for rows.Next() {
 		var ep domain.IngestEndpoint
-		if err := rows.Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.IsActive,
+		if err := rows.Scan(&ep.ID, &ep.SourceID, &ep.Path, &ep.Method, &ep.RequestBody, &ep.RespStrategy, &ep.ItemsPath, &ep.IsActive,
 			&ep.LastSyncAt, &ep.LastSuccessAt, &ep.LastETag, &ep.LastPayloadHash, &ep.CreatedAt, &ep.UpdatedAt); err != nil {
 			return nil, err
 		}

@@ -226,9 +226,26 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 
 	fullURL := src.BaseURL + ep.Path
 	body := domain.UnwrapJSON(ep.RequestBody)
-	req, err := http.NewRequestWithContext(ctx, ep.Method, fullURL, bytes.NewReader(body))
+
+	// Refined body handling
+	var bodyReader io.Reader
+	sendBody := false
+	if len(body) > 0 && string(body) != "null" {
+		method := strings.ToUpper(ep.Method)
+		if method == "POST" || method == "PUT" || method == "PATCH" {
+			sendBody = true
+			bodyReader = bytes.NewReader(body)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, ep.Method, fullURL, bodyReader)
 	if err != nil {
 		return err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	if sendBody {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	if src.AuthType == domain.IngestAuthBearer && src.LastToken != "" {
@@ -243,6 +260,35 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 	if err != nil {
 		return err
 	}
+
+	// Retry once on 401 or 403 if using Bearer auth
+	if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && src.AuthType == domain.IngestAuthBearer {
+		resp.Body.Close()
+		log.Printf("[IngestWorker] Received %d for %s, attempting token refresh", resp.StatusCode, ep.Path)
+
+		if err := w.refreshAuth(ctx, src); err != nil {
+			return fmt.Errorf("auth refresh failed after %d: %w", resp.StatusCode, err)
+		}
+
+		// Re-create request
+		req, err = http.NewRequestWithContext(ctx, ep.Method, fullURL, bodyReader)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Accept", "application/json")
+		if sendBody {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("Authorization", "Bearer "+src.LastToken)
+		if ep.LastETag != "" {
+			req.Header.Set("If-None-Match", ep.LastETag)
+		}
+
+		resp, err = w.httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+	}
 	defer resp.Body.Close()
 
 	now := time.Now()
@@ -253,7 +299,7 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 		return w.repo.UpdateIngestEndpoint(ctx, ep)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
@@ -279,7 +325,7 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 	}
 
 	// Strategy-based extraction
-	items := w.extractItems(jsonData, ep.RespStrategy)
+	items := w.extractItems(jsonData, ep.RespStrategy, ep.ItemsPath)
 
 	count := 0
 	for _, item := range items {
@@ -295,7 +341,18 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 	return w.repo.UpdateIngestEndpoint(ctx, ep)
 }
 
-func (w *IngestWorker) extractItems(data interface{}, strategy string) []interface{} {
+func (w *IngestWorker) extractItems(data interface{}, strategy string, itemsPath string) []interface{} {
+	if itemsPath != "" && itemsPath != "$" {
+		res, err := jsonpath.JsonPathLookup(data, itemsPath)
+		if err == nil {
+			if list, ok := res.([]interface{}); ok {
+				return list
+			}
+			return []interface{}{res}
+		}
+		log.Printf("[IngestWorker] JSONPath lookup failed for %s: %v", itemsPath, err)
+	}
+
 	switch strategy {
 	case "list":
 		if list, ok := data.([]interface{}); ok {
