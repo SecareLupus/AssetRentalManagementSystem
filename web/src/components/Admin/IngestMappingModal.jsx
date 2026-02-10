@@ -139,10 +139,10 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
                 </div>
             )}
         >
-            <div className="flex gap-8 min-h-[600px] border-t border-white/5 pt-6">
+            <div className="flex-row gap-8 min-h-[600px] border-t border-white/5 pt-6">
                 {/* Left Sidebar: Endpoints */}
-                <div className="w-72 pr-6 border-r border-white/5 space-y-3">
-                    <div className="px-2 mb-4">
+                <div className="w-60 pr-4 border-r border-white/5 space-y-3 shrink-0">
+                    <div className="px-1 mb-4">
                         <label className="text-[10px] uppercase font-black text-primary tracking-[0.2em] mb-1 block">API Endpoints</label>
                         <div className="text-[9px] text-text-muted font-medium">Select an endpoint to map models</div>
                     </div>
@@ -150,7 +150,7 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
                         <button
                             key={ep.id}
                             onClick={() => { setSelectedEndpointId(ep.id); loadEndpointMappings(ep.id); }}
-                            className={`w-full text-left p-4 rounded-2xl transition-all border group relative overflow-hidden ${selectedEndpointId === ep.id
+                            className={`w-full text-left p-3 rounded-2xl transition-all border group relative overflow-hidden ${selectedEndpointId === ep.id
                                 ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/40'
                                 : 'bg-white/5 border-transparent hover:border-white/10'
                                 }`}
@@ -163,7 +163,7 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
                                     }`}>
                                     {ep.method}
                                 </span>
-                                <span className={`text-xs font-black truncate uppercase tracking-tight ${selectedEndpointId === ep.id ? 'text-primary' : 'text-text'}`}>
+                                <span className={`text-[10px] font-bold truncate uppercase tracking-tight ${selectedEndpointId === ep.id ? 'text-primary' : 'text-white'}`}>
                                     {ep.path}
                                 </span>
                             </div>
@@ -205,73 +205,76 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
 
                     <div className="space-y-4">
                         {mappings.map((m, idx) => (
-                            <GlassCard key={idx} className="p-5 relative group hover:ring-2 hover:ring-primary/20 transition-all border-white/5 bg-white/[0.03]">
-                                <div className="grid grid-cols-12 gap-8 items-start">
-                                    <div className="col-span-11 space-y-4">
-                                        <div className="grid grid-cols-12 gap-6">
-                                            {/* Attribute Path & ID Key Layout Refinement */}
-                                            <div className="col-span-5 space-y-3">
-                                                <div className="flex flex-row items-center justify-between px-1">
-                                                    <label className="text-[10px] uppercase font-black text-text-muted flex flex-row items-center gap-1.5 tracking-[0.15em]">
-                                                        <Layout size={12} className="text-primary" /> Attribute Path
-                                                    </label>
-                                                    <label className="flex flex-row items-center gap-3 cursor-pointer group/id relative hover:opacity-80 transition-opacity">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="w-4 h-4 accent-primary opacity-0 absolute cursor-pointer z-10"
-                                                            checked={!!m.is_identity}
-                                                            onChange={e => handleUpdateMapping(idx, 'is_identity', e.target.checked)}
-                                                        />
-                                                        <div className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${m.is_identity ? 'bg-primary border-primary scale-110 shadow-lg shadow-primary/20' : 'border-white/20'}`}>
-                                                            {m.is_identity && <Check size={10} className="text-white" />}
-                                                        </div>
-                                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${m.is_identity ? 'text-primary' : 'text-text-muted'}`}>ID Key</span>
-                                                    </label>
-                                                </div>
+                            <GlassCard key={idx} className="p-4 relative group hover:ring-2 hover:ring-primary/20 transition-all border-white/5 bg-white/[0.03]">
+                                <div className="grid grid-cols-12 gap-6 items-end">
+                                    {/* Attribute Path & ID Key (4 columns) */}
+                                    <div className="col-span-4 space-y-2">
+                                        <div className="flex flex-row items-center justify-between px-1 h-5">
+                                            <label className="text-[10px] uppercase font-black text-text-muted flex flex-row items-center gap-1.5 tracking-[0.15em]">
+                                                <Layout size={12} className="text-primary" /> Attribute Path
+                                            </label>
+                                            <label className="flex flex-row items-center gap-2 cursor-pointer group/id relative hover:opacity-80 transition-opacity">
                                                 <input
-                                                    className="glass w-full p-3 text-xs font-mono text-blue-300 border-white/5 focus:border-primary/40 focus:bg-primary/5 transition-all outline-none"
-                                                    value={m.json_path}
-                                                    placeholder="$.data.id"
-                                                    onChange={e => handleUpdateMapping(idx, 'json_path', e.target.value)}
+                                                    type="checkbox"
+                                                    className="w-4 h-4 accent-primary opacity-0 absolute cursor-pointer z-10"
+                                                    checked={!!m.is_identity}
+                                                    onChange={e => handleUpdateMapping(idx, 'is_identity', e.target.checked)}
                                                 />
-                                            </div>
-
-                                            <div className="col-span-3 space-y-2">
-                                                <span className="text-[10px] uppercase font-black text-text-muted flex items-center gap-1.5 tracking-[0.15em] px-1">
-                                                    <Target size={12} className="text-primary" /> Model
-                                                </span>
-                                                <select
-                                                    className="glass w-full p-3 text-xs font-black uppercase tracking-wider border-white/5 min-w-[100px]"
-                                                    value={m.target_model}
-                                                    onChange={e => handleUpdateMapping(idx, 'target_model', e.target.value)}
-                                                >
-                                                    {TARGET_MODELS.map(tm => (
-                                                        <option key={tm.value} value={tm.value}>{tm.label}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            <div className="col-span-4 space-y-2">
-                                                <span className="text-[10px] uppercase font-black text-text-muted px-1 tracking-[0.15em] block">Field</span>
-                                                <select
-                                                    className="glass w-full p-3 text-xs font-black uppercase tracking-wider text-primary border-white/5 min-w-[120px]"
-                                                    value={m.target_field}
-                                                    onChange={e => handleUpdateMapping(idx, 'target_field', e.target.value)}
-                                                >
-                                                    <option value="">-- Ignore --</option>
-                                                    {(TARGET_FIELDS[m.target_model] || []).map(f => (
-                                                        <option key={f} value={f}>{f}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                                <div className={`w-3.5 h-3.5 rounded-md border-2 flex items-center justify-center transition-all ${m.is_identity ? 'bg-primary border-primary scale-110 shadow-lg shadow-primary/20' : 'border-white/20'}`}>
+                                                    {m.is_identity && <Check size={8} className="text-white" />}
+                                                </div>
+                                                <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${m.is_identity ? 'text-primary' : 'text-text-muted'}`}>ID Key</span>
+                                            </label>
                                         </div>
+                                        <input
+                                            className="glass w-full h-form-input px-2.5 text-sm font-mono text-blue-300 border-white/5 focus:border-primary/40 focus:bg-primary/5 transition-all outline-none"
+                                            value={m.json_path}
+                                            placeholder="$.data.id"
+                                            onChange={e => handleUpdateMapping(idx, 'json_path', e.target.value)}
+                                        />
                                     </div>
 
-                                    {/* Action column for delete */}
-                                    <div className="col-span-1 flex justify-end pt-8">
+                                    {/* Model Selection (3 columns) */}
+                                    <div className="col-span-3 space-y-2">
+                                        <div className="h-5 flex items-center px-1">
+                                            <span className="text-[10px] uppercase font-black text-text-muted flex items-center gap-1.5 tracking-[0.15em]">
+                                                <Target size={12} className="text-primary" /> Model
+                                            </span>
+                                        </div>
+                                        <select
+                                            className="glass w-full h-form-input px-2.5 text-[10px] font-bold uppercase tracking-wider border-white/5"
+                                            value={m.target_model}
+                                            onChange={e => handleUpdateMapping(idx, 'target_model', e.target.value)}
+                                        >
+                                            {TARGET_MODELS.map(tm => (
+                                                <option key={tm.value} value={tm.value}>{tm.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Field Selection (4 columns) */}
+                                    <div className="col-span-4 space-y-2">
+                                        <div className="h-5 flex items-center px-1">
+                                            <span className="text-[10px] uppercase font-black text-text-muted tracking-[0.15em] block">Field</span>
+                                        </div>
+                                        <select
+                                            className="glass w-full h-form-input px-2.5 text-[10px] font-bold uppercase tracking-wider text-primary border-white/5"
+                                            value={m.target_field}
+                                            onChange={e => handleUpdateMapping(idx, 'target_field', e.target.value)}
+                                        >
+                                            <option value="">-- Ignore --</option>
+                                            {(TARGET_FIELDS[m.target_model] || []).map(f => (
+                                                <option key={f} value={f}>{f}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Delete Action (1 column) */}
+                                    <div className="col-span-1 space-y-2">
+                                        <div className="h-5" />
                                         <button
                                             onClick={() => handleRemoveMapping(idx)}
-                                            className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-red-500/40 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/40 transition-all active:scale-90"
+                                            className="w-full h-form-input rounded-xl bg-red-500/5 border border-red-500/10 text-red-500/40 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/40 transition-all active:scale-90 flex items-center justify-center"
                                             title="Remove Mapping"
                                         >
                                             <Trash2 size={18} />
@@ -283,10 +286,10 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
 
                         <button
                             onClick={handleAddMapping}
-                            className="w-full py-8 border-2 border-dashed border-white/5 rounded-[32px] text-[11px] uppercase font-black tracking-[0.3em] text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-4 bg-white/[0.01] active:scale-[0.99] group shadow-inner"
+                            className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-[10px] uppercase font-black tracking-[0.2em] text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-3 bg-white/[0.01] active:scale-[0.99] group shadow-inner"
                         >
-                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                <Plus size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                <Plus size={16} className="group-hover:rotate-180 transition-transform duration-500" />
                             </div>
                             Add Custom Property Mapping
                         </button>

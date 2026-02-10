@@ -190,6 +190,10 @@ button {
   align-items: flex-start;
 }
 
+.items-end {
+  align-items: flex-end;
+}
+
 .shrink-0 {
   flex-shrink: 0;
 }
@@ -228,6 +232,18 @@ button {
 
 .gap-8 {
   gap: 2rem;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.h-5 {
+  height: 1.25rem;
+}
+
+.h-form-input {
+  height: 38px;
 }
 
 .w-full {
@@ -1599,8 +1615,12 @@ option {
   margin-left: 1rem;
 }
 
-.space-x-6>*+* {
-  margin-left: 1.5rem;
+.space-y-2>*+* {
+  margin-top: 0.5rem;
+}
+
+.flex {
+  display: flex;
 }
 
 .flex-row {
@@ -1686,6 +1706,10 @@ option {
   margin-left: 1.5rem !important;
 }
 
+.uie-manager-page .flex {
+  display: flex !important;
+}
+
 .uie-manager-page .flex-row {
   display: flex !important;
   flex-direction: row !important;
@@ -1693,4 +1717,12 @@ option {
 
 .uie-manager-page .grid-cols-4 {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.uie-manager-page .grid {
+  display: grid !important;
+}
+
+.uie-manager-page .grid-cols-12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
 }
