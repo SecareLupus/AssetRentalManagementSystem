@@ -194,6 +194,10 @@ button {
   flex-shrink: 0;
 }
 
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
 .flex-1 {
   flex: 1 1 0%;
 }
@@ -232,6 +236,11 @@ button {
 
 .max-w-2xl {
   max-width: 42rem;
+}
+
+.my-3 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .mx-auto {
@@ -332,7 +341,7 @@ button {
   padding-bottom: 0.75rem;
 }
 
-.py-3.5 {
+.py-3\.5 {
   padding-top: 0.875rem;
   padding-bottom: 0.875rem;
 }
@@ -371,7 +380,7 @@ button {
   padding: 0.5rem;
 }
 
-.p-2.5 {
+.p-2\.5 {
   padding: 0.625rem;
 }
 
@@ -379,7 +388,7 @@ button {
   padding: 0.75rem;
 }
 
-.p-3.5 {
+.p-3\.5 {
   padding: 0.875rem;
 }
 
@@ -393,6 +402,10 @@ button {
 
 .p-6 {
   padding: 1.5rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
 }
 
 .pt-5 {
@@ -433,6 +446,22 @@ button {
 
 .grid-cols-12 {
   grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+.gap-8 {
+  gap: 2rem;
 }
 
 .col-span-1 {
@@ -596,6 +625,10 @@ button {
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.whitespace-nowrap {
   white-space: nowrap;
 }
 
@@ -1384,13 +1417,29 @@ option {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1.25rem;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-sm {
+  max-width: 400px;
+}
+
+.modal-md {
+  max-width: 600px;
+}
+
+.modal-lg {
+  max-width: 900px;
+}
+
+.modal-xl {
+  max-width: 1200px;
 }
 
 .modal-header {
@@ -1475,4 +1524,173 @@ option {
   background: #3b82f6;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+/* Layout & Geometry Utilities */
+.my-3 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
+}
+
+.pt-5 {
+  padding-top: 1.25rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+.gap-8 {
+  gap: 2rem;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+
+.min-w-max {
+  min-width: max-content;
+}
+
+/* Spacing Utilities */
+.space-y-4>*+* {
+  margin-top: 1rem;
+}
+
+.space-y-6>*+* {
+  margin-top: 1.5rem;
+}
+
+.space-x-4>*+* {
+  margin-left: 1rem;
+}
+
+.space-x-6>*+* {
+  margin-left: 1.5rem;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Scoped Overrides for UIE Manager Page Cards */
+.uie-manager-page .my-3 {
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.uie-manager-page .mt-4 {
+  margin-top: 1rem !important;
+}
+
+.uie-manager-page .mt-6 {
+  margin-top: 1.5rem !important;
+}
+
+.uie-manager-page .pt-4 {
+  padding-top: 1rem !important;
+}
+
+.uie-manager-page .pt-5 {
+  padding-top: 1.25rem !important;
+}
+
+.uie-manager-page .gap-4 {
+  gap: 1rem !important;
+}
+
+.uie-manager-page .gap-6 {
+  gap: 1.5rem !important;
+}
+
+.uie-manager-page .gap-8 {
+  gap: 2rem !important;
+}
+
+.uie-manager-page .flex-shrink-0 {
+  flex-shrink: 0 !important;
+}
+
+.uie-manager-page .whitespace-nowrap {
+  white-space: nowrap !important;
+}
+
+.uie-manager-page .truncate {
+  white-space: nowrap !important;
+}
+
+.uie-manager-page .grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.uie-manager-page .flex-nowrap {
+  flex-wrap: nowrap !important;
+}
+
+.uie-manager-page .min-w-max {
+  min-width: max-content !important;
+}
+
+.uie-manager-page .space-y-4>*+* {
+  margin-top: 1rem !important;
+}
+
+.uie-manager-page .space-y-6>*+* {
+  margin-top: 1.5rem !important;
+}
+
+.uie-manager-page .space-x-4>*+* {
+  margin-left: 1rem !important;
+}
+
+.uie-manager-page .space-x-6>*+* {
+  margin-left: 1.5rem !important;
+}
+
+.uie-manager-page .flex-row {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.uie-manager-page .grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }

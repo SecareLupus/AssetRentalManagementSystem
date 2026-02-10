@@ -74,12 +74,12 @@ export const StatusBadge = ({ status }) => {
 /**
  * Standard Modal component.
  */
-export const Modal = ({ isOpen, onClose, title, children, actions }) => {
+export const Modal = ({ isOpen, onClose, title, children, actions, size = 'md' }) => {
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
-      <div className="modal-container">
+      <div className={`modal-container modal-${size}`}>
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
           <button onClick={onClose} className="modal-close">

@@ -75,7 +75,7 @@ const IngestManager = () => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 uie-manager-page">
             <div className="flex flex-row justify-between items-center mb-8 px-2 mt-4 w-full">
                 <div className="flex flex-col">
                     <h2 className="text-2xl font-black text-text flex items-center gap-3">
@@ -96,64 +96,64 @@ const IngestManager = () => {
                     <RefreshCw className="animate-spin text-primary" size={32} />
                 </div>
             ) : (
-                <div className="grid gap-6">
+                <div className="grid grid-cols-2 gap-8">
                     {sources.map(source => (
                         <GlassCard key={source.id} className="p-5 overflow-hidden group">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-3">
-                                        <h3 className="font-bold text-lg text-text group-hover:text-primary transition-colors">{source.name}</h3>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                            <div className="flex flex-col space-y-4">
+                                <div className="space-y-4 min-w-0">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <h3 className="font-bold text-lg text-text group-hover:text-primary transition-colors truncate min-w-0">{source.name}</h3>
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 flex-shrink-0">
                                             <Globe size={10} className="text-text-muted" />
                                             <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                                                 {source.auth_type}
                                             </span>
                                         </div>
                                         {source.is_active ?
-                                            <span className="text-emerald-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-emerald-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 flex-nowrap min-w-max">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
                                                 Live
                                             </span> :
-                                            <span className="text-text-muted text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full">Paused</span>
+                                            <span className="text-text-muted text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 flex-nowrap min-w-max">Paused</span>
                                         }
                                     </div>
                                     <p className="text-xs font-mono text-text-muted flex items-center gap-1">
                                         {source.base_url}
                                     </p>
                                 </div>
-                                <div className="flex gap-2 relative z-10">
+                                <div className="grid grid-cols-4 gap-4 mt-6 relative z-10 w-full">
                                     <button
                                         onClick={() => handleSyncNow(source.id)}
-                                        className="p-3 bg-primary/5 hover:bg-primary/20 border border-primary/20 rounded-xl text-primary transition-all active:scale-90 group/btn shadow-sm"
-                                        title="Sync All Endpoints"
+                                        className="flex flex-col items-center gap-2 p-3 w-full bg-primary/5 hover:bg-primary/20 border border-primary/20 rounded-xl text-primary transition-all active:scale-95 group/btn shadow-sm min-w-0"
                                     >
-                                        <Play size={16} fill="currentColor" className="group-hover/btn:scale-125 transition-transform" />
+                                        <Play size={18} fill="currentColor" className="group-hover/btn:scale-110 transition-transform" />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest truncate w-full text-center">Sync</span>
                                     </button>
                                     <button
                                         onClick={() => { setCurrentSource(source); setShowMappingModal(true); }}
-                                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-90 group/btn shadow-sm"
-                                        title="Configure Mappings"
+                                        className="flex flex-col items-center gap-2 p-3 w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-95 group/btn shadow-sm min-w-0"
                                     >
-                                        <Fingerprint size={16} className="group-hover/btn:rotate-12 transition-transform" />
+                                        <Fingerprint size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest truncate w-full text-center">Mappings</span>
                                     </button>
                                     <button
                                         onClick={() => { setCurrentSource(source); setShowSourceModal(true); }}
-                                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-90 group/btn shadow-sm"
-                                        title="Edit Connection"
+                                        className="flex flex-col items-center gap-2 p-3 w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-95 group/btn shadow-sm min-w-0"
                                     >
-                                        <Edit size={16} className="group-hover/btn:-rotate-12 transition-transform" />
+                                        <Edit size={18} className="group-hover/btn:-rotate-12 transition-transform" />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest truncate w-full text-center">Edit</span>
                                     </button>
                                     <button
                                         onClick={() => handleDeleteSource(source.id)}
-                                        className="p-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-xl text-red-500/60 hover:text-red-500 transition-all active:scale-90 group/btn shadow-sm"
-                                        title="Delete Source"
+                                        className="flex flex-col items-center gap-2 p-3 w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-xl text-red-500/60 hover:text-red-500 transition-all active:scale-95 group/btn shadow-sm min-w-0"
                                     >
-                                        <Trash2 size={16} className="group-hover/btn:scale-110 transition-transform" />
+                                        <Trash2 size={18} className="group-hover/btn:scale-110 transition-transform" />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest truncate w-full text-center">Delete</span>
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="mt-6 grid grid-cols-4 gap-6 pt-5 border-t border-white/5">
+                            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 pt-5 border-t border-white/5">
                                 <div className="space-y-1">
                                     <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold block">Integrity</span>
                                     <div className={`text-xs font-bold flex items-center gap-1.5 ${(!source.last_error) ? 'text-emerald-400' : 'text-red-400'}`}>

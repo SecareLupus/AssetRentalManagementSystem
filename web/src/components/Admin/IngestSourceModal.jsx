@@ -211,7 +211,7 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
             <div className="min-h-[350px]">
                 {step === 1 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6">
                             <div className="space-y-5">
                                 <div className="space-y-2">
                                     <label className="form-label text-primary flex items-center gap-2 px-1">
@@ -285,7 +285,7 @@ const IngestSourceModal = ({ isOpen, onClose, source, onSave }) => {
 
                 {step === 2 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-8">
                             <div className="space-y-5">
                                 <div className="space-y-2">
                                     <label className="form-label text-primary flex items-center gap-2 px-1">
