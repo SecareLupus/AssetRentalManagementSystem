@@ -9,14 +9,14 @@ import {
     CheckCircle,
     XCircle,
     Clock,
-    Search,
     Database,
     Fingerprint,
     Zap,
     ChevronRight,
     Play,
     Globe,
-    Activity
+    Activity,
+    AlertTriangle
 } from 'lucide-react';
 import { GlassCard } from '../Shared';
 import IngestSourceModal from './IngestSourceModal';
@@ -76,20 +76,18 @@ const IngestManager = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Database className="text-primary" />
-                        Universal Ingestion Engine
+            <div className="flex flex-row justify-between items-center mb-8 px-2 mt-4 w-full">
+                <div className="flex flex-col">
+                    <h2 className="text-2xl font-black text-text flex items-center gap-3">
+                        <Activity className="text-primary" size={28} /> Universal Ingestion Engine
                     </h2>
-                    <p className="text-sm text-text-muted">Harvest and map data from external REST APIs</p>
+                    <p className="text-xs text-text-muted font-medium mt-1">Manage external data sources and automated polling intervals</p>
                 </div>
                 <button
                     onClick={() => { setCurrentSource(null); setShowSourceModal(true); }}
-                    className="btn-primary flex items-center gap-2"
+                    className="btn-primary flex items-center gap-3 py-3 px-6 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all font-bold uppercase tracking-widest text-[11px] ml-auto"
                 >
-                    <Plus size={18} />
-                    New Source
+                    <Plus size={18} strokeWidth={3} /> Register New Data Source
                 </button>
             </div>
 
@@ -123,34 +121,34 @@ const IngestManager = () => {
                                         {source.base_url}
                                     </p>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-2 relative z-10">
                                     <button
                                         onClick={() => handleSyncNow(source.id)}
-                                        className="p-2.5 hover:bg-primary/20 rounded-xl text-primary transition-all active:scale-95"
+                                        className="p-3 bg-primary/5 hover:bg-primary/20 border border-primary/20 rounded-xl text-primary transition-all active:scale-90 group/btn shadow-sm"
                                         title="Sync All Endpoints"
                                     >
-                                        <Play size={20} fill="currentColor" />
+                                        <Play size={16} fill="currentColor" className="group-hover/btn:scale-125 transition-transform" />
                                     </button>
                                     <button
                                         onClick={() => { setCurrentSource(source); setShowMappingModal(true); }}
-                                        className="p-2.5 hover:bg-white/10 rounded-xl text-text-muted hover:text-text transition-all"
+                                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-90 group/btn shadow-sm"
                                         title="Configure Mappings"
                                     >
-                                        <Fingerprint size={20} />
+                                        <Fingerprint size={16} className="group-hover/btn:rotate-12 transition-transform" />
                                     </button>
                                     <button
                                         onClick={() => { setCurrentSource(source); setShowSourceModal(true); }}
-                                        className="p-2.5 hover:bg-white/10 rounded-xl text-text-muted hover:text-text transition-all"
+                                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-text-muted hover:text-text transition-all active:scale-90 group/btn shadow-sm"
                                         title="Edit Connection"
                                     >
-                                        <Edit size={20} />
+                                        <Edit size={16} className="group-hover/btn:-rotate-12 transition-transform" />
                                     </button>
                                     <button
                                         onClick={() => handleDeleteSource(source.id)}
-                                        className="p-2.5 hover:bg-red-500/20 rounded-xl text-red-500 transition-all opacity-40 hover:opacity-100"
+                                        className="p-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-xl text-red-500/60 hover:text-red-500 transition-all active:scale-90 group/btn shadow-sm"
                                         title="Delete Source"
                                     >
-                                        <Trash2 size={20} />
+                                        <Trash2 size={16} className="group-hover/btn:scale-110 transition-transform" />
                                     </button>
                                 </div>
                             </div>
@@ -159,7 +157,6 @@ const IngestManager = () => {
                                 <div className="space-y-1">
                                     <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold block">Integrity</span>
                                     <div className={`text-xs font-bold flex items-center gap-1.5 ${(!source.last_error) ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {(!source.last_error) ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
                                         {source.last_status || 'Checking...'}
                                     </div>
                                     {source.last_error && <div className="text-[8px] opacity-60 truncate">{source.last_error}</div>}
@@ -223,6 +220,6 @@ const IngestManager = () => {
     );
 };
 
-const AlertTriangle = ({ size }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11.73 3 8 14a2 2 0 0 1-1.73 3H4a2 2 0 0 1-1.73-3l8-14a2 2 0 0 1 3.46 0Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
+// Local components if needed
 
 export default IngestManager;
