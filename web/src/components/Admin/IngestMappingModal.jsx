@@ -17,7 +17,7 @@ const TARGET_MODELS = [
 
 const TARGET_FIELDS = {
     item_type: ['code', 'name', 'kind', 'is_active'],
-    asset: ['item_type_id', 'asset_tag', 'serial_number', 'status', 'place_id'],
+    asset: ['item_type_id', 'item_type_code', 'item_type_name', 'asset_tag', 'serial_number', 'status', 'place_id'],
     company: ['name', 'legal_name', 'description'],
     person: ['given_name', 'family_name', 'company_id'],
     place: ['name', 'description', 'category', 'is_internal']
@@ -202,6 +202,18 @@ const IngestMappingModal = ({ isOpen, onClose, source, onSave }) => {
                             <span className="font-medium">{error}</span>
                         </div>
                     )}
+
+                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-2">
+                        <div className="flex items-center gap-2 text-primary">
+                            <Fingerprint size={16} />
+                            <h5 className="text-[10px] font-black uppercase tracking-widest">About "ID Key"</h5>
+                        </div>
+                        <p className="text-[10px] text-text-muted leading-relaxed">
+                            The <strong>ID Key</strong> is the unique identifier for a model in the external system. 
+                            It is used to perform <strong>UPSERT</strong> operations (Update if exists, Insert if not). 
+                            Required for every mapped model. If multiple fields are marked as ID Key for the same model, the last one will be used.
+                        </p>
+                    </div>
 
                     <div className="space-y-4">
                         {mappings.map((m, idx) => (

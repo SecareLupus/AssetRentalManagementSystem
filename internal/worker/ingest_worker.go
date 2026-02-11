@@ -327,9 +327,12 @@ func (w *IngestWorker) SyncEndpoint(ctx context.Context, src *domain.IngestSourc
 	// Strategy-based extraction
 	items := w.extractItems(jsonData, ep.RespStrategy, ep.ItemsPath)
 
+	// Load ItemType cache for resolution
+	typeCache := w.loadItemTypeCache(ctx)
+
 	count := 0
 	for _, item := range items {
-		if err := w.ingestItem(ctx, ep.Mappings, item); err == nil {
+		if err := w.ingestItem(ctx, ep.Mappings, item, typeCache); err == nil {
 			count++
 		}
 	}
@@ -369,7 +372,21 @@ func (w *IngestWorker) extractItems(data interface{}, strategy string, itemsPath
 	return nil
 }
 
-func (w *IngestWorker) ingestItem(ctx context.Context, mappings []domain.IngestMapping, item interface{}) error {
+func (w *IngestWorker) loadItemTypeCache(ctx context.Context) map[string]int64 {
+	cache := make(map[string]int64)
+	types, err := w.repo.ListItemTypes(ctx, true)
+	if err != nil {
+		log.Printf("[IngestWorker] Failed to load ItemType cache: %v", err)
+		return cache
+	}
+	for _, t := range types {
+		cache["code:"+t.Code] = t.ID
+		cache["name:"+t.Name] = t.ID
+	}
+	return cache
+}
+
+func (w *IngestWorker) ingestItem(ctx context.Context, mappings []domain.IngestMapping, item interface{}, typeCache map[string]int64) error {
 	// Group mappings by target model
 	models := make(map[domain.IngestTargetModel]map[string]interface{})
 	identities := make(map[domain.IngestTargetModel]interface{})
@@ -389,8 +406,42 @@ func (w *IngestWorker) ingestItem(ctx context.Context, mappings []domain.IngestM
 		}
 	}
 
-	// Upsert each model
+	// Handle ItemType mappings first
+	if itData, ok := models[domain.IngestTargetItemType]; ok {
+		identity := identities[domain.IngestTargetItemType]
+		if identity != nil {
+			it := &domain.ItemType{
+				Code: fmt.Sprintf("%v", identity),
+			}
+			if name, ok := itData["name"].(string); ok {
+				it.Name = name
+			}
+			if kind, ok := itData["kind"].(string); ok {
+				it.Kind = domain.ItemKind(kind)
+			}
+			if isActive, ok := itData["is_active"].(bool); ok {
+				it.IsActive = isActive
+			} else {
+				it.IsActive = true
+			}
+
+			if err := w.repo.UpsertItemType(ctx, it); err == nil {
+				// Update cache with new/updated ID
+				typeCache["code:"+it.Code] = it.ID
+				if it.Name != "" {
+					typeCache["name:"+it.Name] = it.ID
+				}
+			} else {
+				log.Printf("[IngestWorker] UpsertItemType failed: %v", err)
+			}
+		}
+	}
+
+	// Upsert remaining models
 	for model, data := range models {
+		if model == domain.IngestTargetItemType {
+			continue // Already handled
+		}
 		identity := identities[model]
 		if identity == nil {
 			continue // Identity is required
@@ -398,10 +449,8 @@ func (w *IngestWorker) ingestItem(ctx context.Context, mappings []domain.IngestM
 
 		var err error
 		switch model {
-		case domain.IngestTargetItemType:
-			err = w.upsertItemType(ctx, data, identity)
 		case domain.IngestTargetAsset:
-			err = w.upsertAsset(ctx, data, identity)
+			err = w.upsertAsset(ctx, data, identity, typeCache)
 		case domain.IngestTargetCompany:
 			err = w.upsertCompany(ctx, data, identity)
 		case domain.IngestTargetPerson:
@@ -435,7 +484,7 @@ func (w *IngestWorker) upsertItemType(ctx context.Context, data map[string]inter
 	return w.repo.UpsertItemType(ctx, it)
 }
 
-func (w *IngestWorker) upsertAsset(ctx context.Context, data map[string]interface{}, identity interface{}) error {
+func (w *IngestWorker) upsertAsset(ctx context.Context, data map[string]interface{}, identity interface{}, typeCache map[string]int64) error {
 	a := &domain.Asset{}
 	idenStr := fmt.Sprintf("%v", identity)
 
@@ -459,8 +508,24 @@ func (w *IngestWorker) upsertAsset(ctx context.Context, data map[string]interfac
 		a.ItemTypeID = int64(itID)
 	}
 
+	// Dynamic resolution
 	if a.ItemTypeID == 0 {
-		return fmt.Errorf("item_type_id missing")
+		if code, ok := data["item_type_code"].(string); ok && code != "" {
+			if id, ok := typeCache["code:"+code]; ok {
+				a.ItemTypeID = id
+			}
+		}
+		if a.ItemTypeID == 0 {
+			if name, ok := data["item_type_name"].(string); ok && name != "" {
+				if id, ok := typeCache["name:"+name]; ok {
+					a.ItemTypeID = id
+				}
+			}
+		}
+	}
+
+	if a.ItemTypeID == 0 {
+		return fmt.Errorf("item_type_id could not be resolved (serial: %s)", idenStr)
 	}
 
 	return w.repo.UpsertAsset(ctx, a)
