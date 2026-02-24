@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/Shared';
+import { GlassCard } from '../components/Shared';
 import PredictiveLoadout from '../components/PredictiveLoadout';
 
 const SeasonPlanner = () => {
@@ -13,7 +13,7 @@ const SeasonPlanner = () => {
             // Assume we are creating a new show here, and then applying the loadout
             const newShowId = 999; // Mock ID for demonstration
 
-            const response = await fetch(`/api/v1/seasons/shows/${newShowId}/loadout`, {
+            const response = await fetch(`/v1/seasons/shows/${newShowId}/loadout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(finalLoadout)
@@ -29,22 +29,22 @@ const SeasonPlanner = () => {
     };
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-6 text-white">Season & Show Planner</h1>
-            <p className="text-gray-400 mb-8">
+        <div style={{ padding: '1.5rem' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'white' }}>Season & Show Planner</h1>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
                 Manage the logistical hierarchy of Show Companies, Seasons, Shows, and their associated Rings.
             </p>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Hierarchy Setup</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <GlassCard>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Hierarchy Setup</h3>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Select Show Company</label>
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Select Show Company</label>
                             <select
-                                className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"
+                                style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.5rem', color: 'white' }}
                                 value={selectedCompanyId}
                                 onChange={(e) => setSelectedCompanyId(e.target.value)}
                             >
@@ -55,9 +55,9 @@ const SeasonPlanner = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Select Season</label>
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Select Season</label>
                             <select
-                                className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"
+                                style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.5rem', color: 'white' }}
                                 value={selectedSeasonId}
                                 onChange={(e) => setSelectedSeasonId(e.target.value)}
                                 disabled={!selectedCompanyId}
@@ -69,9 +69,9 @@ const SeasonPlanner = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Historical Show Reference (For Prediction)</label>
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Historical Show Reference (For Prediction)</label>
                             <select
-                                className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"
+                                style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.5rem', color: 'white' }}
                                 value={selectedHistoricalShowId}
                                 onChange={(e) => setSelectedHistoricalShowId(e.target.value)}
                                 disabled={!selectedSeasonId}
@@ -81,8 +81,8 @@ const SeasonPlanner = () => {
                                 <option value="2">2025 Winter Circuit - Week 2</option>
                             </select>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </GlassCard>
 
                 <div>
                     {selectedHistoricalShowId && (
@@ -98,3 +98,4 @@ const SeasonPlanner = () => {
 };
 
 export default SeasonPlanner;
+

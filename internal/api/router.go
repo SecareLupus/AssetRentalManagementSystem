@@ -444,6 +444,48 @@ func NewRouter(h *Handler) http.Handler {
 		}
 	})
 
+	// Logistics (Deliveries)
+	mux.HandleFunc("/v1/logistics/deliveries", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateScheduledDelivery(w, r)
+		case http.MethodGet:
+			h.ListScheduledDeliveries(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/logistics/deliveries/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetScheduledDelivery(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Logistics (Shipments)
+	mux.HandleFunc("/v1/logistics/shipments", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			h.CreateShipment(w, r)
+		case http.MethodGet:
+			h.ListShipments(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/v1/logistics/shipments/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetShipment(w, r)
+		case http.MethodPut:
+			h.UpdateShipment(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Intelligence
 	mux.HandleFunc("/v1/intelligence/availability", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

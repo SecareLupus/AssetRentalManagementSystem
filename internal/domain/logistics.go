@@ -16,6 +16,16 @@ const (
 	ReservationStatusFulfilled          RentalReservationStatus = "ReservationFulfilled"
 )
 
+// DeliveryStatus represents the status of a shipment, aligning with schema.org/DeliveryStatusEvent.
+type DeliveryStatus string
+
+const (
+	DeliveryPreparing DeliveryStatus = "DeliveryPreparing"
+	DeliveryShipped   DeliveryStatus = "DeliveryShipped"
+	DeliveryDelivered DeliveryStatus = "DeliveryDelivered"
+	DeliveryReturned  DeliveryStatus = "DeliveryReturned"
+)
+
 // RentalReservation represents an "intent to rent", aligning with schema.org/RentalReservation.
 type RentalReservation struct {
 	ID                int64                   `json:"id"`
@@ -51,16 +61,18 @@ type Demand struct {
 
 // CheckOutAction tracks the physical movement of assets out of the warehouse.
 type CheckOutAction struct {
-	ID            int64           `json:"id"`
-	ReservationID int64           `json:"reservationId"`
-	AssetID       int64           `json:"assetId"`
-	AgentID       int64           `json:"agentId"`        // User/Person performing the action
-	RecipientID   *int64          `json:"recipientId"`    // Person receiving the asset
-	StartTime     time.Time       `json:"startTime"`      // When the checkout happened
-	FromLocation  *int64          `json:"fromLocationId"` // PlaceID (Warehouse)
-	ToLocation    *int64          `json:"toLocationId"`   // PlaceID (Event Location)
-	Status        string          `json:"actionStatus"`   // schema.org/actionStatus
-	Metadata      json.RawMessage `json:"metadata,omitempty"`
+	ID                  int64           `json:"id"`
+	ReservationID       int64           `json:"reservationId"`
+	AssetID             int64           `json:"assetId"`
+	AgentID             int64           `json:"agentId"`             // User/Person performing the action
+	RecipientID         *int64          `json:"recipientId"`         // Person receiving the asset
+	ShipmentID          *int64          `json:"shipmentId"`          // Link to Shipment
+	ScheduledDeliveryID *int64          `json:"scheduledDeliveryId"` // Link to ScheduledDelivery (if no shipment)
+	StartTime           time.Time       `json:"startTime"`           // When the checkout happened
+	FromLocation        *int64          `json:"fromLocationId"`      // PlaceID (Warehouse)
+	ToLocation          *int64          `json:"toLocationId"`        // PlaceID (Event Location)
+	Status              string          `json:"actionStatus"`        // schema.org/actionStatus
+	Metadata            json.RawMessage `json:"metadata,omitempty"`
 }
 
 // ReturnAction tracks the physical movement of assets back to the warehouse.
@@ -69,6 +81,7 @@ type ReturnAction struct {
 	ReservationID int64           `json:"reservationId"`
 	AssetID       int64           `json:"assetId"`
 	AgentID       int64           `json:"agentId"`
+	ShipmentID    *int64          `json:"shipmentId"` // Link to Shipment (e.g., return shipment)
 	StartTime     time.Time       `json:"startTime"`
 	FromLocation  *int64          `json:"fromLocationId"`
 	ToLocation    *int64          `json:"toLocationId"` // PlaceID (Warehouse)
@@ -92,4 +105,38 @@ type RentalFulfillmentStatus struct {
 	ReservationID int64             `json:"reservationId"`
 	Status        string            `json:"status"` // Overall status based on lines
 	Lines         []FulfillmentLine `json:"lines"`
+}
+
+// ScheduledDelivery represents a planned delivery for a specific Event/SeasonPlan (schema.org/DeliveryEvent).
+type ScheduledDelivery struct {
+	ID         int64     `json:"id"`
+	EventID    int64     `json:"eventId"` // Replacing seasonPlanId for generic use
+	TargetDate time.Time `json:"availableFrom"`
+	Notes      string    `json:"notes,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// ScheduledDeliveryItem represents the required items for a scheduled delivery (schema.org/Demand).
+type ScheduledDeliveryItem struct {
+	ID                  int64  `json:"id"`
+	ScheduledDeliveryID int64  `json:"scheduledDeliveryId"`
+	ItemKind            string `json:"itemKind"` // e.g., 'item_type'
+	ItemID              int64  `json:"itemId"`
+	Quantity            int    `json:"requestedQuantity"`
+}
+
+// Shipment represents a physical shipment, optionally linked to a ScheduledDelivery (schema.org/ParcelDelivery).
+type Shipment struct {
+	ID                  int64          `json:"id"`
+	ScheduledDeliveryID *int64         `json:"scheduledDeliveryId,omitempty"`
+	ProviderID          int64          `json:"providerId"` // Replacing showCompanyId
+	ShipDate            time.Time      `json:"expectedArrivalFrom"`
+	Carrier             string         `json:"carrier,omitempty"`
+	TrackingNumber      string         `json:"trackingNumber,omitempty"`
+	Status              DeliveryStatus `json:"deliveryStatus"` // schema.org/deliveryStatus (links to DeliveryStatusEvent)
+	Notes               string         `json:"notes,omitempty"`
+	Direction           string         `json:"direction"` // 'outbound' or 'inbound'
+	CreatedAt           time.Time      `json:"createdAt"`
+	UpdatedAt           time.Time      `json:"updatedAt"`
 }

@@ -174,4 +174,17 @@ type Repository interface {
 	GetRingsForShow(ctx context.Context, showID int64) ([]domain.ShowRing, error)
 
 	SetShowRingLoadout(ctx context.Context, showRingID int64, items []domain.RingLoadoutItem) error
+
+	// Shipments and Deliveries (Phase 32)
+	CreateScheduledDelivery(ctx context.Context, sd *domain.ScheduledDelivery) error
+	GetScheduledDeliveryByID(ctx context.Context, id int64) (*domain.ScheduledDelivery, error)
+	ListScheduledDeliveries(ctx context.Context, eventID *int64) ([]domain.ScheduledDelivery, error)
+
+	CreateScheduledDeliveryItem(ctx context.Context, item *domain.ScheduledDeliveryItem) error
+	ListScheduledDeliveryItems(ctx context.Context, deliveryID int64) ([]domain.ScheduledDeliveryItem, error)
+
+	CreateShipment(ctx context.Context, s *domain.Shipment) error
+	GetShipmentByID(ctx context.Context, id int64) (*domain.Shipment, error)
+	ListShipments(ctx context.Context, deliveryID *int64) ([]domain.Shipment, error)
+	UpdateShipment(ctx context.Context, s *domain.Shipment) error
 }

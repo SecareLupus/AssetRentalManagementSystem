@@ -623,22 +623,22 @@ func (r *SqlRepository) DeleteDemand(ctx context.Context, id int64) error {
 
 func (r *SqlRepository) CreateCheckOutAction(ctx context.Context, co *domain.CheckOutAction) error {
 	query := `INSERT INTO check_out_actions (
-		reservation_id, asset_id, agent_id, recipient_id, start_time, 
+		reservation_id, asset_id, agent_id, recipient_id, shipment_id, scheduled_delivery_id, start_time, 
 		from_location_id, to_location_id, action_status, metadata
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, co.ReservationID, co.AssetID, co.AgentID, co.RecipientID, co.StartTime, co.FromLocation, co.ToLocation, co.Status, co.Metadata).Scan(&co.ID)
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, co.ReservationID, co.AssetID, co.AgentID, co.RecipientID, co.ShipmentID, co.ScheduledDeliveryID, co.StartTime, co.FromLocation, co.ToLocation, co.Status, co.Metadata).Scan(&co.ID)
 }
 
 func (r *SqlRepository) CreateReturnAction(ctx context.Context, ra *domain.ReturnAction) error {
 	query := `INSERT INTO return_actions (
-		reservation_id, asset_id, agent_id, start_time, 
+		reservation_id, asset_id, agent_id, shipment_id, start_time, 
 		from_location_id, to_location_id, action_status, metadata
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	return r.db.QueryRowContext(ctx, query, ra.ReservationID, ra.AssetID, ra.AgentID, ra.StartTime, ra.FromLocation, ra.ToLocation, ra.Status, ra.Metadata).Scan(&ra.ID)
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, ra.ReservationID, ra.AssetID, ra.AgentID, ra.ShipmentID, ra.StartTime, ra.FromLocation, ra.ToLocation, ra.Status, ra.Metadata).Scan(&ra.ID)
 }
 
 func (r *SqlRepository) ListCheckOutActions(ctx context.Context, reservationID int64) ([]domain.CheckOutAction, error) {
-	query := `SELECT id, reservation_id, asset_id, agent_id, recipient_id, start_time, 
+	query := `SELECT id, reservation_id, asset_id, agent_id, recipient_id, shipment_id, scheduled_delivery_id, start_time, 
 	                 from_location_id, to_location_id, action_status, metadata 
 	          FROM check_out_actions WHERE reservation_id = $1`
 	rows, err := r.db.QueryContext(ctx, query, reservationID)
@@ -651,7 +651,7 @@ func (r *SqlRepository) ListCheckOutActions(ctx context.Context, reservationID i
 	for rows.Next() {
 		var co domain.CheckOutAction
 		var metadataJSON []byte
-		if err := rows.Scan(&co.ID, &co.ReservationID, &co.AssetID, &co.AgentID, &co.RecipientID, &co.StartTime, &co.FromLocation, &co.ToLocation, &co.Status, &metadataJSON); err != nil {
+		if err := rows.Scan(&co.ID, &co.ReservationID, &co.AssetID, &co.AgentID, &co.RecipientID, &co.ShipmentID, &co.ScheduledDeliveryID, &co.StartTime, &co.FromLocation, &co.ToLocation, &co.Status, &metadataJSON); err != nil {
 			return nil, err
 		}
 		co.Metadata = json.RawMessage(metadataJSON)
@@ -661,7 +661,7 @@ func (r *SqlRepository) ListCheckOutActions(ctx context.Context, reservationID i
 }
 
 func (r *SqlRepository) ListReturnActions(ctx context.Context, reservationID int64) ([]domain.ReturnAction, error) {
-	query := `SELECT id, reservation_id, asset_id, agent_id, start_time, 
+	query := `SELECT id, reservation_id, asset_id, agent_id, shipment_id, start_time, 
 	                 from_location_id, to_location_id, action_status, metadata 
 	          FROM return_actions WHERE reservation_id = $1`
 	rows, err := r.db.QueryContext(ctx, query, reservationID)
@@ -674,7 +674,7 @@ func (r *SqlRepository) ListReturnActions(ctx context.Context, reservationID int
 	for rows.Next() {
 		var ra domain.ReturnAction
 		var metadataJSON []byte
-		if err := rows.Scan(&ra.ID, &ra.ReservationID, &ra.AssetID, &ra.AgentID, &ra.StartTime, &ra.FromLocation, &ra.ToLocation, &ra.Status, &metadataJSON); err != nil {
+		if err := rows.Scan(&ra.ID, &ra.ReservationID, &ra.AssetID, &ra.AgentID, &ra.ShipmentID, &ra.StartTime, &ra.FromLocation, &ra.ToLocation, &ra.Status, &metadataJSON); err != nil {
 			return nil, err
 		}
 		ra.Metadata = json.RawMessage(metadataJSON)
@@ -2362,4 +2362,132 @@ func (r *SqlRepository) UpsertPlace(ctx context.Context, p *domain.Place) error 
 	            updated_at = NOW()
 	          RETURNING id`
 	return r.db.QueryRowContext(ctx, query, p.Name, p.Description, p.Category, p.IsInternal).Scan(&p.ID)
+}
+
+// Shipments and Deliveries
+
+func (r *SqlRepository) CreateScheduledDelivery(ctx context.Context, sd *domain.ScheduledDelivery) error {
+	now := time.Now()
+	sd.CreatedAt = now
+	sd.UpdatedAt = now
+	query := `INSERT INTO scheduled_deliveries (event_id, target_date, notes, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, sd.EventID, sd.TargetDate, sd.Notes, sd.CreatedAt, sd.UpdatedAt).Scan(&sd.ID)
+}
+
+func (r *SqlRepository) GetScheduledDeliveryByID(ctx context.Context, id int64) (*domain.ScheduledDelivery, error) {
+	query := `SELECT id, event_id, target_date, COALESCE(notes, ''), created_at, updated_at FROM scheduled_deliveries WHERE id = $1`
+	var sd domain.ScheduledDelivery
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&sd.ID, &sd.EventID, &sd.TargetDate, &sd.Notes, &sd.CreatedAt, &sd.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &sd, err
+}
+
+func (r *SqlRepository) ListScheduledDeliveries(ctx context.Context, eventID *int64) ([]domain.ScheduledDelivery, error) {
+	query := `SELECT id, event_id, target_date, COALESCE(notes, ''), created_at, updated_at FROM scheduled_deliveries`
+	var args []interface{}
+	if eventID != nil {
+		query += ` WHERE event_id = $1`
+		args = append(args, *eventID)
+	}
+	query += ` ORDER BY target_date`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.ScheduledDelivery
+	for rows.Next() {
+		var sd domain.ScheduledDelivery
+		if err := rows.Scan(&sd.ID, &sd.EventID, &sd.TargetDate, &sd.Notes, &sd.CreatedAt, &sd.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, sd)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) CreateScheduledDeliveryItem(ctx context.Context, item *domain.ScheduledDeliveryItem) error {
+	query := `INSERT INTO scheduled_delivery_items (scheduled_delivery_id, item_kind, item_id, quantity)
+	          VALUES ($1, $2, $3, $4) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, item.ScheduledDeliveryID, item.ItemKind, item.ItemID, item.Quantity).Scan(&item.ID)
+}
+
+func (r *SqlRepository) ListScheduledDeliveryItems(ctx context.Context, deliveryID int64) ([]domain.ScheduledDeliveryItem, error) {
+	query := `SELECT id, scheduled_delivery_id, item_kind, item_id, quantity FROM scheduled_delivery_items WHERE scheduled_delivery_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, deliveryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.ScheduledDeliveryItem
+	for rows.Next() {
+		var item domain.ScheduledDeliveryItem
+		if err := rows.Scan(&item.ID, &item.ScheduledDeliveryID, &item.ItemKind, &item.ItemID, &item.Quantity); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) CreateShipment(ctx context.Context, s *domain.Shipment) error {
+	now := time.Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
+	// Ensure default status
+	if s.Status == "" {
+		s.Status = "Preparing"
+	}
+	query := `INSERT INTO shipments (scheduled_delivery_id, provider_id, ship_date, carrier, tracking_number, status, notes, direction, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	return r.db.QueryRowContext(ctx, query, s.ScheduledDeliveryID, s.ProviderID, s.ShipDate, s.Carrier, s.TrackingNumber, s.Status, s.Notes, s.Direction, s.CreatedAt, s.UpdatedAt).Scan(&s.ID)
+}
+
+func (r *SqlRepository) GetShipmentByID(ctx context.Context, id int64) (*domain.Shipment, error) {
+	query := `SELECT id, scheduled_delivery_id, provider_id, ship_date, COALESCE(carrier, ''), COALESCE(tracking_number, ''), status, COALESCE(notes, ''), direction, created_at, updated_at FROM shipments WHERE id = $1`
+	var s domain.Shipment
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&s.ID, &s.ScheduledDeliveryID, &s.ProviderID, &s.ShipDate, &s.Carrier, &s.TrackingNumber, &s.Status, &s.Notes, &s.Direction, &s.CreatedAt, &s.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &s, err
+}
+
+func (r *SqlRepository) ListShipments(ctx context.Context, deliveryID *int64) ([]domain.Shipment, error) {
+	query := `SELECT id, scheduled_delivery_id, provider_id, ship_date, COALESCE(carrier, ''), COALESCE(tracking_number, ''), status, COALESCE(notes, ''), direction, created_at, updated_at FROM shipments`
+	var args []interface{}
+	if deliveryID != nil {
+		query += ` WHERE scheduled_delivery_id = $1`
+		args = append(args, *deliveryID)
+	}
+	query += ` ORDER BY ship_date`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.Shipment
+	for rows.Next() {
+		var s domain.Shipment
+		if err := rows.Scan(&s.ID, &s.ScheduledDeliveryID, &s.ProviderID, &s.ShipDate, &s.Carrier, &s.TrackingNumber, &s.Status, &s.Notes, &s.Direction, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, s)
+	}
+	return results, nil
+}
+
+func (r *SqlRepository) UpdateShipment(ctx context.Context, s *domain.Shipment) error {
+	s.UpdatedAt = time.Now()
+	query := `UPDATE shipments SET scheduled_delivery_id = $1, provider_id = $2, ship_date = $3, carrier = $4, tracking_number = $5, status = $6, notes = $7, direction = $8, updated_at = $9 WHERE id = $10`
+	_, err := r.db.ExecContext(ctx, query, s.ScheduledDeliveryID, s.ProviderID, s.ShipDate, s.Carrier, s.TrackingNumber, s.Status, s.Notes, s.Direction, s.UpdatedAt, s.ID)
+	return err
 }

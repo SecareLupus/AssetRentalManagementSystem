@@ -607,3 +607,92 @@ func (m *MockRepository) UpsertPlace(ctx context.Context, p *domain.Place) error
 	args := m.Called(ctx, p)
 	return args.Error(0)
 }
+
+// Phase 31: Hierarchy
+func (m *MockRepository) CreateShowCompany(ctx context.Context, sc *domain.ShowCompany) error {
+	return nil
+}
+func (m *MockRepository) GetShowCompany(ctx context.Context, id int64) (*domain.ShowCompany, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) CreateSeason(ctx context.Context, s *domain.Season) error { return nil }
+func (m *MockRepository) ListSeasonsForCompany(ctx context.Context, showCompanyID int64) ([]domain.Season, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) CreateShow(ctx context.Context, s *domain.Show) error { return nil }
+func (m *MockRepository) GetShowByID(ctx context.Context, id int64) (*domain.Show, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) CreateRing(ctx context.Context, r *domain.Ring) error { return nil }
+func (m *MockRepository) ListRingsForCompany(ctx context.Context, companyID int64) ([]domain.Ring, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) AddRingToShow(ctx context.Context, showRing *domain.ShowRing) error {
+	return nil
+}
+func (m *MockRepository) GetRingsForShow(ctx context.Context, showID int64) ([]domain.ShowRing, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) SetShowRingLoadout(ctx context.Context, showRingID int64, items []domain.RingLoadoutItem) error {
+	return nil
+}
+
+// Phase 32: Deliveries and Shipments
+func (m *MockRepository) CreateScheduledDelivery(ctx context.Context, sd *domain.ScheduledDelivery) error {
+	args := m.Called(ctx, sd)
+	return args.Error(0)
+}
+func (m *MockRepository) GetScheduledDeliveryByID(ctx context.Context, id int64) (*domain.ScheduledDelivery, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.ScheduledDelivery), args.Error(1)
+}
+func (m *MockRepository) ListScheduledDeliveries(ctx context.Context, eventID *int64) ([]domain.ScheduledDelivery, error) {
+	args := m.Called(ctx, eventID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.ScheduledDelivery), args.Error(1)
+}
+
+func (m *MockRepository) CreateScheduledDeliveryItem(ctx context.Context, item *domain.ScheduledDeliveryItem) error {
+	args := m.Called(ctx, item)
+	return args.Error(0)
+}
+func (m *MockRepository) ListScheduledDeliveryItems(ctx context.Context, deliveryID int64) ([]domain.ScheduledDeliveryItem, error) {
+	args := m.Called(ctx, deliveryID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.ScheduledDeliveryItem), args.Error(1)
+}
+
+func (m *MockRepository) CreateShipment(ctx context.Context, s *domain.Shipment) error {
+	args := m.Called(ctx, s)
+	return args.Error(0)
+}
+func (m *MockRepository) GetShipmentByID(ctx context.Context, id int64) (*domain.Shipment, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Shipment), args.Error(1)
+}
+func (m *MockRepository) ListShipments(ctx context.Context, scheduledDeliveryID *int64) ([]domain.Shipment, error) {
+	args := m.Called(ctx, scheduledDeliveryID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.Shipment), args.Error(1)
+}
+func (m *MockRepository) UpdateShipment(ctx context.Context, s *domain.Shipment) error {
+	args := m.Called(ctx, s)
+	return args.Error(0)
+}

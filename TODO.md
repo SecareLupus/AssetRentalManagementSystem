@@ -13,10 +13,10 @@ Goal: Implement the hierarchy of `ShowCompany` -> `Season` -> `Show` -> `Ring` a
 
 ### Phase 32: Delivery & Shipment Routing
 Goal: Port the explicit `ScheduledDelivery` and `Shipment` tracking from the prototype into our `CheckOutAction`/`ReturnAction` flow.
-- [ ] **Delivery Models**: Create `ScheduledDelivery` and `Shipment` structs in Go to group `CheckOutActions` logically.
-- [ ] **Carrier Tracking Integration**: Add tracking number and carrier fields to the new Shipment models.
-- [ ] **Frontend - Logistics Dispatch Board**: Create a React UI dedicated to assembling Shipments from approved Reservations and dispatching them.
-- [ ] **Frontend - Return Processing**: Create a streamlined UI for receiving `ReturnShipments` and instantly triggering the `InspectionRunner`.
+- [x] **Delivery Models**: Create `ScheduledDelivery` and `Shipment` structs in Go to group `CheckOutActions` logically.
+- [x] **Carrier Tracking Integration**: Add tracking number and carrier fields to the new Shipment models.
+- [x] **Frontend - Logistics Dispatch Board**: Create a React UI dedicated to assembling Shipments from approved Reservations and dispatching them.
+- [x] **Frontend - Return Processing**: Create a streamlined UI for receiving `ReturnShipments` and instantly triggering the `InspectionRunner`.
 
 ### Phase 33: Contextual Device Allocation
 Goal: Simplify the UX by allowing users to allocate specific devices (Assets) to Shipments based on the prototype's leaner workflow.

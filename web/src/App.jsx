@@ -21,8 +21,10 @@ import FleetReports from './pages/FleetReports';
 import InspectionEditor from './pages/InspectionEditor';
 import EntityManager from './pages/EntityManager';
 import SeasonPlanner from './pages/SeasonPlanner';
+import LogisticsDispatchBoard from './pages/LogisticsDispatchBoard';
+import ReturnProcessing from './pages/ReturnProcessing';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3, Building2, Map } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3, Building2, Map, Truck, Download } from 'lucide-react';
 import './App.css';
 
 const DevToggle = ({ collapsed }) => {
@@ -137,6 +139,8 @@ function AppContent() {
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
           <NavLink to="/tech" icon={Wrench} label="Maintenance" collapsed={collapsed} />
+          <NavLink to="/logistics/dispatch" icon={Truck} label="Dispatch Board" collapsed={collapsed} />
+          <NavLink to="/logistics/returns" icon={Download} label="Inbound Returns" collapsed={collapsed} />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" collapsed={collapsed} />
           <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" collapsed={collapsed} />
           <NavLink to="/season-planner" icon={Map} label="Season Planner" collapsed={collapsed} />
@@ -188,6 +192,8 @@ function AppContent() {
           <Route path="/tech" element={<TechDashboard />} />
           <Route path="/tech/inspect/:id" element={<InspectionRunner />} />
           <Route path="/tech/provision/:id" element={<ProvisioningInterface />} />
+          <Route path="/logistics/dispatch" element={<LogisticsDispatchBoard />} />
+          <Route path="/logistics/returns" element={<ReturnProcessing />} />
           <Route path="/kiosk" element={<WarehouseKiosk />} />
           <Route path="/intelligence" element={<IntelligenceOverview />} />
           <Route path="/season-planner" element={<SeasonPlanner />} />

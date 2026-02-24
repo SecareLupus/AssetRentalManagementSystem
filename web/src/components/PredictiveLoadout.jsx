@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/Shared';
+import { GlassCard } from '../components/Shared';
 
 const PredictiveLoadout = ({ historicalShowId, onPredictionComplete }) => {
     const [loading, setLoading] = useState(false);
@@ -10,7 +10,7 @@ const PredictiveLoadout = ({ historicalShowId, onPredictionComplete }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/v1/seasons/predict/${historicalShowId}`);
+            const response = await fetch(`/v1/seasons/predict/${historicalShowId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch prediction');
             }
@@ -36,36 +36,37 @@ const PredictiveLoadout = ({ historicalShowId, onPredictionComplete }) => {
     };
 
     return (
-        <Card className="mt-4">
-            <CardHeader>
-                <CardTitle>Predictive Equipment Loadout</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <GlassCard className="mt-4" style={{ marginTop: '1rem' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Predictive Equipment Loadout</h3>
+            </div>
+            <div>
                 {predictedRings.length === 0 ? (
-                    <div className="flex justify-between items-center">
-                        <p className="text-gray-400 text-sm">Predict next year's ring loadouts based on historical data.</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Predict next year's ring loadouts based on historical data.</p>
                         <button
                             onClick={handlePredict}
                             disabled={loading || !historicalShowId}
-                            className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                            className="btn-primary"
+                            style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
                         >
                             {loading ? 'Predicting...' : 'Generate Prediction'}
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {predictedRings.map((ring, rIndex) => (
-                            <div key={rIndex} className="bg-gray-800 p-4 rounded border border-gray-700">
-                                <h4 className="font-semibold text-lg text-white mb-2">{ring.ring?.name || `Ring ${ring.ring_id}`}</h4>
+                            <div key={rIndex} style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
+                                <h4 style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '1rem' }}>{ring.ring?.name || `Ring ${ring.ring_id}`}</h4>
                                 {ring.loadout_items?.map((item, iIndex) => (
-                                    <div key={iIndex} className="flex justify-between items-center border-b border-gray-700 py-2">
-                                        <span className="text-sm text-gray-300">Item Type ID: {item.item_type_id}</span>
-                                        <div className="flex items-center gap-2">
-                                            <label className="text-xs text-gray-400">Qty:</label>
+                                    <div key={iIndex} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', padding: '0.5rem 0' }}>
+                                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Item Type ID: {item.item_type_id}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Qty:</label>
                                             <input
                                                 type="number"
                                                 min="0"
-                                                className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-white w-20 text-right"
+                                                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '0.4rem', padding: '0.25rem 0.5rem', width: '60px', textAlign: 'right', color: 'white' }}
                                                 value={item.quantity}
                                                 onChange={(e) => handleQuantityChange(rIndex, iIndex, e.target.value)}
                                             />
@@ -75,27 +76,30 @@ const PredictiveLoadout = ({ historicalShowId, onPredictionComplete }) => {
                             </div>
                         ))}
 
-                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                        {error && <p style={{ color: 'var(--error)', fontSize: '0.875rem' }}>{error}</p>}
 
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                             <button
                                 onClick={() => setPredictedRings([])}
-                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                                className="glass"
+                                style={{ padding: '0.5rem 1rem' }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirm}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-sm"
+                                className="btn-primary"
+                                style={{ padding: '0.5rem 1rem' }}
                             >
                                 Confirm Loadout
                             </button>
                         </div>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </GlassCard>
     );
 };
 
 export default PredictiveLoadout;
+
