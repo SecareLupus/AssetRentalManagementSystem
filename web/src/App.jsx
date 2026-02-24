@@ -20,8 +20,9 @@ import PlanningSimulator from './pages/PlanningSimulator';
 import FleetReports from './pages/FleetReports';
 import InspectionEditor from './pages/InspectionEditor';
 import EntityManager from './pages/EntityManager';
+import SeasonPlanner from './pages/SeasonPlanner';
 import ApiInspector from './components/ApiInspector';
-import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3, Building2 } from 'lucide-react';
+import { LayoutDashboard, Box, Calendar, Settings, User, Terminal, Wrench, Scan, Brain, LogOut, ChevronLeft, ChevronRight, Menu, ShieldAlert, Calculator, BarChart3, Building2, Map } from 'lucide-react';
 import './App.css';
 
 const DevToggle = ({ collapsed }) => {
@@ -107,25 +108,25 @@ function AppContent() {
       {/* Sidebar Nav */}
       <nav className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: collapsed ? 'center' : 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ background: 'var(--primary)', padding: '0.5rem', borderRadius: '0.5rem', minWidth: '36px', display: 'flex', justifyContent: 'center' }}>
-                    <Box color="white" size={20} />
-                </div>
-                {!collapsed && <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.025em', whiteSpace: 'nowrap' }}>RMS Fleet</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: 'var(--primary)', padding: '0.5rem', borderRadius: '0.5rem', minWidth: '36px', display: 'flex', justifyContent: 'center' }}>
+              <Box color="white" size={20} />
             </div>
-             {!collapsed && (
-               <button onClick={() => setCollapsed(true)} className="glass" style={{ padding: '0.25rem', borderRadius: '0.25rem', color: 'var(--text-muted)' }}>
-                 <ChevronLeft size={16} />
-               </button>
-             )}
+            {!collapsed && <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.025em', whiteSpace: 'nowrap' }}>RMS Fleet</span>}
+          </div>
+          {!collapsed && (
+            <button onClick={() => setCollapsed(true)} className="glass" style={{ padding: '0.25rem', borderRadius: '0.25rem', color: 'var(--text-muted)' }}>
+              <ChevronLeft size={16} />
+            </button>
+          )}
         </div>
 
         {collapsed && (
-             <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '1rem' }}>
-               <button onClick={() => setCollapsed(false)} className="glass" style={{ padding: '0.25rem', borderRadius: '0.25rem', color: 'var(--text-muted)' }}>
-                 <ChevronRight size={16} />
-               </button>
-             </div>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '1rem' }}>
+            <button onClick={() => setCollapsed(false)} className="glass" style={{ padding: '0.25rem', borderRadius: '0.25rem', color: 'var(--text-muted)' }}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
         )}
 
         <div style={{ padding: '0 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -138,6 +139,7 @@ function AppContent() {
           <NavLink to="/tech" icon={Wrench} label="Maintenance" collapsed={collapsed} />
           <NavLink to="/kiosk" icon={Scan} label="Warehouse Kiosk" collapsed={collapsed} />
           <NavLink to="/intelligence" icon={Brain} label="Intelligence Hub" collapsed={collapsed} />
+          <NavLink to="/season-planner" icon={Map} label="Season Planner" collapsed={collapsed} />
           <NavLink to="/entities" icon={Building2} label="Entity Management" collapsed={collapsed} />
           <NavLink to="/simulator" icon={Calculator} label="Fleet Simulator" collapsed={collapsed} />
           <NavLink to="/reports" icon={BarChart3} label="Fleet Reports" collapsed={collapsed} />
@@ -145,28 +147,28 @@ function AppContent() {
           <div style={{ margin: '1rem 0', padding: '0 1rem', height: '1px', background: 'var(--border)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-             <NavLink to="/admin" icon={ShieldAlert} label="System Admin" collapsed={collapsed} />
-             <NavLink to="#" icon={Settings} label="Settings" collapsed={collapsed} />
-            
-             <div style={{ padding: '0.75rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-                <div style={{ minWidth: '32px', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: '0.75rem' }}>
-                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+            <NavLink to="/admin" icon={ShieldAlert} label="System Admin" collapsed={collapsed} />
+            <NavLink to="#" icon={Settings} label="Settings" collapsed={collapsed} />
+
+            <div style={{ padding: '0.75rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem', justifyContent: collapsed ? 'center' : 'flex-start' }}>
+              <div style={{ minWidth: '32px', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: '0.75rem' }}>
+                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              {!collapsed && (
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.username || 'User'}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role || 'Viewer'}</div>
                 </div>
-                {!collapsed && (
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.username || 'User'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role || 'Viewer'}</div>
-                    </div>
-                )}
-                {!collapsed && (
-                    <button 
-                    onClick={logout}
-                    style={{ background: 'transparent', color: 'var(--text-muted)', padding: '0.25rem' }}
-                    title="Logout"
-                    >
-                        <LogOut size={18} />
-                    </button>
-                )}
+              )}
+              {!collapsed && (
+                <button
+                  onClick={logout}
+                  style={{ background: 'transparent', color: 'var(--text-muted)', padding: '0.25rem' }}
+                  title="Logout"
+                >
+                  <LogOut size={18} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -188,6 +190,7 @@ function AppContent() {
           <Route path="/tech/provision/:id" element={<ProvisioningInterface />} />
           <Route path="/kiosk" element={<WarehouseKiosk />} />
           <Route path="/intelligence" element={<IntelligenceOverview />} />
+          <Route path="/season-planner" element={<SeasonPlanner />} />
           <Route path="/analytics/heatmap" element={<AvailabilityHeatmap />} />
           <Route path="/admin" element={<AdminCenter />} />
           <Route path="/entities" element={<EntityManager />} />

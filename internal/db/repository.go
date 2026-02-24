@@ -156,4 +156,22 @@ type Repository interface {
 	MarkEventProcessed(ctx context.Context, id int64) error
 	MarkEventFailed(ctx context.Context, id int64, errMessage string) error
 	ListWebhooks(ctx context.Context) ([]domain.WebhookConfig, error)
+
+	// Season Hierarchy Overlay (Phase 31)
+	CreateShowCompany(ctx context.Context, sc *domain.ShowCompany) error
+	GetShowCompany(ctx context.Context, id int64) (*domain.ShowCompany, error)
+
+	CreateSeason(ctx context.Context, s *domain.Season) error
+	ListSeasonsForCompany(ctx context.Context, showCompanyID int64) ([]domain.Season, error)
+
+	CreateRing(ctx context.Context, r *domain.Ring) error
+	ListRingsForCompany(ctx context.Context, showCompanyID int64) ([]domain.Ring, error)
+
+	CreateShow(ctx context.Context, s *domain.Show) error
+	GetShowByID(ctx context.Context, id int64) (*domain.Show, error)
+
+	AddRingToShow(ctx context.Context, showRing *domain.ShowRing) error
+	GetRingsForShow(ctx context.Context, showID int64) ([]domain.ShowRing, error)
+
+	SetShowRingLoadout(ctx context.Context, showRingID int64, items []domain.RingLoadoutItem) error
 }
