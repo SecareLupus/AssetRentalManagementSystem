@@ -696,3 +696,8 @@ func (m *MockRepository) UpdateShipment(ctx context.Context, s *domain.Shipment)
 	args := m.Called(ctx, s)
 	return args.Error(0)
 }
+
+func (m *MockRepository) AllocateAssetsToShipment(ctx context.Context, shipmentID int64, assetIDs []int64, agentID int64) error {
+	args := m.Called(ctx, shipmentID, assetIDs, agentID)
+	return args.Error(0)
+}

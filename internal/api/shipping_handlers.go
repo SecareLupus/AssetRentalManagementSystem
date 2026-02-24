@@ -157,3 +157,36 @@ func (h *Handler) UpdateShipment(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(shipment)
 }
+
+// AllocateAssets handles bulk allocation of assets to a shipment.
+func (h *Handler) AllocateAssets(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/v1/logistics/shipments/")
+	idStr = strings.TrimSuffix(idStr, "/allocate")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid shipment id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		AssetIDs []int64 `json:"asset_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	agentIDVal := h.getUserIDFromContext(r)
+	if agentIDVal == nil {
+		http.Error(w, "agent id missing from context", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.repo.AllocateAssetsToShipment(r.Context(), id, req.AssetIDs, *agentIDVal); err != nil {
+		log.Printf("failed to allocate assets to shipment: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -11,8 +11,11 @@ import {
     Search,
     Clock,
     CheckCircle2,
-    Briefcase
+    Briefcase,
+    Box
 } from 'lucide-react';
+import ShipmentAllocationUI from '../components/ShipmentAllocationUI';
+import { StatusBadge } from '../components/Shared';
 
 const LogisticsDispatchBoard = () => {
     const [reservations, setReservations] = useState([]);
@@ -20,6 +23,8 @@ const LogisticsDispatchBoard = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('unassigned'); // unassigned, scheduled, shipped
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedShipmentId, setSelectedShipmentId] = useState(null);
+    const [showAllocationModal, setShowAllocationModal] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -49,8 +54,7 @@ const LogisticsDispatchBoard = () => {
                 availableFrom: reservation.startTime,
                 notes: `Consolidated delivery for ${reservation.reservationName || 'Reservation #' + reservation.id}`
             };
-            const res = await axios.post('/v1/logistics/deliveries', deliveryData);
-            // Refresh
+            await axios.post('/v1/logistics/deliveries', deliveryData);
             fetchData();
         } catch (err) {
             console.error("Failed to create delivery", err);
@@ -133,12 +137,30 @@ const LogisticsDispatchBoard = () => {
                             </div>
                         ) : (
                             deliveries.map(del => (
-                                <DeliveryCard key={del.id} delivery={del} />
+                                <DeliveryCard
+                                    key={del.id}
+                                    delivery={del}
+                                    onAllocate={(shipmentId) => {
+                                        setSelectedShipmentId(shipmentId);
+                                        setShowAllocationModal(true);
+                                    }}
+                                />
                             ))
                         )}
                     </div>
                 </main>
             </div>
+
+            {showAllocationModal && (
+                <ShipmentAllocationUI
+                    shipmentId={selectedShipmentId}
+                    onClose={() => setShowAllocationModal(false)}
+                    onAllocationComplete={() => {
+                        setShowAllocationModal(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };
@@ -184,7 +206,17 @@ const ReservationMiniCard = ({ reservation, onSchedule }) => (
     </div>
 );
 
-const DeliveryCard = ({ delivery }) => {
+const DeliveryCard = ({ delivery, onAllocate }) => {
+    const [shipments, setShipments] = useState([]);
+
+    useEffect(() => {
+        if (delivery.id) {
+            axios.get(`/v1/logistics/shipments?delivery_id=${delivery.id}`)
+                .then(res => setShipments(res.data || []))
+                .catch(err => console.error(err));
+        }
+    }, [delivery.id]);
+
     return (
         <div className="glass" style={{ borderRadius: '1.5rem', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -203,7 +235,28 @@ const DeliveryCard = ({ delivery }) => {
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', padding: '1rem', marginBottom: '1.5rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{delivery.notes}</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{delivery.notes}</p>
+
+                {shipments.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {shipments.map(s => (
+                            <div key={s.id} className="glass" style={{ padding: '0.75rem', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                                    <Box size={14} color="var(--primary)" />
+                                    <span>Shipment #{s.id}</span>
+                                    <StatusBadge status={s.status} />
+                                </div>
+                                <button
+                                    className="glass"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.65rem' }}
+                                    onClick={() => onAllocate(s.id)}
+                                >
+                                    Allocate
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>

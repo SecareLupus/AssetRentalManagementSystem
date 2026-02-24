@@ -2491,3 +2491,63 @@ func (r *SqlRepository) UpdateShipment(ctx context.Context, s *domain.Shipment) 
 	_, err := r.db.ExecContext(ctx, query, s.ScheduledDeliveryID, s.ProviderID, s.ShipDate, s.Carrier, s.TrackingNumber, s.Status, s.Notes, s.Direction, s.UpdatedAt, s.ID)
 	return err
 }
+
+func (r *SqlRepository) AllocateAssetsToShipment(ctx context.Context, shipmentID int64, assetIDs []int64, agentID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Get ScheduledDelivery and ReservationID (EventID) from Shipment
+	var scheduledDeliveryID *int64
+	var reservationID int64
+	queryInfo := `SELECT s.scheduled_delivery_id, sd.event_id 
+	              FROM shipments s
+	              LEFT JOIN scheduled_deliveries sd ON s.scheduled_delivery_id = sd.id
+	              WHERE s.id = $1`
+	err = tx.QueryRowContext(ctx, queryInfo, shipmentID).Scan(&scheduledDeliveryID, &reservationID)
+	if err != nil {
+		return fmt.Errorf("getting shipment info: %w", err)
+	}
+
+	now := time.Now()
+	for _, assetID := range assetIDs {
+		// 2. Verify asset is available
+		var status string
+		err = tx.QueryRowContext(ctx, "SELECT status FROM assets WHERE id = $1", assetID).Scan(&status)
+		if err != nil {
+			return fmt.Errorf("checking asset %d: %w", assetID, err)
+		}
+		if status != "available" && status != "reserved" {
+			return fmt.Errorf("asset %d is not available (status: %s)", assetID, status)
+		}
+
+		// 3. Create CheckOutAction (Potential/Draft)
+		coQuery := `INSERT INTO check_out_actions (reservation_id, asset_id, agent_id, shipment_id, scheduled_delivery_id, start_time, action_status)
+		            VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		_, err = tx.ExecContext(ctx, coQuery, reservationID, assetID, agentID, shipmentID, scheduledDeliveryID, now, "Potential")
+		if err != nil {
+			return fmt.Errorf("creating checkout for asset %d: %w", assetID, err)
+		}
+
+		// 4. Update Asset status
+		_, err = tx.ExecContext(ctx, "UPDATE assets SET status = 'reserved', updated_at = $1 WHERE id = $2", now, assetID)
+		if err != nil {
+			return fmt.Errorf("updating asset status %d: %w", assetID, err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	// Re-evaluate overall status (async or after commit)
+	fStatus, err := r.GetRentalFulfillmentStatus(ctx, reservationID)
+	if err == nil {
+		r.UpdateRentalReservationStatus(ctx, reservationID, domain.RentalReservationStatus(fStatus.Status))
+	}
+
+	return nil
+}

@@ -187,4 +187,5 @@ type Repository interface {
 	GetShipmentByID(ctx context.Context, id int64) (*domain.Shipment, error)
 	ListShipments(ctx context.Context, deliveryID *int64) ([]domain.Shipment, error)
 	UpdateShipment(ctx context.Context, s *domain.Shipment) error
+	AllocateAssetsToShipment(ctx context.Context, shipmentID int64, assetIDs []int64, agentID int64) error
 }

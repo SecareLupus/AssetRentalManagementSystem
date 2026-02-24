@@ -482,6 +482,14 @@ func NewRouter(h *Handler) http.Handler {
 		case http.MethodPut:
 			h.UpdateShipment(w, r)
 		default:
+			if strings.HasSuffix(r.URL.Path, "/allocate") {
+				if r.Method == http.MethodPost {
+					h.AllocateAssets(w, r)
+					return
+				}
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})

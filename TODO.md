@@ -20,8 +20,8 @@ Goal: Port the explicit `ScheduledDelivery` and `Shipment` tracking from the pro
 
 ### Phase 33: Contextual Device Allocation
 Goal: Simplify the UX by allowing users to allocate specific devices (Assets) to Shipments based on the prototype's leaner workflow.
-- [ ] **Asset Allocation API**: Create streamlined Go endpoints that assign an `Asset` to a `Shipment` (which under the hood creates the complex `CheckOutAction` and `Demand` lines).
-- [ ] **Frontend - Allocation UI**: Build a drag-and-drop or checklist React component for assigning available Assets to pending Shipments.
+- [x] **Asset Allocation API**: Create streamlined Go endpoints that assign an `Asset` to a `Shipment` (which under the hood creates the complex `CheckOutAction` and `Demand` lines).
+- [x] **Frontend - Allocation UI**: Build a drag-and-drop or checklist React component for assigning available Assets to pending Shipments.
 
 ---
 
